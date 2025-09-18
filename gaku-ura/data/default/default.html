@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="{DESCRIPTION}">
+<title>{TITLE}{SITE_TITLE}</title>
+<!-- cssを静的リンクする場合は「{CSS}」にcssが埋め込まれます -->
+<!-- <style>{CSS}</style>-->
+<!-- 動的リンクする場合は「{CSS_URL}」に置換されます。外部のCSSは直接URLを書きます -->
+<link rel="stylesheet" href="{CSS_URL}">
+<link rel="icon" href="/favicon.ico">
+</head>
+<body>
+<!-- {CONTENT}に本文が埋め込まれます -->
+{CONTENT}
+
+
+
+<p><br><br></p>
+<footer>
+<nav>
+<label for="SW"></label>
+<input type="checkbox" id="SW" style="display:none;">
+<p class="n">
+<label for="SW"></label>
+　<a href="{U_ROOT}">ホ ー ム</a>
+　<a href="{U_ROOT}users/">ユーザー</a>
+</p>
+</nav>
+<p><br></p>
+<p class="c">&copy; <a href="{U_ROOT}?Page=about">name</a></p>
+</footer>
+<!-- <script nonce="{NONCE}">{JS}</script> -->
+<script src="{JS_URL}" nonce="{NONCE}"></script>
+</body>
+</html>

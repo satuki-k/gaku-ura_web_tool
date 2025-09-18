@@ -1,0 +1,39 @@
+<h1>{TITLE}</h1>
+
+<file_list>
+	<p><a href="?Menu=user">他のユーザーを管理</a></p>
+	<table border="1" width="100%">
+		<thead>
+			<tr style="text-align:left;"><th colspan="5">
+				<form action="" method="POST" enctype="multipart/form-data" id="form">
+					<input type="hidden" name="session_token" value="{SESSION_TOKEN}">
+					<label><select name="new">
+						<option value="folder">新規フォルダ</option>
+						<option value="file">新規ファイル</option>
+						<option value="php">PHP</option>
+						<option value="html">html</option>
+						<option value="css">css</option>
+						<option value="js">Javascript</option>
+						<option value="pl">perl</option>
+						<option value="py">python3</option>
+						<option value=".htaccess">.htaccess</option>
+						<option value="/sitemap.xml">/sitemap.xml</option>
+						<option value="/robots.txt">/robots.txt</option>
+					</select></label>
+					<label>名前<input type="text" name="name"></label>
+					<label id="files"><input type="file" name="file0"></label>
+					<label><button type="submit" name="submit" value="new">作成</button></label>
+				</form>
+			</th></tr>
+			<tr><th>名 前</th><th>編 集</th><th>詳 細</th><th>更 新</th></tr>
+		</thead>
+		<tbody>
+			{FILE_LIST}
+		</tbody>
+	</table>
+</file_list>
+
+{EDIT_AREA}
+
+<p><br></p>
+<p><a href="../">ユーザーページへ</a></p>
