@@ -1,0 +1,73 @@
+/* gaku-ura cssLIB animation */
+/*
+classは調整が出来ないから参考程度
+*/
+
+
+/* スクロールバー消す(アニメーション過程で画面幅を超える場合に使用) */
+.transform_base{
+	overflow:hidden;
+	width:100%;
+}
+
+/* marqueeの代用 */
+@keyframes marquee{
+	0%{
+		transform:translate(150%);
+	}
+	100%{
+		transform:translate(0%);
+	}
+}
+.marquee{
+	display:block;
+	animation:marquee 5s linear infinite;
+}
+.rmarquee{
+	display:block;
+	animation:marquee 5s linear infinite reverse;
+}
+
+
+/* 回転 */
+@keyframes turn{
+	0%{
+		transform:rotate(0deg);
+	}
+	100%{
+		transform:rotate(360deg);
+	}
+}
+.turn{
+	animation:turn 5s linear infinite;
+}
+.rturn{
+	animation:turn 5s linear infinite reverse;
+}
+
+/* 振動 */
+@keyframes tremble{
+	0%{
+		transform:translate(1px, 1px);
+	}
+	100%{
+		transform:translate(0px, 0px);
+	}
+}
+.tremble{
+	display:inline-block;
+	animation:tremble .1s linear infinite alternate;
+}
+
+/* フェード */
+@keyframes fade{
+	0%{
+		opacity:0;
+	}
+	100%{
+		opacity:1;
+	}
+}
+.fade{
+	animation:fade 1s linear 1;
+}

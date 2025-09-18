@@ -1,0 +1,36 @@
+.p{
+	margin-left:1em;
+}
+.p:before{
+	content:"◆";
+	color:#0ab;
+}
+
+a strong{
+	color:#15a;
+}
+a strong:after{
+	content:' - ';
+	color:#000;
+}
+ol,	li{
+	list-style:none;
+}
+ol{
+	padding:1em;
+}
+li{
+	margin-bottom:3em;
+}
+li a, li a:visited{
+	color:#000;
+	display:block;
+	box-shadow:0 2px 5px 0 #a60;
+	padding:.2em;
+	text-decoration:none;
+}
+li a:hover{
+	text-decoration:underline;
+	box-shadow:0 2px 5px 0 #00f;
+}
+

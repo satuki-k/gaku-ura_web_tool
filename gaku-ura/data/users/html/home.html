@@ -1,0 +1,24 @@
+<h1>ようこそ、{NAME} さん</h1>
+<h2>登録情報</h2>
+<form action="" method="POST" id="form">
+	<p>変更は現在のパスワードの入力が必須です。</p>
+	<p><label>名前<input type="text" name="name" value="{NAME}" placeholder="変更なし"></label></p>
+	<p><label>現在のパスワード<input type="password" name="passwd" required></label></p>
+	<p><label>新しいパスワード<input type="password" name="new_passwd" placeholder="変更なし"></label></p>
+	<p><label>メールアドレス<input type="text" name="mail" value="{MAIL}" placeholder="登録解除"></label></p>
+	<p><label>自己紹介<br><textarea name="profile" rows="5" placeholder="こんにちは">{PROFILE}</textarea></label></p>
+	<p>権限レベル: {ADMIN}</p>
+	<p><label><button type="submit" name="session_token" value="{SESSION_TOKEN}">変更</button></label></p>
+</form>
+<p><a href="?{NAME}">自分のユーザーページ</a></p>
+<p><br></p>
+
+<admin>
+	<h2><a href="./admin/">管理ページ</a></h2>
+	<p>{NAME}さんは、管理機能を使用する権限があります。</p>
+	<p>サイトの編集や、他のユーザーに対して操作が可能です。</p>
+	<p><br></p>
+</admin>
+
+<p><form action="" method="POST"><input type="hidden" name="session_token" value="{SESSION_TOKEN}"><label><button type="submit" name="submit" value="logout">ログアウト</button></label></form></p>
+

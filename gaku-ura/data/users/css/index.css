@@ -1,0 +1,177 @@
+h1{
+	color:#fff;
+}
+body,input,textarea{
+	background:#000;
+	color:#eee;
+}
+select,option{
+	font-size:1em;
+	background:#fff;
+	color:#000;
+}
+input[type="text"],input[type="password"]{
+	border:solid 1px #fff;
+	font-size:1em;
+	width:10em;
+}
+form table input[type="text"],table form input[type="password"]{
+	width:95%;
+	border:none;
+	outline:none;
+}
+a,a:visited{
+	color:#0a0;
+}
+a:hover{
+	color:#ba0;
+}
+table{
+	width:100%;
+	border-collapse:collapse;
+}
+th,td{
+	border:solid 1px #aaa;
+}
+textarea{
+	width:99%;
+	max-height:400px;
+}
+button{
+	font-size:1em;
+	border:ridge .1em #111;
+	padding:.2em;
+	background:#eef;
+}
+button:hover{
+	background:transparent;
+	color:#fff;
+}
+.profile h1{
+	text-align:left;
+}
+
+/* js file input */
+.js_finput{
+	font-size:.8em;
+	display:inline-block;
+	border:solid 1px #eee;
+	background:#f0c;
+	color:#111;
+	margin:.2em;
+}
+.js_finput input[type="file"]{
+	display:none;
+}
+
+
+#exit{
+	border:solid 1px #fff;
+	background:#f0b;
+	padding:.2em;
+	color:#fff;
+}
+#my,#my *{
+	background:#555;
+	font-weight:bold;
+}
+
+
+/* ファイル属性 */
+.type_dir{
+	padding:1px;
+}
+.type_dir a{
+	border:solid 1px #b60;
+}
+.type_php:before{
+	content:'⚖';
+}
+.type_html:before{
+	content:'🌍';
+}
+.type_css:before{
+	content:'🐟';
+}
+.type_js:before{
+	content:'🗡';
+}
+.type_py:before{
+	content:'◇';
+}
+.type_pl:before{
+	content:'◎';
+}
+.type_rb:before{
+	content:'▽';
+}
+.type_csv:before,.type_tsv:before{
+	content:'✂';
+}
+.type_txt:before{
+	content:'✉';
+}
+.type_htaccess:before,.type_ini:before,.type_conf:before{
+	content:'⚙';
+}
+.type_image:before{
+	content:'🖼';
+}
+.type_mpeg:before{
+	content:'📺';
+}
+.type_zip:before{
+	content:'❄';
+}
+.type_unknown:bofore{
+	content:'⚠';
+}
+
+
+/* 適当なハイライト */
+.gaku-ura_include{
+	text-decoration:underline;
+}
+.gaku-ura_include:after{
+	content:'gaku-ura lib';
+	color:#c00;
+}
+.gaku-ura_notminify{
+	text-decoration:underline;
+}
+.gaku-ura_notminify:after{
+	content:'not minify';
+	color:#c00;
+}
+.gaku-ura_replace{
+	text-decoration:underline wavy #aaa;
+}
+.gaku-ura_replace:after{
+	content:'variable';
+	color:#ccc;
+}
+
+.pview{
+	display:flex;
+	background:#fff;
+	overflow-x:scroll;
+	max-height:400px;
+	font-size:1em;
+	color:#000;
+}
+.pview h1, .pview h2{
+	text-align:left;
+}
+.pview *{
+	color:#000;
+}
+.pview pre{
+	width:100%;
+}
+.lid{
+	height:100%;
+	background:#eee;
+	color:#111;
+	min-width:4em;
+}
+

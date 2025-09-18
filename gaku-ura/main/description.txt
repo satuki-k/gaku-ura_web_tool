@@ -1,0 +1,18 @@
+このフォルダに、主たる動作を記述する
+
+require __DIR__ .'/gaku-ura/main/[ファイル名]';
+で、間接的にここのファイルを読み込む。
+
+main関数を定義し、URL上のファイルがmain関数を呼び出す。
+
+
+
+
+■ gaku-uraライブラリ梱包ファイル一覧
+description.txt これ
+404.php 404エラーページ
+admin.php 管理ページ
+admin_login.php 管理ページログイン
+src_link.php cssやjsを出力
+index.php トップページ(ブログ機能付き)
+

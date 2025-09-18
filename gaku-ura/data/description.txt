@@ -1,0 +1,14 @@
+ここには、データを保管します。
+
+例: html css js csv tsv sqlite json など。掲示板のlogデータも
+
+プロジェクトを管理しやすいように、フォルダを作る
+
+
+■gaku-uraライブラリ梱包一覧
+description.txt これ
+404 エラーページ(404以外も含む)
+admin 管理ページ
+default テンプレートhtmlや共通css
+home トップページ(ブログ記事も)
+
