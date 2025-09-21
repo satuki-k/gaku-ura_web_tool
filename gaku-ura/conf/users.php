@@ -1,9 +1,7 @@
 <?php
 /*
- * gaku-ura9.4.0
+ * gaku-ura9.5.13
 */
-//管理ページの廃止 ユーザーページに統合
-
 
 //ログイン必須とは限らない機能を考慮し、ログインチェックは初期化では行わない
 class GakuUraUser{
@@ -26,7 +24,7 @@ class GakuUraUser{
 			}
 		}
 		$this->admin_revel = 3;
-		if (isset($conf->config['login.admin_revel']) && ((int)$conf->config['login.admin_revel'] > 0)){
+		if (isset($conf->config['login.admin_revel']) && (int)$conf->config['login.admin_revel'] > 0){
 			$this->admin_revel = (int)$conf->config['login.admin_revel'];
 		}
 		$this->user_dir = $conf->data_dir.'/users';
@@ -71,7 +69,7 @@ class GakuUraUser{
 			if ($row !== false){
 				$user_data = $this->user_data_convert(explode("\t", $row));
 				if (isset($user_data['enable']) && ((int)$user_data['enable'] === 1)){
-					if (list_isset($user_data, ['id','passwd']) && ((int)$user_data['id'] === (int)$_SESSION['gaku-ura_login:id']) && ($user_data['passwd'] === $_SESSION['gaku-ura_login:passwd'])){
+					if (list_isset($user_data, ['id','passwd']) && (int)$user_data['id']===(int)$_SESSION['gaku-ura_login:id'] && $user_data['passwd']===$_SESSION['gaku-ura_login:passwd']){
 						$result['result'] = true;
 						$result['user_data'] = $user_data;
 					}
@@ -91,7 +89,7 @@ class GakuUraUser{
 				if (($name !== '') && ($d['name'] === $name)){
 					return $uid;
 				}
-				if (($mail !== '') && ($d['mail'] === $mail)){
+				if ($mail !== '' && $d['mail'] === $mail){
 					return $uid;
 				}
 			}
@@ -136,3 +134,4 @@ class GakuUraUser{
 		$conf->file_unlock('user_list');
 	}
 }
+

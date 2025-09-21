@@ -16,20 +16,20 @@ function highlight_code(string $code, string $fname):string{
 	if (stripos($type, 'php') !== false){
 		return highlight_string($code, true);
 	}
-	$code = str_replace('<', h('<'), $code);
-	$code = str_replace('>', h('>'), $code);
-	if ((stripos($type, 'html') !== false) || (stripos(basename($fname), '.md') !== false)){
+	$code = str_replace('<', h('<'), str_replace('>', h('>'), $code));
+	$f = strtolower(basename($fname));
+	if (stripos($type, 'html') !== false || str_ends_with($f, '.md')){
 		$code = preg_replace('/((\{)(([A-Z]|[0-9]|_|-)+)(\}))/', '<span class="gaku-ura_replace">$1</span>', $code);
-	} elseif (stripos(basename($fname), '.conf') !== false){
+	} elseif (str_ends_with($f, '.conf')){
 		$code = preg_replace('/(;.*)/', '<span style="color:#c00;">$1</span>', $code);
 		$code = preg_replace('/(\[.+\])/', '<span style="color:#00c;">$1</span>', $code);
-	} elseif (stripos(basename($fname), '.css') !== false){
+	} elseif (str_ends_with($f, '.css')){
 		$code = preg_replace('/(#!include [^;]+;)/', '<span class="gaku-ura_include">$1</span>', $code);
 		$code = preg_replace('/([^\{\}:]+)(:)([^\{\};]+)(;)/', '<span style="color:#06c;">$1</span>:<span style="color:#e60;">$3</span>;', $code);
 		$code = preg_replace('/(@)(([a-z]|[A-Z]|[0-9]|-|_)+)/', '<span style="color:#0c0;">$1$2</span>', $code);
 		$code = preg_replace('/((\*|\.|#|[a-z]|[A-Z]|[0-9]| |,|\+|-|_|:|\[|\])+)(\{)/', '<b><span style="color:#00c;">$1</span></b>{', $code);
 		$code = preg_replace('/(\/\*[^\*\/]+\*\/)/si', '<span style="color:#c00;">$1</span>', $code);
-	} elseif (stripos(basename($fname), '.js') !== false){
+	} elseif (str_ends_with($f, '.js')){
 		$code = preg_replace('/(\"[^\"]*\")/', '<span style="color:#e60;">$1</span>', $code);
 		$code = preg_replace('/(\'[^\']*\')/', '<span style="color:#e60;">$1</span>', $code);
 		$code = preg_replace('/(#!include [^;]+;)/', '<span class="gaku-ura_include">$1</span>', $code);
@@ -37,7 +37,7 @@ function highlight_code(string $code, string $fname):string{
 		$code = preg_replace('/([^\"\'\w]+)(if|function|in|do|get|else|true|false|null|const|let|case|break|continue|new)([^\"\'\w]+)/i', '$1<span style="color:#00c;">$2</span>$3', $code);
 		$code = preg_replace('/(\/\*[^\*\/]+\*\/)/si', '<span style="color:#c00;">$1</span>', $code);
 		$code = preg_replace('/(\/\/.*)/', '<span style="color:#c00;">$1</span>', $code);
-	} elseif (basename($fname) === '.htaccess'){
+	} elseif ($f === '.htaccess'){
 		$code = preg_replace('/(#.*)/', '<span style="color:#c00;">$1</span>', $code);
 	}
 	return '<pre><code>'.$code.'</code></pre>';
@@ -48,8 +48,9 @@ function get_ftype(string $file):string{
 		return 'dir';
 	}
 	$m = mime_content_type($file);
-	foreach (['php','css','html','js','py','rb','conf','ini','htaccess','zip','csv','tsv','txt','pl','image','mpeg'] as $t){
-		if (stripos($m, $t) !== false || strpos(basename($file), '.'.$t) !== false){
+	$f = strtolower(basename($file));
+	foreach (['php','css','html','js','py','rb','conf','ini','htaccess','zip','csv','tsv','txt','pl','image/','mpeg'] as $t){
+		if (str_ends_with($f, '.'.$t) || stripos($m, $t) !== false){
 			return $t;
 		}
 	}
@@ -57,12 +58,12 @@ function get_ftype(string $file):string{
 }
 
 function is_editable(string $fname):bool{
-	$m = mime_content_type($fname);
-	if (stripos($m, 'text/') !== false){
+	$f = strtolower(basename($fname));
+	if (stripos(mime_content_type($fname), 'text/') !== false){
 		return true;
 	}
-	foreach (['.txt','.htaccess','.php','.pl','.py','.css','.html','.js'] as $k){
-		if (strpos($fname, $k) !== false){
+	foreach (['txt','htaccess','php','pl','py','rb','conf','ini','log','css','html','js','csv','tsv','c','cpp','cxx','gkrs'] as $k){
+		if (str_ends_with($f, '.'.$k)){
 			return true;
 		}
 	}
@@ -104,7 +105,7 @@ function main(string $from):int{
 			exit;
 		}
 		if ($conf->url_param === ''){
-			if (list_isset($_POST, ['submit','session_token']) && ($_POST['submit']==='logout') && $conf->check_csrf_token('user_home', $_POST['session_token'], true)){
+			if (list_isset($_POST, ['submit','session_token']) && $_POST['submit']==='logout' && $conf->check_csrf_token('user_home', $_POST['session_token'], true)){
 				$_SESSION['gaku-ura_login:id'] = '';
 				header('Location:./');
 				exit;
@@ -116,7 +117,7 @@ function main(string $from):int{
 				$new_passwd = row(h(GakuUraUser::h($_POST['new_passwd'])));
 				$profile = str_replace("\n", '&#10;', h(GakuUraUser::h($_POST['profile'])));
 				if (pass($passwd) === $login_data['user_data']['passwd']){
-					if (not_empty($name) && (strlen($name) < 32)){
+					if (not_empty($name) && strlen($name) < 32){
 						$new_user_data['name'] = $name;
 					}
 					if (not_empty($new_passwd)){
@@ -176,7 +177,7 @@ function main(string $from):int{
 		$uri_dir = '';
 		$replace = ['TITLE'=>'管理機能','EDIT_AREA'=>'','FILE_LIST'=>''];
 		//現在位置を特定
-		if (isset($_GET['Dir']) && (strpos($_GET['Dir'], '..') === false) && is_dir($c_root.'/'.h($_GET['Dir']))){
+		if (isset($_GET['Dir']) && strpos($_GET['Dir'], '..')===false && is_dir($c_root.'/'.h($_GET['Dir']))){
 			$uri_dir = h($_GET['Dir']);
 			if ($uri_dir !== ''){
 				$current_dir = realpath($c_root.'/'.$uri_dir);
@@ -195,7 +196,7 @@ function main(string $from):int{
 					$path = $current_dir.'/'.h($_POST['name']);
 					//削除
 					if ($path !== $conf->config_file || (int)$login_data['user_data']['admin'] === 4){
-						if (isset($_POST['remove']) && ($_POST['remove'] === 'yes')){
+						if (isset($_POST['remove']) && $_POST['remove']==='yes'){
 							unlink($path);
 							header('Location:./?Dir='.$uri_dir);
 							exit;
@@ -228,7 +229,7 @@ function main(string $from):int{
 						$up_to = implode('/', array_slice($flist, 0, count($flist) -1));
 					}
 					//削除
-					if (isset($_POST['remove']) && ($_POST['remove'] === 'yes')){
+					if (isset($_POST['remove']) && $_POST['remove']==='yes'){
 						rmdir_all($path);
 					} else {
 						if ($_POST['perm'] !== 'no'){
@@ -247,7 +248,7 @@ function main(string $from):int{
 					$name = str_replace('..', '', str_replace('/', '', h($_POST['name'])));
 					if ($_POST['new'] === '.htaccess'){
 						touch($current_dir.'/.htaccess');
-					} elseif (($_POST['new'] === '/sitemap.xml') && (strpos($conf->d_root, $c_root) !== false)){
+					} elseif ($_POST['new']==='/sitemap.xml' && strpos($conf->d_root, $c_root)!==false){
 						$url_list = [''];
 						foreach (scandir($conf->data_dir.'/home/html') as $f){
 							if (strpos($f, '.html') !== false){
@@ -257,7 +258,7 @@ function main(string $from):int{
 								$url_list[] = '?Page='.str_replace('.md', '', $f);
 							}
 						}
-						if (isset($conf->config['login.enable']) && ((int)$conf->config['login.enable'] === 1)){
+						if (isset($conf->config['login.enable']) && (int)$conf->config['login.enable']===1){
 							$url_list[] = 'users/';
 						}
 						$url_list = array_unique($url_list);
@@ -269,7 +270,7 @@ function main(string $from):int{
 						file_put_contents($conf->d_root.'/sitemap.xml', $t, LOCK_EX);
 						header('Location:?File=sitemap.xml&Menu=edit');
 						exit;
-					} elseif (($_POST['new'] === '/robots.txt') && (strpos($conf->d_root, $c_root) !== false)){
+					} elseif ($_POST['new']==='/robots.txt' && strpos($conf->d_root, $c_root)!==false){
 						file_put_contents($conf->d_root.'/robots.txt', "User-agent: *\nSitemap : {$conf->domain}sitemap.xml\n", LOCK_EX);
 						header('Location:?File=robots.txt');
 						exit;
@@ -279,7 +280,7 @@ function main(string $from):int{
 						} elseif ($_POST['new'] === 'file'){
 							touch($current_dir.'/'.$name);
 						} else {
-							if ((strpos($name, '.'.$_POST['new']) === false) && in_array($_POST['new'], ['php','html','css','js','pl','py'], true)){
+							if (strpos($name, '.'.$_POST['new'])===false && in_array($_POST['new'], ['php','html','css','js','pl','py'], true)){
 								$name .= '.'.$_POST['new'];
 							}
 							$new_path = $current_dir.'/'.str_replace('..', '.', $name);
@@ -308,7 +309,7 @@ function main(string $from):int{
 								break;
 							}
 							file_put_contents($new_path, $content."\n", LOCK_EX);
-							if ($_POST['new'] === 'pl' || $_POST['new'] === 'py'){
+							if ($_POST['new']==='pl' || $_POST['new']==='py'){
 								chmod($new_path, 0745);
 							}
 						}
@@ -316,12 +317,12 @@ function main(string $from):int{
 					//アップロード
 					if (isset($_FILES)){
 						foreach ($_FILES as $k=>$v){
-							if (isset($_FILES[$k]['tmp_name']) && (int)$_FILES[$k]['error'] === 0 && is_file($_FILES[$k]['tmp_name']) && not_empty($_FILES[$k]['name'])){
+							if (isset($_FILES[$k]['tmp_name']) && (int)$_FILES[$k]['error']===0 && is_file($_FILES[$k]['tmp_name']) && not_empty($_FILES[$k]['name'])){
 								$ftname = $_FILES[$k]['tmp_name'];
 								$fname = $_FILES[$k]['name'];
 								$path = $current_dir.'/'.$fname;
 								//権限昇華防止
-								if (($path === $conf->config_file) || ($path === $user->user_list_file)){
+								if ($path===$conf->config_file || $path===$user->user_list_file){
 									//最高権限のみ
 									if ((int)$login_data['user_data']['admin'] === 4){
 										rename($ftname, $path);
@@ -343,23 +344,22 @@ function main(string $from):int{
 				foreach (get_rows($user->user_list_file, 2) as $row){
 					$d = $user->user_data_convert(explode("\t", $row));
 					//自分より権限が下か自分が最高権限か自分自身
-					if (($d['admin'] < $login_data['user_data']['admin']) || ((int)$login_data['user_data']['admin'] === 4) || ((int)$login_data['user_data']['id'] === (int)$d['id'])){
+					if ($d['admin']<$login_data['user_data']['admin'] || (int)$login_data['user_data']['admin']===4 || (int)$login_data['user_data']['id']===(int)$d['id']){
 						foreach ($user->user_list_keys as $k){
 							if ($k === 'id'){
 								continue;
 							}
 							if (isset($_POST[$k.$d['id']])){
-								if ((($k === 'name') || ($k === 'enable') || ($k === 'admin') || ($k === 'passwd')) && !not_empty($_POST[$k.$d['id']])){
+								if (in_array($k, ['name','enable','admin','passwd'], true) && !not_empty($_POST[$k.$d['id']])){
 									continue;
 								}
-								if (($k === 'enable') || ($k === 'admin')){
+								if ($k==='enable' || $k==='admin'){
 									$_POST[$k.$d['id']] = (int)$_POST[$k.$d['id']];
 								}
-
 								if ($k === 'profile'){
 									$_POST[$k.$d['id']] = str_replace("\n", '&#10;', $_POST[$k.$d['id']]);
 								} elseif ($k === 'admin'){
-									if ($_POST[$k.$d['id']] < 0 || $_POST[$k.$d['id']] > 4 || ((int)$login_data['user_data']['admin'] !== 4 && $_POST[$k.$d['id']] >= $login_data['user_data']['admin'])){
+									if ($_POST[$k.$d['id']]<0 || $_POST[$k.$d['id']]>4 || ((int)$login_data['user_data']['admin']!==4 && $_POST[$k.$d['id']]>=$login_data['user_data']['admin'])){
 										continue;
 									}
 								}
@@ -383,12 +383,12 @@ function main(string $from):int{
 		}
 
 		//ファイルがある
-		if (isset($_GET['File']) && (strpos($_GET['File'], '..') === false) && (strpos($_GET['File'], '/') === false) && is_file($current_dir.'/'.h($_GET['File']))){
+		if (isset($_GET['File']) && strpos($_GET['File'],'..')===false && strpos($_GET['File'], '/')===false && is_file($current_dir.'/'.h($_GET['File']))){
 			$current_file = $current_dir.'/'.h($_GET['File']);
 			//ユーザー管理
-			if (($current_file === $user->user_list_file) && !isset($_GET['download'])){
+			if ($current_file===$user->user_list_file && !isset($_GET['download'])){
 				$_GET['Menu'] = 'user';
-			} elseif ((isset($_GET['Menu']) && ($_GET['Menu'] === 'edit')) || (is_editable($current_file) && !isset($_GET['download']))){
+			} elseif ((isset($_GET['Menu'])&&($_GET['Menu']==='edit')) || (is_editable($current_file)&&!isset($_GET['download']))){
 				//編集
 				$replace['TITLE'] = 'ファイル:'.basename($current_file).' を編集';
 				$html = file_get_contents($html_file);
@@ -430,7 +430,7 @@ function main(string $from):int{
 				exit;
 			}
 			$is_edit_mode = true;
-		} elseif (not_empty($uri_dir) && isset($_GET['Menu']) && ($_GET['Menu'] === 'edit')){
+		} elseif (not_empty($uri_dir) && isset($_GET['Menu']) && $_GET['Menu']==='edit'){
 			//ディレクトリの編集
 			$is_edit_mode = true;
 			$replace['TITLE'] = 'ディレクトリ:'.basename($current_dir).' を編集';
@@ -451,7 +451,7 @@ function main(string $from):int{
 　<label><input type="radio" name="remove" value="no" checked>削除しない</label> <label><input type="radio" name="remove" value="yes">削除する</label>
 　<label><button type="submit" name="submit_type" value="edit_dir">保 存</button></label>
 </p></form><p><br></p>';
-		} elseif (!isset($_GET['Menu']) || ($_GET['Menu'] !== 'user')){
+		} elseif (!isset($_GET['Menu']) || $_GET['Menu']!=='user'){
 			$html = file_get_contents($html_file);
 			$html = str_replace('<file_list>', '', str_replace('</file_list>', '', $html));
 			$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__new');
@@ -486,7 +486,7 @@ function main(string $from):int{
 				}
 			}
 		}
-		if (isset($_GET['Menu']) && ($_GET['Menu'] === 'user')){
+		if (isset($_GET['Menu']) && $_GET['Menu']==='user'){
 			$is_edit_mode = true;
 
 			//ユーザー管理
@@ -503,7 +503,7 @@ function main(string $from):int{
 			foreach (get_rows($user->user_list_file, 2) as $row){
 				$d = $user->user_data_convert(explode("\t", $row));
 				//自分より下の権限か最高権限か自分自身
-				if (($d['admin'] < $login_data['user_data']['admin']) || ((int)$login_data['user_data']['admin'] === 4) || ((int)$login_data['user_data']['id'] === (int)$d['id'])){
+				if ($d['admin']<$login_data['user_data']['admin'] || (int)$login_data['user_data']['admin']===4 || (int)$login_data['user_data']['id']===(int)$d['id']){
 					if ((int)$login_data['user_data']['id'] === (int)$d['id']){
 						$replace['EDIT_AREA'] .= '<tr id="my">';
 					} else {
@@ -532,7 +532,7 @@ function main(string $from):int{
 			$replace['EDIT_AREA'] .= '<p>idは必ず行番号-1です。adminは自分のより小さい0以上の整数です。enableが0でログイン出来なくなります。このファイルは<b>最高権限のユーザー</b>のみ上書きアップロード可能ですが最高権限が存在しない場合はFTP等を使用して最高権限ユーザーのadminを4にしてください。</p>';
 		}
 
-		if (!$is_edit_mode && isset($_GET['Menu']) && ($_GET['Menu'] === 'edit')){
+		if (!$is_edit_mode && isset($_GET['Menu']) && $_GET['Menu']==='edit'){
 			header('Location:?Dir='.$uri_dir);
 			exit;
 		}
@@ -556,7 +556,7 @@ function main(string $from):int{
 		if (list_isset($_POST, ['name','passwd','session_token']) && $conf->check_csrf_token('login', $_POST['session_token'], true)){
 			foreach (get_rows($user->user_list_file, 2) as $row){
 				$user_data = $user->user_data_convert(explode("\t", $row));
-				if (($user_data['name'] === h($_POST['name'])) && ($user_data['passwd'] === pass(h($_POST['passwd'])))){
+				if ($user_data['name']===h($_POST['name']) && $user_data['passwd']===pass(h($_POST['passwd']))){
 					session_regenerate_id(true);
 					$_SESSION['gaku-ura_login:id'] = $user_data['id'];
 					$_SESSION['gaku-ura_login:passwd'] = $user_data['passwd'];
@@ -578,7 +578,7 @@ function main(string $from):int{
 		/* 新規登録 */
 		case 'regist':
 		$conf->content_type('text/html');
-		if (!isset($conf->config['login.regist']) || ((int)$conf->config['login.regist']===0)){
+		if (!isset($conf->config['login.regist']) || (int)$conf->config['login.regist']===0){
 			$conf->not_found(false, 'このサイトでは、新規登録は受け付けていません。');
 		}
 		$replace = ['WARNING'=>'', 'SESSION_TOKEN'=>''];
