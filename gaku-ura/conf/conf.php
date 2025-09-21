@@ -1,5 +1,5 @@
 <?php
-# gaku-ura9.5.12
+# gaku-ura9.5.13
 /* gaku-ura標準ライブラリが定義 */
 //ini_set('display_errors', 'Off');
 
@@ -30,7 +30,7 @@ function one_time_pass(int $min, int $max):string{
 }
 //開始と終了の文字列で囲まれた中身の文字列
 function subrpos(string $start, string $end, string $text):string{
-	if ((($s=strpos($text,$start))!==false) && (($e=strpos($text,$end,$s))!==false)){
+	if (($s=strpos($text,$start))!==false && ($e=strpos($text,$end,$s))!==false){
 		$len1 = strlen($start);
 		return substr($text, $s+$len1, $e-$s-$len1);
 	}
@@ -59,12 +59,12 @@ function get_rows(string $file, int $start):array|false{
 	return array_slice($rows, $start -1);
 }
 //任意時間以上更新ないファイル削除
-function unlink_by_date(string $dir, int $time_limit):void{
+function unlink_by_date(string $dir, int $ds):void{
 	if (is_dir($dir)){
-		$now = time();
-		foreach (scandir($dir) as $f){
-			if (($f!=='.')&&($f!=='..') && is_file($dir.'/'.$f) && ($now -filemtime($dir.'/'.$f) > $time_limit)){
-				unlink($dir.'/'.$f);
+		foreach (scandir($dir) as $i){
+			$f = $dir.'/'.$i;
+			if (is_file($f) && time() -filemtime($f) > $ds){
+				unlink($f);
 			}
 		}
 	}
@@ -76,7 +76,7 @@ function path_list(string $dir):array{
 	}
 	$list = [];
 	foreach (scandir($dir) as $d){
-		if (($d !== '.') && ($d !== '..')){
+		if ($d !== '.' && $d !== '..'){
 			$f = $dir.'/'.$d;
 			$list[] = $f;
 			if (is_dir($f)){
@@ -110,7 +110,7 @@ function read_conf(string $conf_file):array{
 		while (($i=fgets($fp)) !== false){
 			$row = trim($i);
 			$fi = substr($row, 0, 1);
-			if (($fi===';')||($fi==='#')||($fi==='[')||(strpos($row,'=')===false)){
+			if ($fi===';'||$fi==='#'||$fi==='['||strpos($row,'=')===false){
 				continue;
 			}
 			$peq = strpos($row, '=');
@@ -157,7 +157,7 @@ function css_out(string $css_file):string{
 	$css_list = [];
 	if (is_dir($css_file)){
 		foreach (scandir($css_file) as $f){
-			if (strpos($f, '.css') !== false){
+			if (str_ends_with(strtolower($f), '.css')){
 				$css_list[] = $css_file.'/'.$f;
 			}
 		}
@@ -180,7 +180,7 @@ function js_out(string $js_file, bool $minify=true):string{
 	$js_list = [];
 	if (is_dir($js_file)){
 		foreach (scandir($js_file) as $f){
-			if (strpos($f, '.js') !== false){
+			if (str_ends_with(strtolower($f), '.js')){
 				$js_list[] = $js_file.'/'.$f;
 			}
 		}
@@ -197,10 +197,9 @@ function js_out(string $js_file, bool $minify=true):string{
 			remove_comment_rows($j);
 			$t = '';
 			foreach (explode("\n", $j) as $row){
-				$i = trim($row);
-				$t .= trim(preg_replace('/(function)\((.*)\)(\{)/i','($2)=>{',preg_replace('/( |)(,|=|{|}|\(|\)|[|]|\?|!|\&|-|\+|<|>|:|;|\*|\/)( |)/','$2',preg_replace('/\/\/.*/','',$i))));
+				$t .= preg_replace('/\/\/.*/', '', trim($row));
 			}
-			$r .= $t;
+			$r .= preg_replace('/( |)(,|=|{|}|\(|\)|[|]|\?|!|\&|-|\+|<|>|:|;|\*|\/)( |)/', '$2', $t);
 		} else {
 			$r .= $j;
 		}
@@ -299,8 +298,11 @@ function to_html(string $md_text):string{
 		}
 		$t = $nt;
 	}
-	$t = preg_replace('/(\|)([^《\|<>]+)(《)([^\|<>]+)(》)/', '<ruby><rb>$2</rb><rt>$4</rt></ruby>', $t);
-	$t = preg_replace('/(\|)([あ-んA-Za-z0-9]+)(《)([あ-んA-Za-z0-9]+)(》)/', '<ruby><rb>$2</rb><rt>$4</rt></ruby>', $t);
+	for ($p=strpos($t,'|');($c=subrpos('|','》',substr($t,(int)$p)))!=='';$p=strpos($t,'|')){
+		if (count($l=explode('《',$c)) === 2){
+			$t = str_replace('|'.$c.'》', '<ruby><rb>'.$l[0].'</rb><rt>'.$l[1].'</rt></ruby>', $t);
+		}
+	}
 	return str_replace('\\', '', str_replace('\\\\', '&#92;', $t));
 }
 //真のIP入手
@@ -355,16 +357,16 @@ class GakuUra{
 		'name'=>'','description'=>'','url'=>$this->canonical,'headline'=>'',
 		'author'=>['@type'=>'Person','name'=>'unknown'],
 		'datePublished'=>date('Y年m月d日',filemtime($this->d_root)),'image'=>'/favicon.ico'];
-		if (isset($this->config['seo.author']) && (count($d = explode(',', $this->config['seo.author'])) >= 2)){
+		if (isset($this->config['seo.author']) && count($d=explode(',',$this->config['seo.author'])) > 1){
 			$this->ld_json['author']['@type'] = trim($d[0]);
 			$this->ld_json['author']['name'] = trim($d[1]);
 		}
-		if (($this->here===$this->domain) || ($this->here.'/'===$this->domain)){
+		if ($this->here===$this->domain || $this->here.'/'===$this->domain){
 			$this->ld_json['@type'] = 'WebSite';
 		}
 		$this->nonce = one_time_pass(20, 30);
 		if ($third_party === null){
-			if (isset($this->config['use_nonce']) && ($this->config['use_nonce']===0)){
+			if (isset($this->config['use_nonce']) && $this->config['use_nonce']===0){
 				$third_party = true;
 			} else {
 				$third_party = false;
@@ -481,7 +483,7 @@ class GakuUra{
 			$html = str_replace('{'.$s.'}', $r, $html);
 		}
 		$html = str_replace(' nonce=""', '', $html);
-		if ($robots && isset($this->config['seo.enable_ld_json']) && ((int)$this->config['seo.enable_ld_json'] === 1)){
+		if ($robots && isset($this->config['seo.enable_ld_json']) && (int)$this->config['seo.enable_ld_json']===1){
 			if ($this->ld_json['@type'] !== 'Person'){
 				$this->ld_json['name'] = $replace['SITE_TITLE'];
 				$this->ld_json['headline'] = $replace['TITLE'].$replace['SITE_TITLE'];
@@ -546,7 +548,7 @@ class GakuUra{
 	public function check_csrf_token(string $label, string $token, bool $strict):bool{
 		if (isset($_SESSION['csrf_token__'.$label])){
 			$d = explode("'", $_SESSION['csrf_token__'.$label]);
-			if (($d[0] === $token) && (($d[1]===$this->referer)||(!$strict))){
+			if ($d[0] === $token && ($d[1]===$this->referer||!$strict)){
 				return true;
 			}
 		}
