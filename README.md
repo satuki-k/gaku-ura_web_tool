@@ -87,7 +87,7 @@ gaku-ura標準以外で、ユーザー情報を使用する際に使います。
 
 ## 推奨するphp.ini
 php.iniを編集出来る場合は、以下の値に変更が推奨されます。
-'''
+```
 [PHP]
 default_charset = UTF-8
 display_errors = Off
