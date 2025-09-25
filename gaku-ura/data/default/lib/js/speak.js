@@ -7,7 +7,7 @@ function speak(elm, txt, speed, add=false){
 	let i = 0;
 	let l = txt.length;
 	let e = elm;
-	let tid = setInterval(function (){
+	let tid = setInterval(()=>{
 		if (i > l){
 			clearInterval(tid);
 			return;
