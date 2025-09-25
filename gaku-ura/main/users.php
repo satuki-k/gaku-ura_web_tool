@@ -1,47 +1,9 @@
 <?php
 /*
- * gaku-ura9.5.12
+ * gaku-ura9.5.14
 */
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
-
-
-ini_set('highlight.comment', '#d00');
-ini_set('highlight.default', '#000');
-ini_set('highlight.keyword', '#00c');
-ini_set('highlight.string', '#f80');
-
-function highlight_code(string $code, string $fname):string{
-	$type = mime_content_type($fname);
-	if (stripos($type, 'php') !== false){
-		return highlight_string($code, true);
-	}
-	$code = str_replace('<', h('<'), str_replace('>', h('>'), $code));
-	$f = strtolower(basename($fname));
-	if (stripos($type, 'html') !== false || str_ends_with($f, '.md')){
-		$code = preg_replace('/((\{)(([A-Z]|[0-9]|_|-)+)(\}))/', '<span class="gaku-ura_replace">$1</span>', $code);
-	} elseif (str_ends_with($f, '.conf')){
-		$code = preg_replace('/(;.*)/', '<span style="color:#c00;">$1</span>', $code);
-		$code = preg_replace('/(\[.+\])/', '<span style="color:#00c;">$1</span>', $code);
-	} elseif (str_ends_with($f, '.css')){
-		$code = preg_replace('/(#!include [^;]+;)/', '<span class="gaku-ura_include">$1</span>', $code);
-		$code = preg_replace('/([^\{\}:]+)(:)([^\{\};]+)(;)/', '<span style="color:#06c;">$1</span>:<span style="color:#e60;">$3</span>;', $code);
-		$code = preg_replace('/(@)(([a-z]|[A-Z]|[0-9]|-|_)+)/', '<span style="color:#0c0;">$1$2</span>', $code);
-		$code = preg_replace('/((\*|\.|#|[a-z]|[A-Z]|[0-9]| |,|\+|-|_|:|\[|\])+)(\{)/', '<b><span style="color:#00c;">$1</span></b>{', $code);
-		$code = preg_replace('/(\/\*[^\*\/]+\*\/)/si', '<span style="color:#c00;">$1</span>', $code);
-	} elseif (str_ends_with($f, '.js')){
-		$code = preg_replace('/(\"[^\"]*\")/', '<span style="color:#e60;">$1</span>', $code);
-		$code = preg_replace('/(\'[^\']*\')/', '<span style="color:#e60;">$1</span>', $code);
-		$code = preg_replace('/(#!include [^;]+;)/', '<span class="gaku-ura_include">$1</span>', $code);
-		$code = str_replace('#!option notminify;', '<span class="gaku-ura_notminify">#!option notmiify;</span>', $code);
-		$code = preg_replace('/([^\"\'\w]+)(if|function|in|do|get|else|true|false|null|const|let|case|break|continue|new)([^\"\'\w]+)/i', '$1<span style="color:#00c;">$2</span>$3', $code);
-		$code = preg_replace('/(\/\*[^\*\/]+\*\/)/si', '<span style="color:#c00;">$1</span>', $code);
-		$code = preg_replace('/(\/\/.*)/', '<span style="color:#c00;">$1</span>', $code);
-	} elseif ($f === '.htaccess'){
-		$code = preg_replace('/(#.*)/', '<span style="color:#c00;">$1</span>', $code);
-	}
-	return '<pre><code>'.$code.'</code></pre>';
-}
 
 function get_ftype(string $file):string{
 	if (is_dir($file)){
@@ -49,7 +11,7 @@ function get_ftype(string $file):string{
 	}
 	$m = mime_content_type($file);
 	$f = strtolower(basename($file));
-	foreach (['php','css','html','js','py','rb','conf','ini','htaccess','zip','csv','tsv','txt','pl','image/','mpeg'] as $t){
+	foreach (['php','css','html','js','py','rb','conf','ini','htaccess','zip','csv','tsv','txt','image','mpeg','pl'] as $t){
 		if (str_ends_with($f, '.'.$t) || stripos($m, $t) !== false){
 			return $t;
 		}
@@ -62,7 +24,7 @@ function is_editable(string $fname):bool{
 	if (stripos(mime_content_type($fname), 'text/') !== false){
 		return true;
 	}
-	foreach (['txt','htaccess','php','pl','py','rb','conf','ini','log','css','html','js','csv','tsv','c','cpp','cxx','gkrs'] as $k){
+	foreach (['txt','htaccess','php','py','rb','conf','ini','log','css','html','js','csv','tsv','c','cpp','cxx','gkrs','pl'] as $k){
 		if (str_ends_with($f, '.'.$k)){
 			return true;
 		}
@@ -411,13 +373,6 @@ function main(string $from):int{
 					$replace['EDIT_AREA'] .= '<p><img style="max-width:100px;height:auto;" width="'.$im[0].'px" height="'.$im[1].'px" src="data:'.mime_content_type($current_file).';base64,'.base64_encode(file_get_contents($current_file)).'"></p>';
 				}
 				$replace['EDIT_AREA'] .= '</form><p><a href="?Dir='.$uri_dir.'&File='.basename($current_file).'&download">ダウンロードする</a></p><p><br></p>';
-				if (is_editable($current_file)){
-					$replace['EDIT_AREA'] .= '<h2>read only</h2><div class="pview"><div class="lid">';
-					for ($i = 0;$i <= substr_count($content, "\n");++$i){
-						$replace['EDIT_AREA'] .= $i +1 .'<br>';
-					}
-					$replace['EDIT_AREA'] .= '</div>'.highlight_code($content, $current_file).'</div>';
-				}
 			} else {
 				header('Content-Description:File Transfer');
 				$conf->content_type(mime_content_type($current_file));

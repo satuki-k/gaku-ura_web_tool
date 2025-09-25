@@ -33,9 +33,13 @@ table{
 th,td{
 	border:solid 1px #aaa;
 }
+table a{
+	text-decoration:none;
+}
 textarea{
 	width:99%;
 	max-height:400px;
+	tab-size:4;
 }
 button{
 	font-size:1em;
@@ -78,20 +82,17 @@ button:hover{
 
 
 /* ファイル属性 */
-.type_dir{
-	padding:1px;
-}
-.type_dir a{
-	border:solid 1px #b60;
+.type_dir:before{
+	content:'🗂';
 }
 .type_php:before{
-	content:'⚖';
+	content:'🐈';
 }
 .type_html:before{
-	content:'🌍';
+	content:'🌏';
 }
 .type_css:before{
-	content:'🐟';
+	content:'🛡';
 }
 .type_js:before{
 	content:'🗡';
@@ -127,51 +128,4 @@ button:hover{
 	content:'⚠';
 }
 
-
-/* 適当なハイライト */
-.gaku-ura_include{
-	text-decoration:underline;
-}
-.gaku-ura_include:after{
-	content:'gaku-ura lib';
-	color:#c00;
-}
-.gaku-ura_notminify{
-	text-decoration:underline;
-}
-.gaku-ura_notminify:after{
-	content:'not minify';
-	color:#c00;
-}
-.gaku-ura_replace{
-	text-decoration:underline wavy #aaa;
-}
-.gaku-ura_replace:after{
-	content:'variable';
-	color:#ccc;
-}
-
-.pview{
-	display:flex;
-	background:#fff;
-	overflow-x:scroll;
-	max-height:400px;
-	font-size:1em;
-	color:#000;
-}
-.pview h1, .pview h2{
-	text-align:left;
-}
-.pview *{
-	color:#000;
-}
-.pview pre{
-	width:100%;
-}
-.lid{
-	height:100%;
-	background:#eee;
-	color:#111;
-	min-width:4em;
-}
 
