@@ -1,7 +1,7 @@
-h1{
+h1,#exit{
 	color:#fff;
 }
-body,input,textarea{
+html,body,input,textarea{
 	background:#000;
 	color:#eee;
 }
@@ -15,7 +15,7 @@ input[type="text"],input[type="password"]{
 	font-size:1em;
 	width:10em;
 }
-form table input[type="text"],table form input[type="password"]{
+form table input[type="text"],table input[type="password"]{
 	width:95%;
 	border:none;
 	outline:none;
@@ -30,12 +30,25 @@ table{
 	width:100%;
 	border-collapse:collapse;
 }
-th,td{
+table,th,td{
 	border:solid 1px #aaa;
 }
-table a{
+tbody a{
 	text-decoration:none;
+	font-weight:bold;
 }
+.js_finput{
+	font-size:.8em;
+	display:inline-block;
+	border:solid 1px #eee;
+	background:#f0c;
+	color:#111;
+	margin:.2em;
+}
+.js_finput input{
+	display:none;
+}
+
 textarea{
 	width:99%;
 	max-height:400px;
@@ -51,29 +64,10 @@ button:hover{
 	background:transparent;
 	color:#fff;
 }
-.profile h1{
-	text-align:left;
-}
-
-/* js file input */
-.js_finput{
-	font-size:.8em;
-	display:inline-block;
-	border:solid 1px #eee;
-	background:#f0c;
-	color:#111;
-	margin:.2em;
-}
-.js_finput input[type="file"]{
-	display:none;
-}
-
-
 #exit{
 	border:solid 1px #fff;
 	background:#f0b;
 	padding:.2em;
-	color:#fff;
 }
 #my,#my *{
 	background:#555;
@@ -128,4 +122,7 @@ button:hover{
 	content:'⚠';
 }
 
+.profile h1{
+	text-align:left;
+}
 
