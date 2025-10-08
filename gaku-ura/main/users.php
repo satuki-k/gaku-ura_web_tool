@@ -1,6 +1,6 @@
 <?php
 /*
- * gaku-ura9.5.14
+ * gaku-ura9.5.15
 */
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -12,7 +12,7 @@ function get_ftype(string $file):string{
 	$m = mime_content_type($file);
 	$f = strtolower(basename($file));
 	foreach (['php','css','html','js','py','rb','conf','ini','htaccess','zip','csv','tsv','txt','image','mpeg','pl'] as $t){
-		if (str_ends_with($f, '.'.$t) || stripos($m, $t) !== false){
+		if (str_ends_with($f,'.'.$t) || stripos($m,$t)!==false){
 			return $t;
 		}
 	}
@@ -21,7 +21,7 @@ function get_ftype(string $file):string{
 
 function is_editable(string $fname):bool{
 	$f = strtolower(basename($fname));
-	if (stripos(mime_content_type($fname), 'text/') !== false){
+	if (stripos(mime_content_type($fname),'text/') !== false){
 		return true;
 	}
 	foreach (['txt','htaccess','php','py','rb','conf','ini','log','css','html','js','csv','tsv','c','cpp','cxx','gkrs','pl'] as $k){
@@ -67,11 +67,11 @@ function main(string $from):int{
 			exit;
 		}
 		if ($conf->url_param === ''){
-			if (list_isset($_POST, ['submit','session_token']) && $_POST['submit']==='logout' && $conf->check_csrf_token('user_home', $_POST['session_token'], true)){
+			if (list_isset($_POST,['submit','session_token']) && $_POST['submit']==='logout' && $conf->check_csrf_token('user_home',$_POST['session_token'],true)){
 				$_SESSION['gaku-ura_login:id'] = '';
 				header('Location:./');
 				exit;
-			} elseif (list_isset($_POST, ['session_token','name','mail','passwd','new_passwd','profile']) && $conf->check_csrf_token('user_home', $_POST['session_token'], true)){
+			} elseif (list_isset($_POST,['session_token','name','mail','passwd','new_passwd','profile']) && $conf->check_csrf_token('user_home',$_POST['session_token'],true)){
 				$new_user_data = $login_data['user_data'];
 				$name = row(h(GakuUraUser::h($_POST['name'])));
 				$mail = row(h(GakuUraUser::h($_POST['mail'])));
@@ -133,13 +133,17 @@ function main(string $from):int{
 			$conf->not_found();
 		}
 		$is_edit_mode = false;
+		$menu = isset($_GET['Menu'])?$_GET['Menu']:'';
 		$admin_dir = $user->own_dir[(int)$login_data['user_data']['admin']];
 		$c_root = realpath($conf->d_root.$admin_dir);
 		$current_dir = $c_root;
 		$uri_dir = '';
-		$replace = ['TITLE'=>'管理機能','EDIT_AREA'=>'','FILE_LIST'=>''];
+		$replace = ['TITLE'=>'管理機能','EDIT_AREA'=>'','FILE_LIST'=>'','CONFIG'=>''];
+		if ((int)$login_data['user_data']['admin']===4 && strpos($conf->config_file,$c_root)!==false){
+			$replace['CONFIG'] = '<a href="?Dir='.str_replace($c_root.'/','',str_replace('/'.basename($conf->config_file),'',$conf->config_file)).'&File='.basename($conf->config_file).'&Menu=edit">設定</a>';
+		}
 		//現在位置を特定
-		if (isset($_GET['Dir']) && strpos($_GET['Dir'], '..')===false && is_dir($c_root.'/'.h($_GET['Dir']))){
+		if (isset($_GET['Dir']) && strpos($_GET['Dir'],'..')===false && is_dir($c_root.'/'.h($_GET['Dir']))){
 			$uri_dir = h($_GET['Dir']);
 			if ($uri_dir !== ''){
 				$current_dir = realpath($c_root.'/'.$uri_dir);
@@ -207,17 +211,17 @@ function main(string $from):int{
 				break;
 				case 'new':
 				if (list_isset($_POST, ['new','name'])){
-					$name = str_replace('..', '', str_replace('/', '', h($_POST['name'])));
+					$name = str_replace('..','', str_replace('/','',h($_POST['name'])));
 					if ($_POST['new'] === '.htaccess'){
 						touch($current_dir.'/.htaccess');
 					} elseif ($_POST['new']==='/sitemap.xml' && strpos($conf->d_root, $c_root)!==false){
 						$url_list = [''];
 						foreach (scandir($conf->data_dir.'/home/html') as $f){
-							if (strpos($f, '.html') !== false){
-								$url_list[] = '?Page='.str_replace('.html', '', $f);
+							if (strpos($f,'.html') !== false){
+								$url_list[] = '?Page='.str_replace('.html','',$f);
 							}
-							if (strpos($f, '.md') !== false){
-								$url_list[] = '?Page='.str_replace('.md', '', $f);
+							if (strpos($f,'.md') !== false){
+								$url_list[] = '?Page='.str_replace('.md','',$f);
 							}
 						}
 						if (isset($conf->config['login.enable']) && (int)$conf->config['login.enable']===1){
@@ -242,36 +246,36 @@ function main(string $from):int{
 						} elseif ($_POST['new'] === 'file'){
 							touch($current_dir.'/'.$name);
 						} else {
-							if (strpos($name, '.'.$_POST['new'])===false && in_array($_POST['new'], ['php','html','css','js','pl','py'], true)){
+							if (strpos($name,'.'.$_POST['new'])===false && in_array($_POST['new'],['php','html','css','js','pl','py'],true)){
 								$name .= '.'.$_POST['new'];
 							}
-							$new_path = $current_dir.'/'.str_replace('..', '.', $name);
+							$new_path = $current_dir.'/'.str_replace('..','.',$name);
 							$content = '';
 							switch ($_POST['new']){
 								case 'php':
 								$content = '<?php';
 								if ($current_dir === __DIR__){
-									$content .= implode("\n", ['','require __DIR__ .\'/../conf/conf.php\';','function main():int{',"\t".'return 0;','}']);
+									$content .= implode("\n",['','require __DIR__ .\'/../conf/conf.php\';','function main():int{',"\t".'return 0;','}']);
 								}
 								break;
 								case 'html':
-								$content = implode("\n", ['<!DOCTYPE html>','<html lang="ja">','<head>','<meta http-equiv="content-type" content="text/html;charset=UTF-8">','<meta name="viewport" content="width=device-width,initial-scale=1.0">','<title>neu</title>','<style>','</style>','</head>','<body>','<h1>neu</h1>','</body>','</html>']);
+								$content = implode("\n",['<!DOCTYPE html>','<html lang="ja">','<head>','<meta http-equiv="content-type" content="text/html;charset=UTF-8">','<meta name="viewport" content="width=device-width,initial-scale=1.0">','<title>neu</title>','<style>','</style>','</head>','<body>','<h1>neu</h1>','</body>','</html>']);
 								break;
 								case 'css':
-								$content = implode("\n", ['/* gaku-uraを使用する場合は以下の機能が適用されます */','/* #!include [lib_name.css]; (data/dafault/lib/css の中を使う場合) */','/* @import は自動的に順序を保持してCSSの先頭に移動します。 */']);
+								$content = implode("\n",['/* gaku-uraを使用する場合は以下の機能が適用されます */','/* #!include [lib_name.css]; (data/dafault/lib/css の中を使う場合) */','/* @import は自動的に順序を保持してCSSの先頭に移動します。 */']);
 								break;
 								case 'js':
-								$content = implode("\n", ['// gaku-uraを使用する場合は以下の機能が適用されます。','// #!include [lib_name].js; (data/default/lib/js の中を使う場合)']);
+								$content = implode("\n",['// gaku-uraを使用する場合は以下の機能が適用されます。','// #!include [lib_name].js; (data/default/lib/js の中を使う場合)']);
 								break;
 								case 'pl':
-								$content = implode("\n", ['#!/usr/bin/env perl','use strict;','use warnings;','print "content-type:text/html;charset=UTF-8\n\n";']);
+								$content = implode("\n",['#!/usr/bin/env perl','use strict;','use warnings;','print "content-type:text/html;charset=UTF-8\n\n";']);
 								break;
 								case 'py':
-								$content = implode("\n", ['#!/usr/bin/env python3','import cgi','print("content-type:text/html;charset=UTF-8\n")']);
+								$content = implode("\n",['#!/usr/bin/env python3','import cgi','print("content-type:text/html;charset=UTF-8\n")']);
 								break;
 							}
 							file_put_contents($new_path, $content."\n", LOCK_EX);
-							if ($_POST['new']==='pl' || $_POST['new']==='py'){
+							if (in_array($_POST['new'], ['pl','py'], true)){
 								chmod($new_path, 0745);
 							}
 						}
@@ -293,7 +297,11 @@ function main(string $from):int{
 									rename($ftname, $path);
 								}
 								//403防止
-								chmod($path, $perm_list['STATIC']);
+								if (str_ends_with($fname,'.cgi') || str_ends_with($fname,'.pl') || str_ends_with($fname,'.rb')){
+									chmod($path, 0745);
+								} else {
+									chmod($path, $perm_list['STATIC']);
+								}
 							}
 						}
 					}
@@ -347,15 +355,17 @@ function main(string $from):int{
 		//ファイルがある
 		if (isset($_GET['File']) && strpos($_GET['File'],'..')===false && strpos($_GET['File'], '/')===false && is_file($current_dir.'/'.h($_GET['File']))){
 			$current_file = $current_dir.'/'.h($_GET['File']);
-			//ユーザー管理
-			if ($current_file===$user->user_list_file && !isset($_GET['download'])){
-				$_GET['Menu'] = 'user';
-			} elseif ((isset($_GET['Menu'])&&($_GET['Menu']==='edit')) || (is_editable($current_file)&&!isset($_GET['download']))){
-				//編集
-				$replace['TITLE'] = 'ファイル:'.basename($current_file).' を編集';
-				$html = file_get_contents($html_file);
-				remove_comment_rows($html, '<file_list>', '</file_list>');
-				$replace['EDIT_AREA'] = '<form action="" method="POST" id="form">
+			if (!isset($_GET['download'])){
+				$is_edit_mode = true;
+				if ($current_file===$user->user_list_file){
+					//ユーザー管理
+					$menu = 'user';
+				} elseif ($menu==='edit' || is_editable($current_file)){
+					//編集
+					$replace['TITLE'] = 'ファイル:'.basename($current_file).' を編集';
+					$html = file_get_contents($html_file);
+					remove_comment_rows($html, '<file_list>', '</file_list>');
+					$replace['EDIT_AREA'] = '<form action="" method="POST" id="form">
 <input type="hidden" name="session_token" value="'.$conf->set_csrf_token('admin__edit_file').'">
 <input type="hidden" name="name" value="'.basename($current_file).'">
 <p><a href="?Dir='.$uri_dir.'" id="exit">戻る</a>
@@ -365,15 +375,19 @@ function main(string $from):int{
 </select></label>
 　<label><input type="radio" name="remove" value="no" checked>削除しない</label> <label><input type="radio" name="remove" value="yes">削除する</label>
 　<label><button type="submit" name="submit_type" value="edit_file">保 存</button></label></p>';
-				if (is_editable($current_file)){
-					$content = file_get_contents($current_file);
-					$replace['EDIT_AREA'] .= '<p><label><textarea rows="25" name="content" id="text">'.str_replace("\t", '&#9;', preg_replace('/\r\n|\r|\n/', '&#10;', h($content))).'</textarea></label></p>';
-				} elseif (stripos(mime_content_type($current_file), 'image/') !== false){
-					$im = getimagesize($current_file);
-					$replace['EDIT_AREA'] .= '<p><img style="max-width:100px;height:auto;" width="'.$im[0].'px" height="'.$im[1].'px" src="data:'.mime_content_type($current_file).';base64,'.base64_encode(file_get_contents($current_file)).'"></p>';
+					if (is_editable($current_file)){
+						$content = file_get_contents($current_file);
+						$replace['EDIT_AREA'] .= '<p><label><textarea rows="25" name="content" id="text">'.str_replace("\t", '&#9;', preg_replace('/\r\n|\r|\n/', '&#10;', h($content))).'</textarea></label></p>';
+					} elseif (stripos(mime_content_type($current_file), 'image/') !== false){
+						$im = getimagesize($current_file);
+						$replace['EDIT_AREA'] .= '<p><img style="max-width:100px;height:auto;" width="'.$im[0].'px" height="'.$im[1].'px" src="data:'.mime_content_type($current_file).';base64,'.base64_encode(file_get_contents($current_file)).'"></p>';
+					}
+					$replace['EDIT_AREA'] .= '</form><p><a href="?Dir='.$uri_dir.'&File='.basename($current_file).'&download">ダウンロードする</a></p><p><br></p>';
+				} else {
+					$is_edit_mode = false;
 				}
-				$replace['EDIT_AREA'] .= '</form><p><a href="?Dir='.$uri_dir.'&File='.basename($current_file).'&download">ダウンロードする</a></p><p><br></p>';
-			} else {
+			}
+			if (!$is_edit_mode){
 				header('Content-Description:File Transfer');
 				$conf->content_type(mime_content_type($current_file));
 				header('Content-Disposition:attachment;filename="'.basename($current_file).'"');
@@ -384,64 +398,24 @@ function main(string $from):int{
 				readfile($current_file);
 				exit;
 			}
-			$is_edit_mode = true;
-		} elseif (not_empty($uri_dir) && isset($_GET['Menu']) && $_GET['Menu']==='edit'){
+		} elseif (not_empty($uri_dir) && $menu==='edit'){
 			//ディレクトリの編集
 			$is_edit_mode = true;
-			$replace['TITLE'] = 'ディレクトリ:'.basename($current_dir).' を編集';
+			$replace['TITLE'] = 'ディレクトリ"'.basename($current_dir).'"を編集';
 			$up_to = '';
 			if ($uri_dir !== ''){
 				$flist = explode('/', $uri_dir);
-				$up_to = implode('/', array_slice($flist, 0, count($flist) -1));
+				$up_to = implode('/', array_slice($flist,0,count($flist)-1));
 			}
 			$html = file_get_contents($html_file);
 			remove_comment_rows($html, '<file_list>', '</file_list>');
-			$replace['EDIT_AREA'] = '<form action="" method="POST" id="form">
-<input type="hidden" name="session_token" value="'.$conf->set_csrf_token('admin__edit_dir').'">
-<p><a href="?Dir='.$up_to.'" id="exit">戻る</a>
-	<label>名前<input type="text" name="new_name" value="'.basename($current_dir).'" placeholder="変更なし"></label>
-	<label>ﾊﾟｰﾐｯｼｮﾝ<select name="perm"><option value="no">'.substr(sprintf('%o', fileperms($current_dir)), -3).' 変更しない</option>
-<option value="DIR">755</option><option value="CGI">745</option><option value="STATIC">644</option><option value="PRIVATE">600</option>
-</select></label>
+			$replace['EDIT_AREA'] = '<form action="" method="POST" id="form"><input type="hidden" name="session_token" value="'.$conf->set_csrf_token('admin__edit_dir').'">
+<p><a href="?Dir='.$up_to.'" id="exit">戻る</a><label>名前<input type="text" name="new_name" value="'.basename($current_dir).'" placeholder="変更なし"></label>
+<label>ﾊﾟｰﾐｯｼｮﾝ<select name="perm"><option value="no">'.substr(sprintf('%o',fileperms($current_dir)), -3).' 変更しない</option>
+<option value="DIR">755</option><option value="CGI">745</option><option value="STATIC">644</option><option value="PRIVATE">600</option></select></label>
 　<label><input type="radio" name="remove" value="no" checked>削除しない</label> <label><input type="radio" name="remove" value="yes">削除する</label>
-　<label><button type="submit" name="submit_type" value="edit_dir">保 存</button></label>
-</p></form><p><br></p>';
-		} elseif (!isset($_GET['Menu']) || $_GET['Menu']!=='user'){
-			$html = file_get_contents($html_file);
-			$html = str_replace('<file_list>', '', str_replace('</file_list>', '', $html));
-			$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__new');
-			if ($uri_dir === ''){
-				$replace['FILE_LIST'] .= '<tr><td colspan="5"><b>ルート</b></td></tr>';
-			} else {
-				$flist = explode('/', $uri_dir);
-				$up_to = implode('/', array_slice($flist, 0, count($flist) -1));
-				$replace['FILE_LIST'] .= '<tr><td colspan="5"><a href="?Dir=">ルート</a>';
-				for ($i = 0;$i < count($flist) -1;++$i){
-					$replace['FILE_LIST'] .= '/<a href="?Dir='.implode('/', array_slice($flist, 0, $i+1)).'">'.$flist[$i].'</a>';
-				}
-				$replace['FILE_LIST'] .= '/'.$flist[count($flist) -1].'</td></tr>';
-			}
-			//先頭の/禁止
-			$u_dir = $uri_dir;
-			if ($u_dir !== ''){
-				$u_dir .= '/';
-			}
-			$files = scandir($current_dir);
-			file_sort($files, $current_dir);
-			foreach ($files as $f){
-				if ($f === '.' || $f == '..'){
-					continue;
-				}
-				$file = $current_dir.'/'.$f;
-				$mt = date('Y-m/d H:i', filemtime($file));
-				if (is_dir($file)){
-					$replace['FILE_LIST'] .= '<tr><td class="type_dir"><a href="?Dir='.$u_dir.$f.'">'.$f.'</a></td><td><a href="?Dir='.$u_dir.$f.'&Menu=edit">編　集</a></td><td>'.count(scandir($file))-2 .'ファイル</td><td>'.$mt.'</td></tr>';
-				} else {
-					$replace['FILE_LIST'] .= '<tr><td class="type_'.get_ftype($file).'"><a href="?Dir='.$uri_dir.'&File='.$f.(is_editable($file)?'&Menu=edit':'').'">'.$f.'</a></td><td><a href="?Dir='.$uri_dir.'&File='.$f.'&Menu=edit">編　集</a></td><td>'.filesize($file)/1000 .'kB '.mime_content_type($file).'</td><td>'.$mt.'</td></tr>';
-				}
-			}
-		}
-		if (isset($_GET['Menu']) && $_GET['Menu']==='user'){
+　<label><button type="submit" name="submit_type" value="edit_dir">保 存</button></label></p></form><p><br></p>';
+		} elseif ($menu === 'user'){
 			$is_edit_mode = true;
 
 			//ユーザー管理
@@ -485,9 +459,42 @@ function main(string $from):int{
 				$replace['EDIT_AREA'] .= '<p><a href="?Dir='.dirname(str_replace($c_root.'/','',$user->user_list_file)).'&File='.basename($user->user_list_file).'&download">ダウンロードする</a></p>';
 			}
 			$replace['EDIT_AREA'] .= '<p>idは必ず行番号-1です。adminは自分のより小さい0以上の整数です。enableが0でログイン出来なくなります。このファイルは<b>最高権限のユーザー</b>のみ上書きアップロード可能ですが最高権限が存在しない場合はFTP等を使用して最高権限ユーザーのadminを4にしてください。</p>';
+		} else {
+			$html = file_get_contents($html_file);
+			$html = str_replace('<file_list>', '', str_replace('</file_list>', '', $html));
+			$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__new');
+			if ($uri_dir === ''){
+				$replace['FILE_LIST'] .= '<tr><td colspan="5"><b>ルート</b></td></tr>';
+			} else {
+				$flist = explode('/', $uri_dir);
+				$up_to = implode('/', array_slice($flist, 0, count($flist) -1));
+				$replace['FILE_LIST'] .= '<tr><td colspan="5"><a href="?Dir=">ルート</a>';
+				for ($i = 0;$i < count($flist) -1;++$i){
+					$replace['FILE_LIST'] .= '/<a href="?Dir='.implode('/', array_slice($flist, 0, $i+1)).'">'.$flist[$i].'</a>';
+				}
+				$replace['FILE_LIST'] .= '/'.$flist[count($flist) -1].'</td></tr>';
+			}
+			//先頭の/禁止
+			$u_dir = $uri_dir;
+			if ($u_dir !== ''){
+				$u_dir .= '/';
+			}
+			$files = scandir($current_dir);
+			file_sort($files, $current_dir);
+			foreach ($files as $f){
+				if ($f === '.' || $f == '..'){
+					continue;
+				}
+				$file = $current_dir.'/'.$f;
+				$mt = date('Y-m/d H:i', filemtime($file));
+				if (is_dir($file)){
+					$replace['FILE_LIST'] .= '<tr><td class="type_dir"><a href="?Dir='.$u_dir.$f.'">'.$f.'</a></td><td><a href="?Dir='.$u_dir.$f.'&Menu=edit">編　集</a></td><td>'.count(scandir($file))-2 .'ファイル</td><td>'.$mt.'</td></tr>';
+				} else {
+					$replace['FILE_LIST'] .= '<tr><td class="type_'.get_ftype($file).'"><a href="?Dir='.$uri_dir.'&File='.$f.(is_editable($file)?'&Menu=edit':'').'">'.$f.'</a></td><td><a href="?Dir='.$uri_dir.'&File='.$f.'&Menu=edit">編　集</a></td><td>'.filesize($file)/1000 .'kB '.mime_content_type($file).'</td><td>'.$mt.'</td></tr>';
+				}
+			}
 		}
-
-		if (!$is_edit_mode && isset($_GET['Menu']) && $_GET['Menu']==='edit'){
+		if (!$is_edit_mode && $menu==='edit'){
 			header('Location:?Dir='.$uri_dir);
 			exit;
 		}

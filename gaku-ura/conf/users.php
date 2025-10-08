@@ -1,6 +1,6 @@
 <?php
 /*
- * gaku-ura9.5.13
+ * gaku-ura9.5.15
 */
 
 //ログイン必須とは限らない機能を考慮し、ログインチェックは初期化では行わない
@@ -104,7 +104,7 @@ class GakuUraUser{
 		$user_row = '';
 		foreach ($this->user_list_keys as $k){
 			if (isset($user_data[$k])){
-				$user_row .= $user_data[$k];
+				$user_row .= trim(self::h($user_data[$k]));
 			}
 			$user_row .= "\t";
 		}
