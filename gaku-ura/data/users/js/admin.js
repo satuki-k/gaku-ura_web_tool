@@ -3,22 +3,24 @@
 #!include popup.js;
 #!include string.js;
 
-const input_special_text = (e, char)=>{
-	const pos = e.selectionStart;
-	e.setRangeText(char, pos, pos, 'end');
-	const event = new InputEvent("input", {bubbles:true, cancelable:true, inputType:"insertText", data:char});
-	e.dispatchEvent(event);
+const input_special_text = (e, c)=>{
+	const p = e.selectionStart;
+	e.setRangeText(c, p, p, 'end');
+	const v = new InputEvent("input", {bubbles:true,cancelable:true,inputType:"insertText",data:c});
+	e.dispatchEvent(v);
 };
 
 class TextEditor{
 	#editor;
 	#lid;
 	#code;
+	#pre;
 	constructor(){
 		if ($ID("fsize") || $ID("input_tab")) return;
 		this.#lid = document.createElement("div");
 		this.#code = document.createElement("code");
 		this.#editor = document.createElement("div");
+		this.#pre = {"l":0,"c":""};
 		const pre = document.createElement("pre");
 		const p = document.createElement("p");
 		const tb = document.createElement("button");
@@ -32,7 +34,7 @@ class TextEditor{
 
 		//エディター初期化
 		const tl = $ID("text").innerHTML.split("\n");
-		this.#code.setAttribute("contenteditable", "true");
+		this.#code.setAttribute("contenteditable", "plaintext-only");
 		this.#code.innerHTML = "";
 		for (let i = 0; i < tl.length; ++i){
 			this.#code.innerHTML += tl[i]+"\n";
@@ -40,9 +42,9 @@ class TextEditor{
 		for (let i = 0; i < tl.length; ++i){
 			this.#lid.innerHTML += (i+1)+"<br>";
 		}
-		this.#editor.style = "display:flex;background:#fff;max-height:500px;color:#000;overflow:scroll;";
+		this.#editor.style = "display:flex;background:#fff;max-height:500px;color:#000;overflow:scroll;position:relative;";
 		pre.style = "width:100%;";
-		this.#lid.style = "height:100%;background:#eee;color:#111;min-width:4em;";
+		this.#lid.style = "height:100%;background:#eee;color:#111;min-width:4em;position:sticky;left:0;";
 		this.#code.style = "display:block;outline:none;tab-size:4;";
 		pre.append(this.#code);
 		this.#editor.append(this.#lid);
@@ -70,7 +72,7 @@ class TextEditor{
 			e.preventDefault();
 			$ID("text").style.display = "block";
 		});
-		this.hlstring(false);
+		/*this.hlstring(false);*/
 	}
 
 	ins_tab(){
@@ -85,6 +87,7 @@ class TextEditor{
 		this.#code.focus();
 	}
 
+	/*
 	__hlstring(){
 		let t = $ID("text").innerHTML;
 		switch ($QS('input[name="new_name"]').value.split('.').slice(-1)[0]){
@@ -114,8 +117,6 @@ class TextEditor{
 		}
 	}
 	hlstring(f=true){
-		return; //undoが出来なくなるし重い
-		/*
 		try {
 			const sel = window.getSelection();
 			const range = sel.getRangeAt(0);
@@ -152,8 +153,8 @@ class TextEditor{
 		} catch {
 			this.__hlstring();
 		}
-		*/
 	}
+	*/
 
 	key_in(e, ty=null){
 		if (ty === "keydown" && e.key === "Tab"){
@@ -161,21 +162,24 @@ class TextEditor{
 			this.ins_tab();
 		}
 		let t = this.#code.textContent;
+		if (this.#pre.c === t) return;
+		this.#pre.c = t;
 		if (t.slice(-1) !== "\n"){
 			t += "\n";
 		}
-		//const tl = t.slice(0,-1).split("\n");
 		const tl = t.split("\n");
 		$ID("text").innerHTML = "";
 		for (let i = 0; i < tl.length -1; ++i){
 			$ID("text").innerHTML += h(tl[i])+"\n";
 		}
 		$ID("text").innerHTML += tl[tl.length -1];
+		if (this.#pre.l === tl.length) return;
 		this.#lid.innerHTML = "";
 		for (let i = 0; i < tl.length; ++i){
 			this.#lid.innerHTML += (i+1)+"<br>";
 		}
-		this.hlstring();
+		this.#pre.l = tl.length;
+		/*this.hlstring();*/
 	}
 };
 
