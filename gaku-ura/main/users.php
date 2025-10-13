@@ -1,6 +1,6 @@
 <?php
 /*
- * gaku-ura9.5.15
+ * gaku-ura9.5.16
 */
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -415,7 +415,42 @@ function main(string $from):int{
 <option value="DIR">755</option><option value="CGI">745</option><option value="STATIC">644</option><option value="PRIVATE">600</option></select></label>
 　<label><input type="radio" name="remove" value="no" checked>削除しない</label> <label><input type="radio" name="remove" value="yes">削除する</label>
 　<label><button type="submit" name="submit_type" value="edit_dir">保 存</button></label></p></form><p><br></p>';
-		} elseif ($menu === 'user'){
+		} elseif (!$is_edit_mode){
+			$html = file_get_contents($html_file);
+			$html = str_replace('<file_list>', '', str_replace('</file_list>', '', $html));
+			$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__new');
+			if ($uri_dir === ''){
+				$replace['FILE_LIST'] .= '<tr><td colspan="5"><b>ルート</b></td></tr>';
+			} else {
+				$flist = explode('/', $uri_dir);
+				$up_to = implode('/', array_slice($flist, 0, count($flist) -1));
+				$replace['FILE_LIST'] .= '<tr><td colspan="5"><a href="?Dir=">ルート</a>';
+				for ($i = 0;$i < count($flist) -1;++$i){
+					$replace['FILE_LIST'] .= '/<a href="?Dir='.implode('/', array_slice($flist, 0, $i+1)).'">'.$flist[$i].'</a>';
+				}
+				$replace['FILE_LIST'] .= '/'.$flist[count($flist) -1].'</td></tr>';
+			}
+			//先頭の/禁止
+			$u_dir = $uri_dir;
+			if ($u_dir !== ''){
+				$u_dir .= '/';
+			}
+			$files = scandir($current_dir);
+			file_sort($files, $current_dir);
+			foreach ($files as $f){
+				if ($f === '.' || $f == '..'){
+					continue;
+				}
+				$file = $current_dir.'/'.$f;
+				$mt = date('Y-m/d H:i', filemtime($file));
+				if (is_dir($file)){
+					$replace['FILE_LIST'] .= '<tr><td class="type_dir"><a href="?Dir='.$u_dir.$f.'">'.$f.'</a></td><td><a href="?Dir='.$u_dir.$f.'&Menu=edit">編　集</a></td><td>'.count(scandir($file))-2 .'ファイル</td><td>'.$mt.'</td></tr>';
+				} else {
+					$replace['FILE_LIST'] .= '<tr><td class="type_'.get_ftype($file).'"><a href="?Dir='.$uri_dir.'&File='.$f.(is_editable($file)?'&Menu=edit':'').'">'.$f.'</a></td><td><a href="?Dir='.$uri_dir.'&File='.$f.'&Menu=edit">編　集</a></td><td>'.filesize($file)/1000 .'kB '.mime_content_type($file).'</td><td>'.$mt.'</td></tr>';
+				}
+			}
+		}
+		if ($menu === 'user'){
 			$is_edit_mode = true;
 
 			//ユーザー管理
@@ -459,40 +494,6 @@ function main(string $from):int{
 				$replace['EDIT_AREA'] .= '<p><a href="?Dir='.dirname(str_replace($c_root.'/','',$user->user_list_file)).'&File='.basename($user->user_list_file).'&download">ダウンロードする</a></p>';
 			}
 			$replace['EDIT_AREA'] .= '<p>idは必ず行番号-1です。adminは自分のより小さい0以上の整数です。enableが0でログイン出来なくなります。このファイルは<b>最高権限のユーザー</b>のみ上書きアップロード可能ですが最高権限が存在しない場合はFTP等を使用して最高権限ユーザーのadminを4にしてください。</p>';
-		} else {
-			$html = file_get_contents($html_file);
-			$html = str_replace('<file_list>', '', str_replace('</file_list>', '', $html));
-			$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__new');
-			if ($uri_dir === ''){
-				$replace['FILE_LIST'] .= '<tr><td colspan="5"><b>ルート</b></td></tr>';
-			} else {
-				$flist = explode('/', $uri_dir);
-				$up_to = implode('/', array_slice($flist, 0, count($flist) -1));
-				$replace['FILE_LIST'] .= '<tr><td colspan="5"><a href="?Dir=">ルート</a>';
-				for ($i = 0;$i < count($flist) -1;++$i){
-					$replace['FILE_LIST'] .= '/<a href="?Dir='.implode('/', array_slice($flist, 0, $i+1)).'">'.$flist[$i].'</a>';
-				}
-				$replace['FILE_LIST'] .= '/'.$flist[count($flist) -1].'</td></tr>';
-			}
-			//先頭の/禁止
-			$u_dir = $uri_dir;
-			if ($u_dir !== ''){
-				$u_dir .= '/';
-			}
-			$files = scandir($current_dir);
-			file_sort($files, $current_dir);
-			foreach ($files as $f){
-				if ($f === '.' || $f == '..'){
-					continue;
-				}
-				$file = $current_dir.'/'.$f;
-				$mt = date('Y-m/d H:i', filemtime($file));
-				if (is_dir($file)){
-					$replace['FILE_LIST'] .= '<tr><td class="type_dir"><a href="?Dir='.$u_dir.$f.'">'.$f.'</a></td><td><a href="?Dir='.$u_dir.$f.'&Menu=edit">編　集</a></td><td>'.count(scandir($file))-2 .'ファイル</td><td>'.$mt.'</td></tr>';
-				} else {
-					$replace['FILE_LIST'] .= '<tr><td class="type_'.get_ftype($file).'"><a href="?Dir='.$uri_dir.'&File='.$f.(is_editable($file)?'&Menu=edit':'').'">'.$f.'</a></td><td><a href="?Dir='.$uri_dir.'&File='.$f.'&Menu=edit">編　集</a></td><td>'.filesize($file)/1000 .'kB '.mime_content_type($file).'</td><td>'.$mt.'</td></tr>';
-				}
-			}
 		}
 		if (!$is_edit_mode && $menu==='edit'){
 			header('Location:?Dir='.$uri_dir);
