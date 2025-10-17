@@ -225,7 +225,7 @@ function main(string $from):int{
 						exit;
 					} elseif ($_POST['new']==='/robots.txt' && strpos($conf->d_root, $c_root)!==false){
 						file_put_contents($conf->d_root.'/robots.txt', "User-agent: *\nSitemap : {$conf->domain}sitemap.xml\n", LOCK_EX);
-						header('Location:?'.str_replace($c_root,'',$conf->d_root).'&File=robots.txt&Menu=edit');
+						header('Location:?Dir='.str_replace($c_root,'',$conf->d_root).'&File=robots.txt&Menu=edit');
 						exit;
 					} elseif (not_empty($name) && !file_exists($current_dir.'/'.$name)){
 						if ($_POST['new'] === 'folder'){
