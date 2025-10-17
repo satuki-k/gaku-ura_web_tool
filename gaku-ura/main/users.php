@@ -1,23 +1,9 @@
 <?php
 /*
- * gaku-ura9.5.16
+ * gaku-ura9.5.17
 */
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
-
-function get_ftype(string $file):string{
-	if (is_dir($file)){
-		return 'dir';
-	}
-	$m = mime_content_type($file);
-	$f = strtolower(basename($file));
-	foreach (['php','css','html','js','py','rb','conf','ini','htaccess','zip','csv','tsv','txt','image','mpeg','pl'] as $t){
-		if (str_ends_with($f,'.'.$t) || stripos($m,$t)!==false){
-			return $t;
-		}
-	}
-	return 'unknown';
-}
 
 function is_editable(string $fname):bool{
 	$f = strtolower(basename($fname));
@@ -217,28 +203,26 @@ function main(string $from):int{
 					} elseif ($_POST['new']==='/sitemap.xml' && strpos($conf->d_root, $c_root)!==false){
 						$url_list = [''];
 						foreach (scandir($conf->data_dir.'/home/html') as $f){
-							if (strpos($f,'.html') !== false){
-								$url_list[] = '?Page='.str_replace('.html','',$f);
-							}
-							if (strpos($f,'.md') !== false){
-								$url_list[] = '?Page='.str_replace('.md','',$f);
+							if (preg_match('/(\.(html|md))$/',$f) === 1){
+								$m = preg_replace('/(\.(html|md))$/', '', $f);
+								if ($m!=='index' && preg_match('/^[0-9]+$/',$m)!==1){
+									$url_list[] = '?Page='.$m;
+								}
 							}
 						}
 						if (isset($conf->config['login.enable']) && (int)$conf->config['login.enable']===1){
 							$url_list[] = 'users/';
 						}
-						$url_list = array_unique($url_list);
-						$t = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">';
-						foreach ($url_list as $i){
-							$t .= '<url><loc>'.$conf->domain.$i.'</loc></url>';
+						$t = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'."\n";
+						foreach (array_unique($url_list) as $i){
+							$t .= '<url><loc>'.$conf->domain.$i.'</loc></url>'."\n";
 						}
-						$t .= '</urlset>'."\n";
-						file_put_contents($conf->d_root.'/sitemap.xml', $t, LOCK_EX);
+						file_put_contents($conf->d_root.'/sitemap.xml', $t.'</urlset>'."\n", LOCK_EX);
 						header('Location:?File=sitemap.xml&Menu=edit');
 						exit;
 					} elseif ($_POST['new']==='/robots.txt' && strpos($conf->d_root, $c_root)!==false){
 						file_put_contents($conf->d_root.'/robots.txt', "User-agent: *\nSitemap : {$conf->domain}sitemap.xml\n", LOCK_EX);
-						header('Location:?File=robots.txt');
+						header('Location:?File=robots.txt&Menu=edit');
 						exit;
 					} elseif (not_empty($name) && !file_exists($current_dir.'/'.$name)){
 						if ($_POST['new'] === 'folder'){
@@ -444,9 +428,9 @@ function main(string $from):int{
 				$file = $current_dir.'/'.$f;
 				$mt = date('Y-m/d H:i', filemtime($file));
 				if (is_dir($file)){
-					$replace['FILE_LIST'] .= '<tr><td class="type_dir"><a href="?Dir='.$u_dir.$f.'">'.$f.'</a></td><td><a href="?Dir='.$u_dir.$f.'&Menu=edit">編　集</a></td><td>'.count(scandir($file))-2 .'ファイル</td><td>'.$mt.'</td></tr>';
+					$replace['FILE_LIST'] .= '<tr><td><a href="?Dir='.$u_dir.$f.'" class="dir">'.$f.'</a></td><td><a href="?Dir='.$u_dir.$f.'&Menu=edit">編　集</a></td><td>'.count(scandir($file))-2 .'ファイル</td><td>'.$mt.'</td></tr>';
 				} else {
-					$replace['FILE_LIST'] .= '<tr><td class="type_'.get_ftype($file).'"><a href="?Dir='.$uri_dir.'&File='.$f.(is_editable($file)?'&Menu=edit':'').'">'.$f.'</a></td><td><a href="?Dir='.$uri_dir.'&File='.$f.'&Menu=edit">編　集</a></td><td>'.filesize($file)/1000 .'kB '.mime_content_type($file).'</td><td>'.$mt.'</td></tr>';
+					$replace['FILE_LIST'] .= '<tr><td><a href="?Dir='.$uri_dir.'&File='.$f.(is_editable($file)?'&Menu=edit':'').'">'.$f.'</a></td><td><a href="?Dir='.$uri_dir.'&File='.$f.'&Menu=edit">編　集</a></td><td>'.filesize($file)/1000 .'kB '.mime_content_type($file).'</td><td>'.$mt.'</td></tr>';
 				}
 			}
 		}
