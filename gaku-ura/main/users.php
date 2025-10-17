@@ -198,6 +198,9 @@ function main(string $from):int{
 				case 'new':
 				if (list_isset($_POST, ['new','name'])){
 					$name = str_replace('..','', str_replace('/','',h($_POST['name'])));
+					if (in_array($_POST['new'],['.htaccess','/sitemap.xml','/robots.txt']) && !str_starts_with($conf->d_root,$c_root)){
+						$conf->not_found(false, '権限がありません');
+					}
 					if ($_POST['new'] === '.htaccess'){
 						touch($current_dir.'/.htaccess');
 					} elseif ($_POST['new']==='/sitemap.xml' && strpos($conf->d_root, $c_root)!==false){
@@ -218,11 +221,11 @@ function main(string $from):int{
 							$t .= '<url><loc>'.$conf->domain.$i.'</loc></url>'."\n";
 						}
 						file_put_contents($conf->d_root.'/sitemap.xml', $t.'</urlset>'."\n", LOCK_EX);
-						header('Location:?File=sitemap.xml&Menu=edit');
+						header('Location:?Dir='.str_replace($c_root,'',$conf->d_root).'&File=sitemap.xml&Menu=edit');
 						exit;
 					} elseif ($_POST['new']==='/robots.txt' && strpos($conf->d_root, $c_root)!==false){
 						file_put_contents($conf->d_root.'/robots.txt', "User-agent: *\nSitemap : {$conf->domain}sitemap.xml\n", LOCK_EX);
-						header('Location:?File=robots.txt&Menu=edit');
+						header('Location:?Dir='.str_replace($c_root,'',$conf->d_root).'&File=robots.txt&Menu=edit');
 						exit;
 					} elseif (not_empty($name) && !file_exists($current_dir.'/'.$name)){
 						if ($_POST['new'] === 'folder'){
