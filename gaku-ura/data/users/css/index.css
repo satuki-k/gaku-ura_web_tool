@@ -37,17 +37,6 @@ tbody a{
 	text-decoration:none;
 	font-weight:bold;
 }
-.js_finput{
-	font-size:.8em;
-	display:inline-block;
-	border:solid 1px #eee;
-	background:#f0c;
-	color:#111;
-	margin:.2em;
-}
-.js_finput input{
-	display:none;
-}
 
 textarea{
 	width:99%;
@@ -74,53 +63,12 @@ button:hover{
 	font-weight:bold;
 }
 
+/* ディレクトリだけ見分けをつける */
+.dir:before{
+	content:'■';
+	color:#fff;
+}
 
-/* ファイル属性 */
-.type_dir:before{
-	content:'🗂';
-}
-.type_php:before{
-	content:'🐈';
-}
-.type_html:before{
-	content:'🌏';
-}
-.type_css:before{
-	content:'🛡';
-}
-.type_js:before{
-	content:'🗡';
-}
-.type_py:before{
-	content:'◇';
-}
-.type_pl:before{
-	content:'◎';
-}
-.type_rb:before{
-	content:'▽';
-}
-.type_csv:before,.type_tsv:before{
-	content:'✂';
-}
-.type_txt:before{
-	content:'✉';
-}
-.type_htaccess:before,.type_ini:before,.type_conf:before{
-	content:'⚙';
-}
-.type_image:before{
-	content:'🖼';
-}
-.type_mpeg:before{
-	content:'📺';
-}
-.type_zip:before{
-	content:'❄';
-}
-.type_unknown:bofore{
-	content:'⚠';
-}
 
 .profile h1{
 	text-align:left;

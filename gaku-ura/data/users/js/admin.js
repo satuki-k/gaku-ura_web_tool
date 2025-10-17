@@ -230,7 +230,6 @@ if (qs_l.get("Menu") === "edit"){
 
 	drop_area.addEventListener("drop", (e)=>{
 		e.preventDefault();
-
 		drop_area.style.background = "";
 		const files = e.dataTransfer.files;
 		if (!files || (files.length === 0)) return;
@@ -241,19 +240,14 @@ if (qs_l.get("Menu") === "edit"){
 			const input = document.createElement("input");
 			input.type = "file";
 			input.name = "file"+fcount;
-			input.id = "file"+fcount;
-			label.classList.add("js_finput");
-			label.innerHTML = file.name+"<sup>削除</sup>";
-			label.id = "l_"+input.id;
+			input.style.display = "none";
+			label.style = "font-size:.8em;display:inline-block;border:solid 1px #eee;background:#f0c;color:#111;margin:.2em;";
+			label.innerHTML = file.name;
 			label.append(input);
 			input.files = insert_flist([file]);
 			input_files.appendChild(label);
 			fcount++;
-			$ID(label.id).onclick = (e)=>{
-				e.preventDefault();
-				$ID(label.id).remove();
-				fcount--;
-			};
+			label.addEventListener("click",(e)=>{e.preventDefault()});
 		}
 		if (fcount > 20) popup.alert("ファイル数が20を超えています。多分エラーになります。");
 	});
