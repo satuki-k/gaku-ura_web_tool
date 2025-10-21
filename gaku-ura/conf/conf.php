@@ -226,7 +226,7 @@ function list_isset(array $dict, array $keys):bool{
 //html互換md
 function to_html(string $md_text):string{
 	$fls = ['ol'=>0, 'ul'=>0];
-	$igtag = ['/','!','p','h','br','bl','bo','di','n','se','fo','ma','ar','as','sc','st','m','o','ul','l','dl','dd','dt'];
+	$igtag = ['/','!','p','t','h','br','bl','bo','di','n','se','fo','ma','ar','as','sc','st','m','o','ul','l','dl','dd','dt'];
 	$t = '';
 	foreach (explode("\n", u8lf($md_text)) as $i){
 		$row = trim($i);
