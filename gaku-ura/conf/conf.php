@@ -1,5 +1,5 @@
 <?php
-# gaku-ura9.5.13
+# gaku-ura9.5.18
 /* gaku-ura標準ライブラリが定義 */
 //ini_set('display_errors', 'Off');
 
@@ -225,57 +225,60 @@ function list_isset(array $dict, array $keys):bool{
 }
 //html互換md
 function to_html(string $md_text):string{
-	$fls = ['ol'=>0, 'ul'=>0];
-	$igtag = ['/','!','p','t','h','br','bl','bo','di','n','se','fo','ma','ar','as','sc','st','m','o','ul','l','dl','dd','dt'];
+	$fls = ['ol'=>1, 'ul'=>1];
 	$t = '';
 	foreach (explode("\n", u8lf($md_text)) as $i){
 		$row = trim($i);
-		$is_p = true;
-		if (substr($row, 0, 1) === '<'){
-			foreach ($igtag as $it){
-				if (substr($row, 1, strlen($it)) === $it){
-					$t .= $row;
-					$is_p = false;
-					break;
-				}
-			}
-		}
-		for ($i=6,$cp='######';$i >= 0;--$i,$cp=substr($cp,0,$i)){
-			if (substr($row, 0, $i +1) === $cp.' '){
-				$t .= '<h'.$i.'>'.substr($row, $i +1).'</h'.$i.'>';
-				$is_p = false;
-				break;
-			}
-		}
-		if (substr($row, 0, 1) === '*'){
-			if ($fls['ul'] === 0){
+		$fstc = substr($row, 0, 1);
+		if ($fstc === '*'){
+			if ($fls['ul']){
 				$t .= '<ul>';
-				$fls['ul'] = 1;
+				$fls['ul'] = 0;
 			}
-			$t .= '<li>'.trim(substr($row, 1)).'</li>';
+			$t .= '<li>'.trim(substr($row,1)).'</li>';
 			continue;
-		} elseif ($fls['ul'] === 1){
+		} elseif (!$fls['ul']){
 			$t .= '</ul>';
-			$fls['ul'] = 0;
+			$fls['ul'] = 1;
 		}
 		if (preg_match('/^[0-9]+\. .+$/', $row) === 1){
 			$row = preg_replace('/^[0-9]+\./', '', $row);
-			if ($fls['ol'] === 0){
+			if ($fls['ol']){
 				$t .= '<ol>';
-				$fls['ol'] = 1;
+				$fls['ol'] = 0;
 			}
 			$t .= '<li>'.trim($row).'</li>';
 			continue;
-		} elseif ($fls['ol'] === 1){
+		} elseif (!$fls['ol']){
 			$t .= '</ol>';
-			$fls['ol'] = 0;
+			$fls['ol'] = 1;
 		}
-		if ($is_p){
-			if ($row === ''){
-				$row = '<br>';
+		for ($i=6,$cp='######'; $i>0; --$i,$cp=substr($cp,0,$i)){
+			if (substr($row,0,$i) === $cp){
+				$t .= '<h'.$i.'>'.trim(substr($row,$i)).'</h'.$i.'>';
+				continue 2;
 			}
-			$t .= '<p>'.$row.'</p>';
 		}
+		if ($fstc === '`'){
+			$t .= $row;
+			continue;
+		} elseif ($fstc === '<'){
+			$nf = true;
+			foreach (['a','b','del','i','img','q','s','span','u'] as $pt){
+				if (substr($row, 1, strlen($pt)+1) === $pt.' '){
+					$nf = false;
+					break;
+				}
+			}
+			if ($nf){
+				$t .= $row;
+				continue;
+			}
+		}
+		if ($row === ''){
+			$row = '<br>';
+		}
+		$t .= '<p>'.$row.'</p>';
 	}
 	foreach (['~~'=>'del','**'=>'b','```'=>'blockquote','`'=>'code','*'=>'i'] as $wrap=>$tag){
 		$len = strlen($t);
