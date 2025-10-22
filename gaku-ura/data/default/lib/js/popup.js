@@ -35,7 +35,9 @@ class POPUP{
 		b.innerHTML = ok;
 		p.append(b);
 		this.#window.append(p);
-		b.addEventListener("click", ()=>{this.disapear()});
+		b.focus();
+		b.addEventListener("keydown", (e)=>{if(!(e.key==="Return"||e.key==="Enter"))e.preventDefault();});
+		b.addEventListener("click", ()=>this.disapear());
 	}
 
 	/* 質問 */
@@ -55,6 +57,19 @@ class POPUP{
 		p.append(n);
 		p.append(y);
 		this.#window.append(p);
+		y.focus();
+		y.addEventListener("keydown", (e)=>{
+			if (!(e.key==="Return"||e.key==="Enter")){
+				if (e.key === "Tab") n.focus();
+				e.preventDefault();
+			}
+		});
+		n.addEventListener("keydown", (e)=>{
+			if (!(e.key==="Return"||e.key==="Enter")){
+				if (e.key === "Tab") y.focus();
+				e.preventDefault();
+			}
+		});
 		return new Promise(resolve=>{
 			const e = fl=>()=>{
 				this.disapear();
