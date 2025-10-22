@@ -3,13 +3,6 @@
 #!include popup.js;
 #!include string.js;
 
-const input_special_text = (e, c)=>{
-	const p = e.selectionStart;
-	e.setRangeText(c, p, p, 'end');
-	const v = new InputEvent("input", {bubbles:true,cancelable:true,inputType:"insertText",data:c});
-	e.dispatchEvent(v);
-};
-
 class TextEditor{
 	#editor;
 	#lid;
@@ -42,16 +35,20 @@ class TextEditor{
 		for (let i = 0; i < tl.length; ++i){
 			this.#lid.innerHTML += (i+1)+"<br>";
 		}
-		this.#editor.style = "display:flex;background:#fff;max-height:500px;color:#000;overflow:scroll;position:relative;";
-		pre.style = "width:100%;";
-		this.#lid.style = "height:100%;background:#eee;color:#111;min-width:4em;position:sticky;left:0;";
-		this.#code.style = "display:block;outline:none;tab-size:4;";
+		const tlen = String(tl.length).length;
+		this.#editor.style = "display:flex;background:#fff;max-height:500px;color:#000;position:relative;overflow:hidden;";
+		this.#lid.style = "height:100%;background:#eee;color:#111;min-width:"+tlen+"em;";
+		pre.style = "width:100%;overflow:scroll;";
+		this.#code.style = "outline:none;tab-size:4;";
 		pre.append(this.#code);
 		this.#editor.append(this.#lid);
 		this.#editor.append(pre);
 		$ID("form").append(this.#editor);
-		this.#code.addEventListener("keydown", (e)=>{this.key_in(e, "keydown")});
-		this.#code.addEventListener("keyup", (e)=>{this.key_in(e, "keyup")});
+		this.#lid.style.position = "relative";
+		this.#lid.style.willChange = "transform";
+		pre.addEventListener("scroll", ()=>{this.#lid.style.transform="translateY(-"+pre.scrollTop+"px)"});
+		this.#code.addEventListener("keydown", (e)=>{this.key_in(e,"keydown")});
+		this.#code.addEventListener("keyup", (e)=>{this.key_in(e,"keyup")});
 		$ID("text").style.display = "none";
 		//ショートカットキー
 		document.addEventListener("keydown", (e)=>{
@@ -76,14 +73,14 @@ class TextEditor{
 	}
 
 	ins_tab(){
-		const sel = window.getSelection();
-		const range = sel.getRangeAt(0);
-		const tabNode = document.createTextNode("\t");
-		range.insertNode(tabNode);
-		range.setStartAfter(tabNode);
-		range.setEndAfter(tabNode);
-		sel.removeAllRanges();
-		sel.addRange(range);
+		const s = window.getSelection();
+		const r = s.getRangeAt(0);
+		const t = document.createTextNode("\t");
+		r.insertNode(t);
+		r.setStartAfter(t);
+		r.setEndAfter(t);
+		s.removeAllRanges();
+		s.addRange(r);
 		this.#code.focus();
 	}
 
@@ -164,9 +161,7 @@ class TextEditor{
 		let t = this.#code.textContent;
 		if (this.#pre.c === t) return;
 		this.#pre.c = t;
-		if (t.slice(-1) !== "\n"){
-			t += "\n";
-		}
+		if (t.slice(-1) !== "\n") t += "\n";
 		const tl = t.split("\n");
 		$ID("text").innerHTML = "";
 		for (let i = 0; i < tl.length -1; ++i){
@@ -179,6 +174,7 @@ class TextEditor{
 			this.#lid.innerHTML += (i+1)+"<br>";
 		}
 		this.#pre.l = tl.length;
+		this.#lid.style.minWidth = String(tl.length).length+"em";
 		/*this.hlstring();*/
 	}
 };
@@ -205,51 +201,43 @@ if (qs_l.get("Menu") === "edit"){
 			if (await popup.confirm("貴方はこのファイルを<b>削除</b>しよとしています。<br>フォルダの場合は中身も含めて全て消えます。<br>本当に削除しますか？")) $QS("form").submit();
 		}
 	});
-} else if ($ID("files") !== null){
-	//通常
-
-
+} else if ($ID("files")){
 	//複数ファイル
-	function insert_flist(files){
-		const dataTransfer = new DataTransfer();
-		files.forEach(file => dataTransfer.items.add(file));
-		return dataTransfer.files;
+	function ins_flist(files){
+		const d = new DataTransfer();
+		files.forEach((f)=>{d.items.add(f)});
+		return d.files;
 	}
 
-	const drop_area = $QS("body");
-	const input_files = $ID("files");
-	let fcount = 0;
-	drop_area.addEventListener("dragover", (e)=>{
+	const drpA = $QS("body");
+	const iptF = $ID("files");
+	let fc = 0;
+	drpA.addEventListener("dragover", (e)=>{
 		e.preventDefault();
-		drop_area.style.background = "#eef";
+		drpA.style.background = "#eef";
 	});
-
-	drop_area.addEventListener("dragleave", ()=>{
-		drop_area.style.backgroundColor = "";
-	});
-
-	drop_area.addEventListener("drop", (e)=>{
+	drpA.addEventListener("dragleave",()=>drpA.style.backgroundColor="");
+	drpA.addEventListener("drop", (e)=>{
 		e.preventDefault();
-		drop_area.style.background = "";
-		const files = e.dataTransfer.files;
-		if (!files || (files.length === 0)) return;
-		for (let i = 0;i < files.length;i++){
-			const file = files[i];
-			if (!file.type || file.size === 0) continue;
-			const label = document.createElement("span");
-			const input = document.createElement("input");
-			input.type = "file";
-			input.name = "file"+fcount;
-			input.style.display = "none";
-			label.style = "font-size:.8em;display:inline-block;border:solid 1px #eee;background:#f0c;color:#111;margin:.2em;";
-			label.innerHTML = file.name;
-			label.append(input);
-			input.files = insert_flist([file]);
-			input_files.appendChild(label);
-			fcount++;
-			label.addEventListener("click",(e)=>{e.preventDefault()});
+		drpA.style.background = "";
+		const fl = e.dataTransfer.files;
+		if (!fl || (fl.length === 0)) return;
+		for (let i = 0;i < fl.length;i++){
+			if (!fl[i].type || fl[i].size === 0) continue;
+			const lb = document.createElement("span");
+			const ipt = document.createElement("input");
+			ipt.type = "file";
+			ipt.name = "file"+fc;
+			ipt.style.display = "none";
+			lb.style = "font-size:.8em;display:inline-block;border:solid 1px #eee;background:#f0c;color:#111;margin:.2em;";
+			lb.innerHTML = fl[i].name;
+			lb.append(ipt);
+			ipt.files = ins_flist([fl[i]]);
+			iptF.appendChild(lb);
+			fc++;
+			lb.addEventListener("click",e=>e.preventDefault());
 		}
-		if (fcount > 20) popup.alert("ファイル数が20を超えています。多分エラーになります。");
+		if (fc > 20) popup.alert("ファイル数が20を超えています。多分エラーになります。");
 	});
 }
 
