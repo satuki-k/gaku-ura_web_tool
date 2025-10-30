@@ -9,7 +9,7 @@ class TextEditor{
 	#code;
 	#pre;
 	constructor(){
-		if ($ID("fsize") || $ID("input_tab")) return;
+		$ID("text").style.display = "none";
 		this.#lid = document.createElement("div");
 		this.#code = document.createElement("code");
 		this.#editor = document.createElement("div");
@@ -18,9 +18,10 @@ class TextEditor{
 		const p = document.createElement("p");
 		const tb = document.createElement("button");
 		const es = document.createElement("button");
-		tb.innerHTML = "タブをコピー(スマホ向け)";
-		tb.id = "input_tab";
-		es.innerHTML = "エディターが使い物にならない！ゴミ！";
+		tb.type = "button";
+		es.type = "button";
+		tb.innerHTML = "タブ文字をコピー";
+		es.innerHTML = "従来版の編集モード";
 		p.append(tb);
 		p.append(es);
 		$ID("form").prepend(p);
@@ -44,130 +45,42 @@ class TextEditor{
 		this.#editor.append(this.#lid);
 		this.#editor.append(pre);
 		$ID("form").append(this.#editor);
-		this.#lid.style.position = "relative";
-		this.#lid.style.willChange = "transform";
 		pre.addEventListener("scroll", ()=>{this.#lid.style.transform="translateY(-"+pre.scrollTop+"px)"});
 		this.#code.addEventListener("keydown", (e)=>{this.key_in(e,"keydown")});
 		this.#code.addEventListener("keyup", (e)=>{this.key_in(e,"keyup")});
-		$ID("text").style.display = "none";
 		//ショートカットキー
 		document.addEventListener("keydown", (e)=>{
-			if (e.ctrlKey){
-				switch (e.key){
-					case 's':
-					e.preventDefault();
-					document.querySelector('button[type="submit"]').click();
-					break;
-				}
+			if (e.ctrlKey && e.key==="s"){
+				e.preventDefault();
+				$QS('button[type="submit"]').click();
 			}
 		});
-		tb.addEventListener("click", (e)=>{
-			e.preventDefault();
+		tb.addEventListener("click", ()=>{
 			navigator.clipboard.writeText("\t");
 		});
-		es.addEventListener("click", (e)=>{
-			e.preventDefault();
+		es.addEventListener("click", ()=>{
 			$ID("text").style.display = "block";
 		});
-		/*this.hlstring(false);*/
 	}
-
-	ins_tab(){
-		const s = window.getSelection();
-		const r = s.getRangeAt(0);
-		const t = document.createTextNode("\t");
-		r.insertNode(t);
-		r.setStartAfter(t);
-		r.setEndAfter(t);
-		s.removeAllRanges();
-		s.addRange(r);
-		this.#code.focus();
-	}
-
-	/*
-	__hlstring(){
-		let t = $ID("text").innerHTML;
-		switch ($QS('input[name="new_name"]').value.split('.').slice(-1)[0]){
-			case "html":
-			t = t.replace(/(&lt;)(.+)(&gt;)/g, '<span style="color:#00c;">&lt;$2&gt;</span>');
-			t = t.replace(/(&lt;!--)(.*?)(--&gt;)/g, '<span style="color:#c00;">&lt;!--$2--&gt;</span>');
-			this.#code.innerHTML = t;
-			break;
-			case "css":
-			t = t.replace(/(\/\*.*?\*\/)/g, '<span style="color:#c00;">$1</span>');
-			this.#code.innerHTML = t;
-			break;
-			case "js":
-			t = t.replace(/(\/\/.*)/g, '<span style="color:#c00;">$1</span>');
-			t = t.replace(/(["'`].*?["'`])/g, '<span style="color:#f60;">$1</span>');
-			this.#code.innerHTML = t;
-			break;
-			case "php":
-			t = t.replace(/(["'`].*?["'`])/g, '<span style="color:#f60;">$1</span>');
-			t = t.replace(/(\/\*.*?\*\/)/g, '<span style="color:#c00;">$1</span>');
-			this.#code.innerHTML = t;
-			break;
-			case "md":
-			t = t.replace(/(#{1,6} .*)/g, '<span style="color:#00c;">$1</span>');
-			this.#code.innerHTML = t;
-			break;
-		}
-	}
-	hlstring(f=true){
-		try {
-			const sel = window.getSelection();
-			const range = sel.getRangeAt(0);
-			const preSelectionRange = range.cloneRange();
-			preSelectionRange.selectNodeContents(this.#code);
-			preSelectionRange.setEnd(range.startContainer, range.startOffset);
-			const start = preSelectionRange.toString().length;
-			this.__hlstring();
-			let charIndex = 0;
-			const nodeStack = [this.#code];
-			let node;
-			let foundStart = false;
-			let stop = false;
-			while (!stop && (node = nodeStack.pop())){
-				if (node.nodeType === 3){
-					const nextCharIndex = charIndex + node.length;
-					if (!foundStart && (start >= charIndex) && (start <= nextCharIndex)){
-						const range = document.createRange();
-						const sel = window.getSelection();
-						range.setStart(node, start - charIndex);
-						range.collapse(true);
-						sel.removeAllRanges();
-						sel.addRange(range);
-						stop = true;
-					}
-					charIndex = nextCharIndex;
-				} else {
-					let i = node.childNodes.length;
-					while (i--){
-						nodeStack.push(node.childNodes[i]);
-					}
-				}
-			}
-		} catch {
-			this.__hlstring();
-		}
-	}
-	*/
 
 	key_in(e, ty=null){
-		if (ty === "keydown" && e.key === "Tab"){
+		if (ty === "keydown" && e.key === "Tab" && !e.shiftKey){
 			e.preventDefault();
-			this.ins_tab();
+			const s = window.getSelection();
+			const r = s.getRangeAt(0);
+			const b = document.createTextNode("\t");
+			r.insertNode(b);
+			r.setStartAfter(b);
+			r.setEndAfter(b);
+			s.removeAllRanges();
+			s.addRange(r);
 		}
 		let t = this.#code.textContent;
 		if (this.#pre.c === t) return;
 		this.#pre.c = t;
 		if (t.slice(-1) !== "\n") t += "\n";
 		const tl = t.split("\n");
-		$ID("text").innerHTML = "";
-		for (let i = 0; i < tl.length -1; ++i){
-			$ID("text").innerHTML += h(tl[i])+"\n";
-		}
-		$ID("text").innerHTML += tl[tl.length -1];
+		$ID("text").innerHTML = t.slice(0, -1);
 		if (this.#pre.l === tl.length) return;
 		this.#lid.innerHTML = "";
 		for (let i = 0; i < tl.length; ++i){
@@ -175,13 +88,12 @@ class TextEditor{
 		}
 		this.#pre.l = tl.length;
 		this.#lid.style.minWidth = String(tl.length).length+"em";
-		/*this.hlstring();*/
 	}
 };
 
 
 //グラフィカルなポップアップ
-popup = new POPUP();
+const popup = new POPUP();
 
 
 /* 編集画面 */
@@ -216,7 +128,7 @@ if (qs_l.get("Menu") === "edit"){
 		e.preventDefault();
 		drpA.style.background = "#eef";
 	});
-	drpA.addEventListener("dragleave",()=>drpA.style.backgroundColor="");
+	drpA.addEventListener("dragleave",()=>{drpA.style.backgroundColor=""});
 	drpA.addEventListener("drop", (e)=>{
 		e.preventDefault();
 		drpA.style.background = "";
@@ -235,7 +147,7 @@ if (qs_l.get("Menu") === "edit"){
 			ipt.files = ins_flist([fl[i]]);
 			iptF.appendChild(lb);
 			fc++;
-			lb.addEventListener("click",e=>e.preventDefault());
+			lb.addEventListener("click",(e)=>{e.preventDefault()});
 		}
 		if (fc > 20) popup.alert("ファイル数が20を超えています。多分エラーになります。");
 	});
