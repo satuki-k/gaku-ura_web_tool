@@ -1,15 +1,15 @@
 <?php
 /*
- * gaku-ura9.5.17
+ * gaku-ura9.5.20
 */
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
 
 function is_editable(string $fname):bool{
-	$f = strtolower(basename($fname));
-	if (stripos(mime_content_type($fname),'text/') !== false){
+	if (stripos(mime_content_type($fname),'text/') === 0){
 		return true;
 	}
+	$f = strtolower(basename($fname));
 	foreach (['txt','htaccess','php','py','rb','conf','ini','log','css','html','js','csv','tsv','c','cpp','cxx','gkrs','pl'] as $k){
 		if (str_ends_with($f, '.'.$k)){
 			return true;
@@ -124,9 +124,12 @@ function main(string $from):int{
 		$c_root = realpath($conf->d_root.$admin_dir);
 		$current_dir = $c_root;
 		$uri_dir = '';
-		$replace = ['TITLE'=>'管理機能','EDIT_AREA'=>'','FILE_LIST'=>'','CONFIG'=>''];
-		if ((int)$login_data['user_data']['admin']===4 && strpos($conf->config_file,$c_root)!==false){
+		$replace = ['TITLE'=>'管理機能','EDIT_AREA'=>'','FILE_LIST'=>'','TOP'=>'','CONFIG'=>''];
+		if ((int)$login_data['user_data']['admin']===4 && str_starts_with($conf->config_file,$c_root)){
 			$replace['CONFIG'] = '<a href="?Dir='.str_replace($c_root.'/','',str_replace('/'.basename($conf->config_file),'',$conf->config_file)).'&File='.basename($conf->config_file).'&Menu=edit">設定</a>';
+		}
+		if (str_starts_with($conf->d_root,$c_root)){
+			$replace['TOP'] = '<a href="?Dir='.($c_root===$conf->d_root?'':str_replace($c_root.'/','',$conf->d_root)).'">ドキュメントルート</a>';
 		}
 		//現在位置を特定
 		if (isset($_GET['Dir']) && strpos($_GET['Dir'],'..')===false && is_dir($c_root.'/'.h($_GET['Dir']))){
@@ -203,7 +206,7 @@ function main(string $from):int{
 					}
 					if ($_POST['new'] === '.htaccess'){
 						touch($current_dir.'/.htaccess');
-					} elseif ($_POST['new']==='/sitemap.xml' && strpos($conf->d_root, $c_root)!==false){
+					} elseif ($_POST['new']==='/sitemap.xml' && strpos($conf->d_root,$c_root)!==false){
 						$url_list = [''];
 						foreach (scandir($conf->data_dir.'/home/html') as $f){
 							if (preg_match('/(\.(html|md))$/',$f) === 1){
@@ -406,28 +409,28 @@ function main(string $from):int{
 			$html = file_get_contents($html_file);
 			$html = str_replace('<file_list>', '', str_replace('</file_list>', '', $html));
 			$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__new');
+			$replace['FILE_LIST'] .= '<tr><td colspan="5">';
 			if ($uri_dir === ''){
-				$replace['FILE_LIST'] .= '<tr><td colspan="5"><b>ルート</b></td></tr>';
+				$replace['FILE_LIST'] .= '(TOP)';
 			} else {
 				$flist = explode('/', $uri_dir);
-				$up_to = implode('/', array_slice($flist, 0, count($flist) -1));
-				$replace['FILE_LIST'] .= '<tr><td colspan="5"><a href="?Dir=">ルート</a>';
-				for ($i = 0;$i < count($flist) -1;++$i){
-					$replace['FILE_LIST'] .= '/<a href="?Dir='.implode('/', array_slice($flist, 0, $i+1)).'">'.$flist[$i].'</a>';
+				$l = count($flist);
+				$up_to = implode('/', array_slice($flist,0,$l-1));
+				$replace['FILE_LIST'] .= '<a href="?Dir=">(TOP)</a>';
+				for ($i = 0;$i < $l-1;++$i){
+					$replace['FILE_LIST'] .= '/<a href="?Dir='.implode('/',array_slice($flist,0,$i+1)).'">'.$flist[$i].'</a>';
 				}
-				$replace['FILE_LIST'] .= '/'.$flist[count($flist) -1].'</td></tr>';
+				$replace['FILE_LIST'] .= '/'.$flist[$l-1];
 			}
+			$replace['FILE_LIST'] .= '</td></tr>';
 			//先頭の/禁止
 			$u_dir = $uri_dir;
 			if ($u_dir !== ''){
 				$u_dir .= '/';
 			}
-			$files = scandir($current_dir);
+			$files = array_diff(scandir($current_dir,SCANDIR_SORT_NONE),['.','..']);
 			file_sort($files, $current_dir);
 			foreach ($files as $f){
-				if ($f === '.' || $f == '..'){
-					continue;
-				}
 				$file = $current_dir.'/'.$f;
 				$mt = date('Y-m/d H:i', filemtime($file));
 				if (is_dir($file)){
