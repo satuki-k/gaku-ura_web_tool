@@ -29,6 +29,9 @@ a[target]:after{
 	content:' >';
 	color:red;
 }
+rt{
+	user-select:none;
+}
 img, audio, video{
 	display:block;
 	margin:0;
@@ -105,3 +108,4 @@ nav label{
 }
 
 h1{color:#938;}
+
