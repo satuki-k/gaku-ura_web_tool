@@ -1,6 +1,6 @@
 <?php
 /*
- * gaku-ura9.5.20
+ * gaku-ura9.5.22
 */
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -124,7 +124,7 @@ function main(string $from):int{
 		$c_root = realpath($conf->d_root.$admin_dir);
 		$current_dir = $c_root;
 		$uri_dir = '';
-		$replace = ['TITLE'=>'管理機能','EDIT_AREA'=>'','FILE_LIST'=>'','TOP'=>'','CONFIG'=>''];
+		$replace = ['TITLE'=>'管理機能','EDIT_AREA'=>'','FILE_LIST'=>'','TOP'=>'','CONFIG'=>'','GAKU_URA_VERSION'=>GAKU_URA_VERSION];
 		if ((int)$login_data['user_data']['admin']===4 && str_starts_with($conf->config_file,$c_root)){
 			$replace['CONFIG'] = '<a href="?Dir='.str_replace($c_root.'/','',str_replace('/'.basename($conf->config_file),'',$conf->config_file)).'&File='.basename($conf->config_file).'&Menu=edit">設定</a>';
 		}
