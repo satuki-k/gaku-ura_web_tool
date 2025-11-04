@@ -80,7 +80,7 @@ class TextEditor{
 		this.#pre.c = t;
 		if (t.slice(-1) !== "\n") t += "\n";
 		const tl = t.split("\n");
-		$ID("text").innerHTML = t.slice(0, -1);
+		$ID("text").innerHTML = h(t.slice(0, -1));
 		if (this.#pre.l === tl.length) return;
 		this.#lid.innerHTML = "";
 		for (let i = 0; i < tl.length; ++i){
