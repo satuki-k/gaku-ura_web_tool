@@ -39,8 +39,6 @@ function main():int{
 			$conf->ld_json['@type'] = $conf->ld_json['author']['@type'];
 			$conf->ld_json['name'] = $conf->ld_json['author']['name'];
 			unset($conf->ld_json['author']);
-			unset($conf->ld_json['headline']);
-			unset($conf->ld_json['datePublished']);
 		} else {
 			$conf->ld_json['@type'] = 'Article';
 		}
@@ -55,7 +53,6 @@ function main():int{
 	}
 	remove_comment_rows($html, '<!--', '-->');
 	$description = subrpos('<p>', '</p>', $html);
-	remove_comment_rows($description, '<', '>');
 	$conf->html($title, $description, $html, $css_file, '', $robots);
 	return 0;
 }
