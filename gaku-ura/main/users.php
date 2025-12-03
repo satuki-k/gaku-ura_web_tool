@@ -374,7 +374,7 @@ function main(string $from):int{
 					$html = file_get_contents($html_file);
 					remove_comment_rows($html, '<file_list>', '</file_list>');
 					$f = '<p><a href="?Dir='.$uri_dir.'" id="exit">戻る</a><label>名前<input type="text" name="new_name" value="'.basename($current_file).'" placeholder="変更なし"></label> ';
-					$f .= perm_opt($perm_list,file_perm($current_file)).'　<label><button type="submit" name="submit_type" value="edit_file">保 存</button></label></p>';
+					$f .= perm_opt($perm_list,file_perm($current_file)).$rm_option.'<label><button type="submit" name="submit_type" value="edit_file">保 存</button></label></p>';
 					if (is_editable($current_file)){
 						$content = file_get_contents($current_file);
 						$f .= '<p><label><textarea rows="25" name="content" id="text">'.str_replace("\t", '&#9;', preg_replace('/\r\n|\r|\n/', '&#10;', h($content))).'</textarea></label></p>';
@@ -411,7 +411,7 @@ function main(string $from):int{
 			$html = file_get_contents($html_file);
 			remove_comment_rows($html, '<file_list>', '</file_list>');
 			$f = '<p><a href="?Dir='.$up_to.'" id="exit">戻る</a><label>名前<input type="text" name="new_name" value="'.basename($current_dir).'" placeholder="変更なし"></label>';
-			$f .= perm_opt($perm_list, file_perm($current_dir)).' '.$rm_option.' <label><button type="submit" name="submit_type" value="edit_dir">保 存</button></label></p>';
+			$f .= perm_opt($perm_list, file_perm($current_dir)).$rm_option.'<label><button type="submit" name="submit_type" value="edit_dir">保 存</button></label></p>';
 			$replace['EDIT_AREA'] = form_fmt(['session_token'=>$conf->set_csrf_token('admin__edit_dir')], $f);
 		} elseif (!$is_edit_mode){
 			$html = file_get_contents($html_file);
