@@ -31,6 +31,23 @@ function file_sort(array &$file_list, string $current_dir):void{
 	natsort($fils);
 	$file_list = array_merge($fols, $fils);
 }
+function file_perm(string $file):string{
+	return substr(sprintf('%o',fileperms($file)),-3);
+}
+function perm_opt(array $perm_list, string $now_p):string{
+	$r = '<label>ﾊﾟｰﾐｯｼｮﾝ<select name="perm"><option value="no">'.$now_p.' 変更しない</option>';
+	foreach ($perm_list as $k=>$v){
+		$r .= '<option value="'.$k.'">'.$v.'</option>';
+	}
+	return $r.'</select></label>';
+}
+function form_fmt(array $hidden, string $content):string{
+	$f = '<form method="POST" action="" id="form">';
+	foreach ($hidden as $k => $v){
+		$f .= '<input type="hidden" name="'.$k.'" value="'.$v.'">';
+	}
+	return $f.$content.'</form>';
+}
 
 function main(string $from):int{
 	$conf = new GakuUra();
@@ -104,7 +121,7 @@ function main(string $from):int{
 				$conf->not_found();
 			}
 			$user_data = $user->user_data_convert(explode("\t", get($user->user_list_file, $uid +1)));
-			$html = '<section><h1>'.$user_data['name'].'</h1>権限:'.$user_data['admin'].'</section><section><div class="profile">'.to_html(str_replace('&#10;', "\n", $user_data['profile'])).'</div></section><p><br></p><p><a href="./">ユーザーホームへ</a></p>';
+			$html = '<section><h1>'.$user_data['name'].'</h1>権限:'.$user_data['admin'].'</section><section><div class="profile">'.to_html(str_replace('&#10;',"\n",$user_data['profile'])).'</div></section><p><br></p><p><a href="./">ユーザーホームへ</a></p>';
 			$conf->html($user_data['name'].'-', $user_data['profile'], $html, $css_file, $js_file, true);
 		}
 		break;
@@ -124,6 +141,8 @@ function main(string $from):int{
 		$c_root = realpath($conf->d_root.$admin_dir);
 		$current_dir = $c_root;
 		$uri_dir = '';
+		$perm_list = ['no'=>0,'DIR'=>0755,'CGI'=>0745,'STATIC'=>0644,'PRIVATE'=>0600];
+		$rm_option = '<label><input type="radio" name="remove" value="no" checked>削除しない</label> <label><input type="radio" name="remove" value="yes">削除する</label>';
 		$replace = ['TITLE'=>'管理機能','EDIT_AREA'=>'','FILE_LIST'=>'','TOP'=>'','CONFIG'=>'','GAKU_URA_VERSION'=>GAKU_URA_VERSION];
 		if ((int)$login_data['user_data']['admin']===4 && str_starts_with($conf->config_file,$c_root)){
 			$replace['CONFIG'] = '<a href="?Dir='.str_replace($c_root.'/','',str_replace('/'.basename($conf->config_file),'',$conf->config_file)).'&File='.basename($conf->config_file).'&Menu=edit">設定</a>';
@@ -144,7 +163,6 @@ function main(string $from):int{
 			$_POST['submit'] = $_POST['submit_type'];
 		}
 		if (list_isset($_POST, ['submit','session_token']) && $conf->check_csrf_token('admin__'.$_POST['submit'], $_POST['session_token'], true)){
-			$perm_list = ['no'=>0,'DIR'=>0755,'CGI'=>0745,'STATIC'=>0644,'PRIVATE'=>0600];
 			switch ($_POST['submit']){
 				case 'edit_file':
 				if (list_isset($_POST, ['name','new_name','perm']) && is_file($current_dir.'/'.h($_POST['name'])) && isset($perm_list[$_POST['perm']])){
@@ -355,24 +373,17 @@ function main(string $from):int{
 					$replace['TITLE'] = 'ファイル:'.basename($current_file).' を編集';
 					$html = file_get_contents($html_file);
 					remove_comment_rows($html, '<file_list>', '</file_list>');
-					$replace['EDIT_AREA'] = '<form action="" method="POST" id="form">
-<input type="hidden" name="session_token" value="'.$conf->set_csrf_token('admin__edit_file').'">
-<input type="hidden" name="name" value="'.basename($current_file).'">
-<p><a href="?Dir='.$uri_dir.'" id="exit">戻る</a>
-	<label>名前<input type="text" name="new_name" value="'.basename($current_file).'" placeholder="変更なし"></label>
-	<label>ﾊﾟｰﾐｯｼｮﾝ<select name="perm"><option value="no">'.substr(sprintf('%o', fileperms($current_file)), -3).' 変更しない</option>
-	<option value="DIR">755</option><option value="CGI">745</option><option value="STATIC">644</option><option value="PRIVATE">600</option>
-</select></label>
-　<label><input type="radio" name="remove" value="no" checked>削除しない</label> <label><input type="radio" name="remove" value="yes">削除する</label>
-　<label><button type="submit" name="submit_type" value="edit_file">保 存</button></label></p>';
+					$f = '<p><a href="?Dir='.$uri_dir.'" id="exit">戻る</a><label>名前<input type="text" name="new_name" value="'.basename($current_file).'" placeholder="変更なし"></label> ';
+					$f .= perm_opt($perm_list,file_perm($current_file)).'　<label><button type="submit" name="submit_type" value="edit_file">保 存</button></label></p>';
 					if (is_editable($current_file)){
 						$content = file_get_contents($current_file);
-						$replace['EDIT_AREA'] .= '<p><label><textarea rows="25" name="content" id="text">'.str_replace("\t", '&#9;', preg_replace('/\r\n|\r|\n/', '&#10;', h($content))).'</textarea></label></p>';
+						$f .= '<p><label><textarea rows="25" name="content" id="text">'.str_replace("\t", '&#9;', preg_replace('/\r\n|\r|\n/', '&#10;', h($content))).'</textarea></label></p>';
 					} elseif (stripos(mime_content_type($current_file), 'image/') !== false){
 						$im = getimagesize($current_file);
-						$replace['EDIT_AREA'] .= '<p><img style="max-width:100px;height:auto;" width="'.$im[0].'px" height="'.$im[1].'px" src="data:'.mime_content_type($current_file).';base64,'.base64_encode(file_get_contents($current_file)).'"></p>';
+						$f .= '<p><img style="max-width:200px;height:auto;" width="'.$im[0].'px" height="'.$im[1].'px" src="data:'.mime_content_type($current_file).';base64,'.base64_encode(file_get_contents($current_file)).'"></p>';
 					}
-					$replace['EDIT_AREA'] .= '</form><p><a href="?Dir='.$uri_dir.'&File='.basename($current_file).'&download">ダウンロードする</a></p><p><br></p>';
+					$replace['EDIT_AREA'] = form_fmt(['session_token'=>$conf->set_csrf_token('admin__edit_file'),'name'=>basename($current_file)], $f);
+					$replace['EDIT_AREA'] .= '<p><a href="?Dir='.$uri_dir.'&File='.basename($current_file).'&download">ダウンロードする</a></p><p><br></p>';
 				} else {
 					$is_edit_mode = false;
 				}
@@ -399,12 +410,9 @@ function main(string $from):int{
 			}
 			$html = file_get_contents($html_file);
 			remove_comment_rows($html, '<file_list>', '</file_list>');
-			$replace['EDIT_AREA'] = '<form action="" method="POST" id="form"><input type="hidden" name="session_token" value="'.$conf->set_csrf_token('admin__edit_dir').'">
-<p><a href="?Dir='.$up_to.'" id="exit">戻る</a><label>名前<input type="text" name="new_name" value="'.basename($current_dir).'" placeholder="変更なし"></label>
-<label>ﾊﾟｰﾐｯｼｮﾝ<select name="perm"><option value="no">'.substr(sprintf('%o',fileperms($current_dir)), -3).' 変更しない</option>
-<option value="DIR">755</option><option value="CGI">745</option><option value="STATIC">644</option><option value="PRIVATE">600</option></select></label>
-　<label><input type="radio" name="remove" value="no" checked>削除しない</label> <label><input type="radio" name="remove" value="yes">削除する</label>
-　<label><button type="submit" name="submit_type" value="edit_dir">保 存</button></label></p></form><p><br></p>';
+			$f = '<p><a href="?Dir='.$up_to.'" id="exit">戻る</a><label>名前<input type="text" name="new_name" value="'.basename($current_dir).'" placeholder="変更なし"></label>';
+			$f .= perm_opt($perm_list, file_perm($current_dir)).' '.$rm_option.' <label><button type="submit" name="submit_type" value="edit_dir">保 存</button></label></p>';
+			$replace['EDIT_AREA'] = form_fmt(['session_token'=>$conf->set_csrf_token('admin__edit_dir')], $f);
 		} elseif (!$is_edit_mode){
 			$html = file_get_contents($html_file);
 			$html = str_replace('<file_list>', '', str_replace('</file_list>', '', $html));
@@ -434,9 +442,9 @@ function main(string $from):int{
 				$file = $current_dir.'/'.$f;
 				$mt = date('Y-m/d H:i', filemtime($file));
 				if (is_dir($file)){
-					$replace['FILE_LIST'] .= '<tr><td><a href="?Dir='.$u_dir.$f.'" class="dir">'.$f.'</a></td><td><a href="?Dir='.$u_dir.$f.'&Menu=edit">編　集</a></td><td>'.count(scandir($file))-2 .'ファイル</td><td>'.$mt.'</td></tr>';
+					$replace['FILE_LIST'] .= '<tr><td><a href="?Dir='.$u_dir.$f.'" class="dir">'.$f.'</a></td><td><a href="?Dir='.$u_dir.$f.'&Menu=edit">編　集</a></td><td>'.count(scandir($file))-2 .'ファイル '.file_perm($file).'</td><td>'.$mt.'</td></tr>';
 				} else {
-					$replace['FILE_LIST'] .= '<tr><td><a href="?Dir='.$uri_dir.'&File='.$f.(is_editable($file)?'&Menu=edit':'').'">'.$f.'</a></td><td><a href="?Dir='.$uri_dir.'&File='.$f.'&Menu=edit">編　集</a></td><td>'.filesize($file)/1000 .'kB '.mime_content_type($file).'</td><td>'.$mt.'</td></tr>';
+					$replace['FILE_LIST'] .= '<tr><td><a href="?Dir='.$uri_dir.'&File='.$f.(is_editable($file)?'&Menu=edit':'').'">'.$f.'</a></td><td><a href="?Dir='.$uri_dir.'&File='.$f.'&Menu=edit">編　集</a></td><td>'.filesize($file)/1000 .'kB '.mime_content_type($file).' '.file_perm($file).'</td><td>'.$mt.'</td></tr>';
 				}
 			}
 		}
@@ -448,42 +456,42 @@ function main(string $from):int{
 			$html = file_get_contents($html_file);
 			remove_comment_rows($html, '<file_list>', '</file_list>');
 			$replace['EDIT_AREA'] = '<p>編集可能なユーザーの一覧を表示します。</p>';
-			$replace['EDIT_AREA'] .= '<form action="" method="POST" id="form"><input type="hidden" name="session_token" value="'.$conf->set_csrf_token('admin__user_list').'">';
-			$replace['EDIT_AREA'] .= '<p><a href="?Dir='.$uri_dir.'" id="exit">戻る</a>　<label><button type="submit" name="submit" value="user_list">保 存</button></label></p><table><thead><tr>';
+			$f = '<p><a href="?Dir='.$uri_dir.'" id="exit">戻る</a>　<label><button type="submit" name="submit" value="user_list">保 存</button></label></p><table><thead><tr>';
 			foreach ($user->user_list_keys as $k){
-				$replace['EDIT_AREA'] .= '<th>'.$k.'</th>';
+				$f .= '<th>'.$k.'</th>';
 			}
-			$replace['EDIT_AREA'] .= '</tr></thead>';
+			$f .= '</tr></thead>';
 			foreach (get_rows($user->user_list_file, 2) as $row){
 				$d = $user->user_data_convert(explode("\t", $row));
 				//自分より下の権限か最高権限か自分自身
 				if ($d['admin']<$login_data['user_data']['admin'] || (int)$login_data['user_data']['admin']===4 || (int)$login_data['user_data']['id']===(int)$d['id']){
 					if ((int)$login_data['user_data']['id'] === (int)$d['id']){
-						$replace['EDIT_AREA'] .= '<tr id="my">';
+						$f .= '<tr id="my">';
 					} else {
-						$replace['EDIT_AREA'] .= '<tr>';
+						$f .= '<tr>';
 					}
 					foreach ($user->user_list_keys as $k){
 						if ($k === 'id'){
-							$replace['EDIT_AREA'] .= '<td style="min-width:2em;">'.$d[$k].'</td>';
+							$f .= '<td style="min-width:2em;">'.$d[$k].'</td>';
 						} elseif ($k === 'passwd'){
-							$replace['EDIT_AREA'] .= '<td><input type="text" name="'.$k.$d['id'].'" placeholder="変更なし"></td>';
+							$f .= '<td><input type="text" name="'.$k.$d['id'].'" placeholder="変更なし"></td>';
 						} else {
-							$replace['EDIT_AREA'] .= '<td><input type="text" name="'.$k.$d['id'].'" value="'.$d[$k].'"';
+							$f .= '<td><input type="text" name="'.$k.$d['id'].'" value="'.$d[$k].'"';
 							if ($k !== 'mail' && $k !== 'profile'){
-								$replace['EDIT_AREA'] .= ' placeholder="変更なし"';
+								$f .= ' placeholder="変更なし"';
 							}
-							$replace['EDIT_AREA'] .= '></td>';
+							$f .= '></td>';
 						}
 					}
-					$replace['EDIT_AREA'] .= '</tr>';
+					$f .= '</tr>';
 				}
 			}
-			$replace['EDIT_AREA'] .= '</table></form>';
+			$f .= '</table>';
+			$replace['EDIT_AREA'] .= form_fmt(['session_token'=>$conf->set_csrf_token('admin__user_list')], $f);
 			if (strpos($user->user_list_file, $c_root) !== false){
 				$replace['EDIT_AREA'] .= '<p><a href="?Dir='.dirname(str_replace($c_root.'/','',$user->user_list_file)).'&File='.basename($user->user_list_file).'&download">ダウンロードする</a></p>';
 			}
-			$replace['EDIT_AREA'] .= '<p>idは必ず行番号-1です。adminは自分のより小さい0以上の整数です。enableが0でログイン出来なくなります。このファイルは<b>最高権限のユーザー</b>のみ上書きアップロード可能ですが最高権限が存在しない場合はFTP等を使用して最高権限ユーザーのadminを4にしてください。</p>';
+			$replace['EDIT_AREA'] .= '<p>idは変更禁止です。enableが0で無効化します。このファイルは<b>最高権限のユーザー</b>(admin=4)のみ上書きアップロード可能です。存在しない場合はFTP等を使用して最高権限にしたいユーザーのadmin値を4に書き換えてください。</p>';
 		}
 		if (!$is_edit_mode && $menu==='edit'){
 			header('Location:?Dir='.$uri_dir);

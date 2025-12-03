@@ -1,9 +1,7 @@
 <?php
-# gaku-ura9.5.22
 /* gaku-ura標準ライブラリが定義 */
 //ini_set('display_errors', 'Off');
-
-const GAKU_URA_VERSION = '9.5.22';
+const GAKU_URA_VERSION = '9.5.23';
 
 function h(string $t):string{
 	return htmlspecialchars($t, ENT_QUOTES, 'UTF-8');#全てのhtml禁止エスケープ
@@ -358,10 +356,8 @@ class GakuUra{
 		$this->referer = (isset($_SERVER['HTTP_REFERER'])?$_SERVER['HTTP_REFERER']:'');
 		$this->u_root = ((isset($this->config['u_root'])&&not_empty($this->config['u_root']))?$this->config['u_root']:'/');
 		$this->ld_json = [
-		'@context'=>'https://schema.org','@type'=>'WebPage',
-		'name'=>'','description'=>'','url'=>$this->canonical,'headline'=>'',
-		'author'=>['@type'=>'Person','name'=>'unknown'],
-		'datePublished'=>date('Y年m月d日',filemtime($this->d_root)),'image'=>'/favicon.ico'];
+		'@context'=>'https://schema.org','@type'=>'WebPage','url'=>$this->canonical,
+		'author'=>['@type'=>'Person','name'=>'unknown'],'image'=>'/favicon.ico'];
 		if (isset($this->config['seo.author']) && count($d=explode(',',$this->config['seo.author'])) > 1){
 			$this->ld_json['author']['@type'] = trim($d[0]);
 			$this->ld_json['author']['name'] = trim($d[1]);
@@ -369,7 +365,14 @@ class GakuUra{
 		if ($this->here===$this->domain || $this->here.'/'===$this->domain){
 			$this->ld_json['@type'] = 'WebSite';
 		}
-		$this->nonce = one_time_pass(20, 30);
+		if (!empty($_SERVER['HTTPS'])){
+			header('Strict-Transport-Security:max-age=63072000;includeSubDomains;preload');
+		}
+		if (!isset($this->config['header_scrict']) || $this->config['header_scrict']===1){
+			header('Cross-Origin-Embedder-Policy:require-corp');
+			header('Cross-Origin-Opener-Policy:same-site');
+			header('X-Frame-Options:SAMEORIGIN');
+		}
 		if ($third_party === null){
 			if (isset($this->config['use_nonce']) && $this->config['use_nonce']===0){
 				$third_party = true;
@@ -380,6 +383,7 @@ class GakuUra{
 		if ($third_party){
 			$this->nonce = '';
 		} else {
+			$this->nonce = one_time_pass(20, 30);
 			header("Content-Security-Policy:connect-src 'self';object-src 'none';base-uri 'self';script-src 'nonce-{$this->nonce}' 'unsafe-inline';");
 		}
 		if (isset($_COOKIE)){
@@ -458,6 +462,8 @@ class GakuUra{
 		}
 		$html = row(file_get_contents($html_file))."\n";
 		remove_comment_rows($html, '<!--', '-->');
+		remove_comment_rows($title, '<', '>');
+		remove_comment_rows($description, '<', '>');
 		$replace = [
 		'CSS_URL'=>$this->u_root.'css/?CSS='.str_replace($this->data_dir,'',$css).($css_default?'':'&USE_DEFAULT=false'),
 		'JS_URL'=>$this->u_root.'js/?JS='.str_replace($this->data_dir,'',$js).($minify?'':'&MINIFY=false'),
@@ -470,7 +476,7 @@ class GakuUra{
 			$html = str_replace('</head>', '<link rel="canonical" href="'.$this->canonical.'"></head>', $html);
 			$robots = false;
 		}
-		if ($robots === false){
+		if (!$robots){
 			$html = str_replace('<ti', '<meta name="robots" content="noindex"><ti', $html);
 		}
 		if (strpos($html, '{CSS}') !== false){
@@ -533,7 +539,7 @@ class GakuUra{
 			foreach (['PERHAPS'=>$perhaps,'REASON'=>$reason] as $k=>$v){
 				$html = str_replace('{'.$k.'}', $v, $html);
 			}
-			$this->html(subrpos('<h1>', '</h1>', $html).'-', '', $html, $this->data_dir.'/404/css');
+			$this->html(subrpos('<h1>','</h1>',$html).'-', '', $html, $this->data_dir.'/404/css');
 		}
 		exit;
 	}
