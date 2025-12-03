@@ -369,8 +369,7 @@ class GakuUra{
 			header('Strict-Transport-Security:max-age=63072000;includeSubDomains;preload');
 		}
 		if (!isset($this->config['header_scrict']) || $this->config['header_scrict']===1){
-			header('Cross-Origin-Embedder-Policy:require-corp');
-			header('Cross-Origin-Opener-Policy:same-site');
+			/* COOPなどは要検討 */
 			header('X-Frame-Options:SAMEORIGIN');
 		}
 		if ($third_party === null){
