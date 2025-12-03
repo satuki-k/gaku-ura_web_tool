@@ -1,6 +1,6 @@
 <?php
 /*
- * gaku-ura9.5.22
+ * gaku-ura9.5.23
 */
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
