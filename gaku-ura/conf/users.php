@@ -1,6 +1,6 @@
 <?php
 /*
- * gaku-ura9.5.15
+ * gaku-ura9.6.1
 */
 
 //ログイン必須とは限らない機能を考慮し、ログインチェックは初期化では行わない
@@ -10,7 +10,9 @@ class GakuUraUser{
 	public array $user_list_keys;
 	public array $own_dir;
 	public int $admin_revel;
-
+	public const SKEY_ID = 'gaku-ura_login:id';
+	public const SKEY_PASSWD = 'galu-ura_login:passwd';
+	public const SKEY_FROM = 'gaku-ura_login:from';
 	//GakuUraオブジェクトが引数
 	function __construct(object &$conf){
 		if (!isset($conf->config['login.enable']) || (int)$conf->config['login.enable'] === 0){
@@ -63,20 +65,23 @@ class GakuUraUser{
 	}
 
 	public function login_check():array{
-		$result = ['result'=>false];
-		if (list_isset($_SESSION, ['gaku-ura_login:id','gaku-ura_login:passwd']) && (int)$_SESSION['gaku-ura_login:id'] > 0 && not_empty($_SESSION['gaku-ura_login:passwd'])){
-			$row = get($this->user_list_file, (int)$_SESSION['gaku-ura_login:id'] +1);
-			if ($row !== false){
-				$user_data = $this->user_data_convert(explode("\t", $row));
-				if (isset($user_data['enable']) && ((int)$user_data['enable'] === 1)){
-					if (list_isset($user_data, ['id','passwd']) && (int)$user_data['id']===(int)$_SESSION['gaku-ura_login:id'] && $user_data['passwd']===$_SESSION['gaku-ura_login:passwd']){
-						$result['result'] = true;
-						$result['user_data'] = $user_data;
+		$r = ['result'=>false];
+		if (list_isset($_SESSION,[self::SKEY_ID,self::SKEY_PASSWD]) && (int)$_SESSION[self::SKEY_ID]>0 && not_empty($_SESSION[self::SKEY_PASSWD])){
+			$l = get($this->user_list_file, (int)$_SESSION[self::SKEY_ID] +1);
+			if ($l !== false){
+				$u = $this->user_data_convert(explode("\t", $l));
+				if (isset($u['enable']) && ((int)$u['enable'] === 1)){
+					if (list_isset($u,['id','passwd']) && (int)$u['id']===(int)$_SESSION[self::SKEY_ID] && $u['passwd']===$_SESSION[self::SKEY_PASSWD]){
+						$r['result'] = true;
+						$r['user_data'] = $u;
 					}
 				}
 			}
 		}
-		return $result;
+		if (!$r['result'] && isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'],'/login/')===false){
+			$_SESSION[self::SKEY_FROM] = $_SERVER['REQUEST_URI']; //ログイン後復帰する用
+		}
+		return $r;
 	}
 
 	public function user_exists(string $name, string $mail=''):int{
@@ -119,8 +124,8 @@ class GakuUraUser{
 					}
 					$user_d[$i] = (int)$last[$i] +1;
 					file_put_contents($this->user_list_file, implode("\t", $user_d)."\n", FILE_APPEND|LOCK_EX);
-					$_SESSION['gaku-ura_login:id'] = $user_d[$i];
-					$_SESSION['gaku-ura_login:passwd'] = $user_data['passwd'];
+					$_SESSION[self::SKEY_ID] = $user_d[$i];
+					$_SESSION[self::SKEY_PASSWD] = $user_data['passwd'];
 					break;
 				}
 			}

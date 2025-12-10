@@ -1,7 +1,7 @@
 <?php
 /* gaku-ura標準ライブラリが定義 */
 //ini_set('display_errors', 'Off');
-const GAKU_URA_VERSION = '9.5.23';
+const GAKU_URA_VERSION = '9.6.1';
 
 function h(string $t):string{
 	return htmlspecialchars($t, ENT_QUOTES, 'UTF-8');#全てのhtml禁止エスケープ
