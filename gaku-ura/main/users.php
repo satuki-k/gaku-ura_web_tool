@@ -151,7 +151,7 @@ function main(string $from):int{
 			$replace['CONFIG'] = '<a href="?Dir='.str_replace($c_root.'/','',str_replace('/'.basename($conf->config_file),'',$conf->config_file)).'&File='.basename($conf->config_file).'&Menu=edit">設定</a>';
 		}
 		if (str_starts_with($conf->d_root,$c_root)){
-			$replace['TOP'] = '<a href="?Dir='.($c_root===$conf->d_root?'':str_replace($c_root.'/','',$conf->d_root)).'">ドキュメントルート</a>';
+			$replace['TOP'] = '<a href="?Dir='.($c_root===$conf->d_root?'':str_replace($c_root.'/','',$conf->d_root)).'" id="d_root">ドキュメントルート</a>';
 		}
 		//現在位置を特定
 		if (isset($_GET['Dir']) && strpos($_GET['Dir'],'..')===false && is_dir($c_root.'/'.h($_GET['Dir']))){

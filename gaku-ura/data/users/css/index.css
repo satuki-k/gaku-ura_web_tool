@@ -37,6 +37,9 @@ tbody a{
 	text-decoration:none;
 	font-weight:bold;
 }
+tbody tr:hover, .select_row{
+	background:#531;
+}
 
 textarea{
 	width:99%;
