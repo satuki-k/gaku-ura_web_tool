@@ -50,7 +50,7 @@ class TextEditor{
 		this.#editor.style = "display:flex;max-height:500px;position:relative;overflow:hidden;font:1em/1.4 serif;";
 		this.#lid.style = "min-width:"+tlen+"em;height:100%;background:#eee;color:#111;padding-bottom:1em;";
 		pr.style = "width:100%;overflow:scroll;background:#fff;color:000;";
-		this.#code.style = "outline:none;tab-size:4;";
+		this.#code.style = "outline:none;tab-size:4;color:#000;";
 		pr.style.font = this.#editor.style.font;
 		this.#lid.style.font = pr.style.font;
 		this.#code.style.font = pr.style.font;
