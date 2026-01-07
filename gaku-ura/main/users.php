@@ -37,7 +37,7 @@ function file_perm(string $file):string{
 function perm_opt(array $perm_list, string $now_p):string{
 	$r = '<label>ﾊﾟｰﾐｯｼｮﾝ<select name="perm"><option value="no">'.$now_p.' 変更しない</option>';
 	foreach ($perm_list as $k=>$v){
-		$r .= '<option value="'.$k.'">'.$v.'</option>';
+		$r .= sprintf('<option value="%s">%o</option>',$k,$v);
 	}
 	return $r.'</select></label>';
 }
@@ -52,6 +52,7 @@ function form_fmt(array $hidden, string $content):string{
 function main(string $from):int{
 	$conf = new GakuUra();
 	$user = new GakuUraUser($conf);
+	$api_args = [];
 	$user_dir = $user->user_dir;
 	$css_file = $user_dir.'/css';
 	$html_file = $user_dir.'/html/'.$from.'.html';
@@ -151,7 +152,9 @@ function main(string $from):int{
 			$replace['CONFIG'] = '<a href="?Dir='.str_replace($c_root.'/','',str_replace('/'.basename($conf->config_file),'',$conf->config_file)).'&File='.basename($conf->config_file).'&Menu=edit">設定</a>';
 		}
 		if (str_starts_with($conf->d_root,$c_root)){
-			$replace['TOP'] = '<a href="?Dir='.($c_root===$conf->d_root?'':str_replace($c_root.'/','',$conf->d_root)).'" id="d_root">ドキュメントルート</a>';
+			$api_args['d_root'] = ($c_root===$conf->d_root?'':str_replace($c_root.'/','',$conf->d_root));
+			$api_args['u_root'] = substr($conf->u_root,0,-1);
+			$replace['TOP'] = '<a href="?Dir='.$api_args['d_root'].'">ドキュメントルート</a>';
 		}
 		//現在位置を特定
 		if (isset($_GET['Dir']) && strpos($_GET['Dir'],'..')===false && is_dir($c_root.'/'.h($_GET['Dir']))){
@@ -353,7 +356,7 @@ function main(string $from):int{
 					$f .= perm_opt($perm_list,file_perm($current_file)).$rm_option.'<label><button type="submit" name="submit_type" value="edit_file">保 存</button></label></p>';
 					if (is_editable($current_file)){
 						$content = file_get_contents($current_file);
-						$f .= '<p><label><textarea rows="25" name="content" id="text">'.str_replace("\t", '&#9;', preg_replace('/\r\n|\r|\n/', '&#10;', h($content))).'</textarea></label></p>';
+						$f .= '<p><label><textarea rows="25" name="content" id="text">'.str_replace("\t",'&#9;',preg_replace('/\r\n|\r|\n/','&#10;',h($content))).'</textarea></label></p>';
 					} elseif (stripos(mime_content_type($current_file), 'image/') !== false){
 						$im = getimagesize($current_file);
 						$f .= '<p><img style="max-width:200px;height:auto;" width="'.$im[0].'px" height="'.$im[1].'px" src="data:'.mime_content_type($current_file).';base64,'.base64_encode(file_get_contents($current_file)).'"></p>';
@@ -395,13 +398,12 @@ function main(string $from):int{
 				$replace['FILE_LIST'] .= '(TOP)';
 			} else {
 				$flist = explode('/', $uri_dir);
-				$l = count($flist);
-				$up_to = implode('/', array_slice($flist,0,$l-1));
-				$replace['FILE_LIST'] .= '<a href="?Dir=">(TOP)</a>';
-				for ($i = 0;$i < $l-1;++$i){
+				$l = count($flist)-1;
+				$replace['FILE_LIST'] .= '<a href="./">(TOP)</a>';
+				for ($i = 0;$i < $l;++$i){
 					$replace['FILE_LIST'] .= '/<a href="?Dir='.implode('/',array_slice($flist,0,$i+1)).'">'.$flist[$i].'</a>';
 				}
-				$replace['FILE_LIST'] .= '/'.$flist[$l-1];
+				$replace['FILE_LIST'] .= '/'.$flist[$l];
 			}
 			$replace['FILE_LIST'] .= '</td></tr>';
 			//先頭の/禁止
@@ -413,11 +415,11 @@ function main(string $from):int{
 			file_sort($files, $current_dir);
 			foreach ($files as $f){
 				$file = $current_dir.'/'.$f;
-				$mt = date('Y-m/d H:i', filemtime($file));
+				$fmt = '<tr><td><a href="?Dir=%s"%s>'.$f.'</a></td><td><a href="?Dir=%s&Menu=edit">編　集</a></td><td>%s '.file_perm($file).'</td><td>'.date('Y-m/d H:i',filemtime($file)).'</td></tr>';
 				if (is_dir($file)){
-					$replace['FILE_LIST'] .= '<tr><td><a href="?Dir='.$u_dir.$f.'" class="dir">'.$f.'</a></td><td><a href="?Dir='.$u_dir.$f.'&Menu=edit">編　集</a></td><td>'.count(scandir($file))-2 .'ファイル '.file_perm($file).'</td><td>'.$mt.'</td></tr>';
+					$replace['FILE_LIST'] .= sprintf($fmt, $u_dir.$f,' class="dir"',$u_dir.$f,count(scandir($file))-2 .'item');
 				} else {
-					$replace['FILE_LIST'] .= '<tr><td><a href="?Dir='.$uri_dir.'&File='.$f.(is_editable($file)?'&Menu=edit':'').'">'.$f.'</a></td><td><a href="?Dir='.$uri_dir.'&File='.$f.'&Menu=edit">編　集</a></td><td>'.filesize($file)/1000 .'kB '.mime_content_type($file).' '.file_perm($file).'</td><td>'.$mt.'</td></tr>';
+					$replace['FILE_LIST'] .= sprintf($fmt, $uri_dir.'&File='.$f.(is_editable($file)?'&Menu=edit':''),'',$uri_dir.'&File='.$f,filesize($file)/1000 .'kB '.mime_content_type($file));
 				}
 			}
 		}
@@ -462,7 +464,7 @@ function main(string $from):int{
 			if (strpos($user->user_list_file, $c_root) !== false){
 				$replace['EDIT_AREA'] .= '<p><a href="?Dir='.dirname(str_replace($c_root.'/','',$user->user_list_file)).'&File='.basename($user->user_list_file).'&download">ダウンロードする</a></p>';
 			}
-			$replace['EDIT_AREA'] .= '<p>idは変更禁止です。enableが0で無効化します。このファイルは<b>最高権限のユーザー</b>(admin=4)のみ上書きアップロード可能です。存在しない場合はFTP等を使用して最高権限にしたいユーザーのadmin値を4に書き換えてください。</p>';
+			$replace['EDIT_AREA'] .= 'enableを0にするとそのユーザーはログイン出来なくなりますが、削除にはなりません。';
 		}
 		if (!$is_edit_mode && $menu==='edit'){
 			header('Location:?Dir='.$uri_dir);
@@ -539,6 +541,13 @@ function main(string $from):int{
 		$html = str_replace('{'.$k.'}', GakuUra::h($v), $html);
 	}
 	$title = subrpos('<h1>', '</h1>', $html);
+	if ($api_args){
+		$html .= '<p style="display:none;" ';
+		foreach ($api_args as $k=>$v){
+			$html .= $k.'="'.$v.'" ';
+		}
+		$html .= 'id="gaku-ura_args">';
+	}
 	$conf->html($title.'-', '', $html, $css_file, $js_file);
 	return 0;
 }

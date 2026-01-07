@@ -159,30 +159,34 @@ if (qs_l.get("Menu") === "edit"){
 			fc++;
 			lb.addEventListener("click",(e)=>{e.preventDefault();});
 		}
-		if (fc > 20) popup.alert("ファイル数が20を超えています。多分エラーになります。");
+		if (fc > 20) popup.alert("ファイル数が20を超えています。処理が門前払いされるかもしれません。");
 	});
 
-	const cm = document.createElement("div");
+	const cm = document.createElement("pre");
 	cm.id = "CLICK_MENU";
 	cm.style = "background:#fff;border:#aaa;position:absolute;display:none;";
 	$QS("body").append(cm);
 	const close_menu = ()=>{
 		cm.style.display="none";
-		$QSA('[class="select_row"]').forEach((i)=>{
+		$QSA('.select_row').forEach((i)=>{
 			i.classList.remove("select_row");
 		});
 	};
-	const fl_e = $QS('table tbody').children;
+	const fl = $QS('table tbody');
+	const fl_e = fl.children;
 	const fl_l = fl_e.length;
-	const d_root_e = $ID("d_root");
+	const args_e = $ID("gaku-ura_args");
+	const d_root = args_e.getAttribute("d_root");
+	const u_root = args_e.getAttribute("u_root");
 	let uri_dir = qs_l.get("Dir");
 	if (!uri_dir){
 		uri_dir = "";
 	}
 	let under_d_root = false;
-	if (d_root_e && d_root_e.href && (d_root_e.href.slice(d_root_e.href.indexOf("=")+1)===""||~uri_dir.indexOf(d_root_e.href.slice(d_root_e.href.indexOf("=")+1)))){
+	if (args_e && d_root!==null && (d_root===""||~uri_dir.indexOf(d_root))){
 		under_d_root = true;
 	}
+	fl.addEventListener("contextmenu", function(e){e.preventDefault();});
 	for (let i = 0; i < fl_l; ++i){
 		const c = fl_e[i];
 		const c_e = c.querySelector('a');
@@ -193,8 +197,6 @@ if (qs_l.get("Menu") === "edit"){
 			e.preventDefault();
 			close_menu();
 			cm.innerHTML = "";
-			cm.style.left = e.pageX+"px";
-			cm.style.top = e.pageY+"px";
 			//編集
 			const m = [['編集する',c_e2.href,""]];
 			//ダウンロード
@@ -205,18 +207,19 @@ if (qs_l.get("Menu") === "edit"){
 			}
 			//実際のURL算出(hrefに「./」使用禁止)
 			if (under_d_root){
-				const d_root = d_root_e.href;
 				let u = "/";
-				if (d_root.slice(d_root.indexOf("=")+1)==="" || subrpos("=","&",c_e.href)===d_root.slice(d_root.indexOf("=")+1)){
-					u += c_e.href.replace(d_root,"");
+				const cf = c_e.href.slice(c_e.href.indexOf("=")+1);
+				if (d_root==="" || cf===d_root){
+					u += cf.replace(d_root,"");
 				} else {
-					u += c_e.href.replace(d_root+"/","");
+					u += cf.replace(d_root+"/","");
 				}
 				if (~u.indexOf("&")) u=u.slice(0, u.indexOf("&"));
 				if (u!=="/") u+="/";
 				if (c_e.getAttribute("class") !== "dir"){
 					u += c_e.textContent;
 				}
+				if (u_root) u=u_root+u;
 				m.push(["WEBページとして開く",u,"",null,1]);
 			}
 			m.forEach((i)=>{
@@ -234,7 +237,13 @@ if (qs_l.get("Menu") === "edit"){
 				cm.append(p);
 			});
 			cm.style.display = "block";
+			cm.style.left = Math.min(e.pageX,window.innerWidth-cm.offsetWidth-10)+"px";
+			cm.style.top = Math.min(e.pageY,window.innerHeight-cm.offsetHeight-10)+"px";
 			c.classList.add("select_row");
+		});
+		c.addEventListener("dblclick", (e)=>{
+			e.preventDefault();
+			c_e.click();
 		});
 	}
 	window.addEventListener("click", close_menu);
