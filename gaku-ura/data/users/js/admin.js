@@ -198,7 +198,7 @@ if (q.get("Menu") === "edit"){
 			if (udr){
 				let u = "/";
 				const cf = a.href.slice(a.href.indexOf("=")+1);
-				u += cf.replace(d_root+((d_root===""||cf===d_root)?"/":""),"");
+				d_root===""||cf===d_root? u+=cf.replace(d_root,""):u+=cf.replace(d_root+"/","");
 				if(~u.indexOf("&")) u=u.slice(0, u.indexOf("&"));
 				if(u!=="/") u+="/";
 				if(a.getAttribute("class")!=="dir") u+=a.textContent;
