@@ -350,7 +350,7 @@ function main(string $from):int{
 					$menu = 'user';
 				} elseif ($menu==='edit' || is_editable($current_file)){
 					//編集
-					$replace['TITLE'] = 'ファイル:'.basename($current_file).' を編集';
+					$replace['TITLE'] = str_replace($c_root,'',$current_file);
 					$is_file_list = true;
 					$f = '<p><a href="?Dir='.$uri_dir.'" id="exit">戻る</a><label>名前<input type="text" name="new_name" value="'.basename($current_file).'" placeholder="変更なし"></label> ';
 					$f .= perm_opt($perm_list,file_perm($current_file)).$rm_option.'<label><button type="submit" name="submit_type" value="edit_file">保 存</button></label></p>';

@@ -2,111 +2,127 @@
 #!include element.js;
 #!include popup.js;
 #!include string.js;
+const key_m = "gaku-ura_editor_mode";
+const key_f = "gaku-ura_editor_fontSize";
+/*! ace (web)ace.c9.io !*/
+const ace_cdn = "https:\/\/cdnjs.cloudflare.com/ajax/libs/ace/1.43.3/ace.js";
 const q = (new URL(document.location)).searchParams;
 //グラフィカルなポップアップ
 const popup = new POPUP();
 class TextEditor{
-	#editor;
-	#lid;
-	#code;
-	#pre;
+	#m;
+	#mf;
+	#mt;
+	#menu;
+	#f;
+	#ace;
+	#h;
 	constructor(){
-		$ID("text").style.display = "none";
-		this.#lid = document.createElement("div");
-		this.#code = document.createElement("code");
-		this.#editor = document.createElement("div");
-		this.#pre = {"l":0,"c":""};
-		const pr = document.createElement("pre");
+		this.#mt = ["normal","ace","exit"];
+		let m = [];
+		this.#mt.forEach((i)=>{m.push(i);});
+		const v = localStorage.getItem(key_m);
+		this.#m = this.#mt[(v!==null&&v>-1&&v<m.length)?v:1];
+		this.#mf = -1;
+		m.splice(m.indexOf(this.#m), 1);
+		m.unshift(this.#m);
+		this.#ace = document.createElement("pre");
+		this.#ace.id = "editor";
+		this.#ace.style = "height:500px;z-index:0;";
+		this.#h = null;
 		const p = document.createElement("p");
-		const tb = document.createElement("button");
-		const es = document.createElement("button");
-		const fsl = document.createElement("label");
-		const fs = document.createElement("input");
-		const fsd = document.createElement("button");
-		tb.type = "button";
-		es.type = "button";
-		tb.innerHTML = "タブ文字をコピー";
-		es.innerHTML = "従来版に切り替え";
-		fsl.textContent = "文字(px)";
-		fs.type = "number";
-		fs.style = "width:3em;background:#fff;color:#000;font-size:1em;";
-		fs.value = 18;
-		fsl.style = "padding-left:1em;";
-		fsd.type = "button";
-		fsd.innerHTML = "決定";
-		fsl.append(fs);
-		fsl.append(fsd);
-		p.append(tb);
-		p.append(es);
-		p.append(fsl);
-		$ID("form").prepend(p);
-		//エディター初期化
-		const tl = $ID("text").innerHTML.split("\n");
-		this.#code.setAttribute("contenteditable", "plaintext-only");
-		this.#code.innerHTML = "";
-		for(let i=0;i<tl.length;++i) this.#code.innerHTML+=tl[i]+"\n";
-		for(let i=1;i<=tl.length;++i) this.#lid.innerHTML+=i+"<br>";
-		const tlen = String(tl.length).length;
-		this.#editor.style = "display:flex;max-height:500px;position:relative;overflow:hidden;font:1em/1.4 serif;";
-		this.#lid.style = "min-width:"+tlen+"em;height:100%;background:#eee;color:#111;padding-bottom:1em;";
-		pr.style = "width:100%;overflow:scroll;background:#fff;color:000;";
-		this.#code.style = "outline:none;tab-size:4;color:#000;";
-		pr.style.font = this.#editor.style.font;
-		this.#lid.style.font = pr.style.font;
-		this.#code.style.font = pr.style.font;
-		pr.append(this.#code);
-		this.#editor.append(this.#lid);
-		this.#editor.append(pr);
-		$ID("form").append(this.#editor);
-		pr.addEventListener("scroll", ()=>{this.#lid.style.transform="translateY(-"+pr.scrollTop+"px)";});
-		this.#code.addEventListener("keydown", (e)=>{this.key_in(e,"keydown");});
-		this.#code.addEventListener("keyup", (e)=>{this.key_in(e,"keyup");});
-		//ショートカットキー
-		document.addEventListener("keydown", (e)=>{
-			if (e.ctrlKey && e.key==="s"){
-				e.preventDefault();
-				$QS('button[type="submit"]').click();
-			}
+		this.#menu = document.createElement("select");
+		m.forEach((i)=>{
+			const o = document.createElement("option");
+			o.value = i;
+			o.textContent = i+(i==="exit"?"":" editor");
+			this.#menu.append(o);
 		});
-		tb.addEventListener("click", ()=>{navigator.clipboard.writeText("\t");});
-		es.addEventListener("click", ()=>{$ID("text").style.display="block";});
-		fs.addEventListener("keydown", function(e){
-			if (e.key=="Enter" || e.key==="Return") e.preventDefault();
+		this.#f = document.createElement("input");
+		const s = localStorage.getItem(key_f);
+		this.#f.value = (s!==null&&s>0)?s:18;
+		this.#f.type = "number";
+		this.#f.style = "width:5em;";
+		p.append(this.#menu);
+		p.append(this.#f);
+		$ID("form").before(p);
+		$ID("form").after(this.#ace);
+		this.#menu.addEventListener("change", ()=>{this.editor();});
+		this.#f.addEventListener("change", ()=>{this.zoom();});
+		this.#f.addEventListener("keydown", function(e){
+			if(e.key=="Enter" || e.key==="Return") e.preventDefault();
 		});
-		fsd.addEventListener("click", ()=>{
-			if (fs.value > 0 && fs.value < 100){
-				pr.style.font = fs.value+"px/1.4 serif";
-				this.#editor.style.font = pr.style.font;
-				this.#lid.style.font = pr.style.font;
-				this.#code.style.font = pr.style.font;
-			} else {
-				popup.alert("1以上100未満にしてください。");
+		this.editor();
+		this.zoom();
+		window.addEventListener("keydown", (e)=>{
+			if(e.ctrlKey){
+				if(~["s","+","-"].indexOf(e.key)) e.preventDefault();
+				if (e.key === "s"){
+					$QS('button[type="submit"]').click();
+				} else if (e.key==="+"||e.key==="-"){
+					if (e.key === "+"){
+						this.#f.value++;
+					} else {
+						this.#f.value++;
+					}
+					this.zoom();
+				}
 			}
 		});
 	}
-	key_in(e, ty=null){
-		if (ty === "keydown" && e.key === "Tab" && !e.shiftKey){
-			e.preventDefault();
-			const s = window.getSelection();
-			const r = s.getRangeAt(0);
-			const b = document.createTextNode("\t");
-			r.insertNode(b);
-			r.setStartAfter(b);
-			r.setEndAfter(b);
-			s.removeAllRanges();
-			s.addRange(r);
+	editor(){
+		this.#m = this.#menu.value;
+		if(this.#m === this.#mf) return;
+		switch (this.#m){
+			case "normal":
+			if(this.#h) $ID("text").value = this.#h.getValue();
+			this.#ace.style.display = "none";
+			$ID("text").style.display = "block";
+			break;
+			case "ace":
+			$ID("text").style.display = "none";
+			this.#ace.style.display = "block";
+			if ($ID("include_ace")){
+				this.ace();
+			} else {
+				const s = document.createElement("script");
+				s.src = ace_cdn;
+				s.id = "include_ace";
+				document.body.appendChild(s);
+				s.addEventListener("load", ()=>{
+					this.ace();
+					$ID("form").addEventListener("submit", ()=>{
+						$ID("text").value = this.#h.getValue();
+					});
+				});
+			}
+			break;
+			case "exit":
+			$ID("exit").click();
+			return;
+			break;
 		}
-		let t = this.#code.textContent;
-		if (this.#pre.c === t) return;
-		this.#pre.c = t;
-		if (t.slice(-1) !== "\n") t += "\n";
-		const tl = t.split("\n");
-		$ID("text").innerHTML = h(t.slice(0, -1));
-		if (this.#pre.l === tl.length) return;
-		this.#lid.innerHTML = "";
-		for(let i=1;i<=tl.length;++i) this.#lid.innerHTML+=i+"<br>";
-		this.#pre.l = tl.length;
-		this.#lid.style.minWidth = String(tl.length).length+"em";
+		this.#mf = this.#m;
+		localStorage.setItem(key_m, this.#mt.indexOf(this.#m));
+	}
+	ace(){
+		const l = {"md":"markdown","py":"python","pl":"perl","rb":"ruby","js":"javascript","txt":"text","conf":"ini"};
+		const v = $QS('input[name="new_name"]').value;
+		const f = v.slice(v.indexOf(".")+1);
+		if (this.#h === null){
+			this.#h = ace.edit("editor");
+			this.#h.setTheme("ace/theme/IPlastic");
+			this.#h.setFontSize(this.#f.value+"px");
+		}
+		this.#h.getSession().setValue($ID("text").value);
+		this.#h.session.setMode("ace/mode/"+(l[f]?l[f]:f));
+	}
+	zoom(){
+		if(this.#f.value < 1) this.#f.value = 1;
+		const f = this.#f.value+"px";
+		$ID("text").style.fontSize = f;
+		if(this.#h) this.#h.setFontSize(f);
+		localStorage.setItem(key_f, this.#f.value);
 	}
 }
 
