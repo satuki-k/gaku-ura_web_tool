@@ -100,7 +100,7 @@ function main(string $from):int{
 			if($i===0) $conf->not_found();
 			$u = $user->user_data_convert(explode("\t", get($user->user_list_file, $i+1)));
 			$html = '<h1>'.$u['name'].'</h1>権限:'.$u['admin'].'<div class="profile">'.to_html(str_replace('&#10;',"\n",$u['profile'])).'</div><p><br></p><p><a href="./">ユーザーホームへ</a></p>';
-			$conf->html($user_data['name'].'-', '', $html, $css_file, $js_file);
+			$conf->html($u['name'].'-', '', $html, $css_file, $js_file);
 			return 0;
 		}
 	} elseif ($from === 'admin'){

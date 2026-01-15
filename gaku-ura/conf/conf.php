@@ -373,9 +373,9 @@ class GakuUra{
 	}
 	#ファイル同時アクセス防止
 	public function file_lock(string $label):void{
-		$s = $this->system_dir.'/flock';
+		$s = $this->system_dir.'/flock/.';
 		if(!is_dir($s)) mkdir($s);
-		for($f=$s.'/'.$label;is_file($f);unlink_by_date($s,60));
+		for($f=$s.$label;is_file($f);unlink_by_date($s,60));
 		touch($f);
 	}
 	public function file_unlock(string $label):void{
