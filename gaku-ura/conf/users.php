@@ -1,8 +1,5 @@
 <?php
-/*
- * gaku-ura9.6.1
-*/
-
+#gaku-ura9.6.5
 //ログイン必須とは限らない機能を考慮し、ログインチェックは初期化では行わない
 class GakuUraUser{
 	public string $user_dir;
@@ -15,18 +12,14 @@ class GakuUraUser{
 	public const SKEY_FROM = 'gaku-ura_login:from';
 	//GakuUraオブジェクトが引数
 	function __construct(object &$conf){
-		if (!isset($conf->config['login.enable']) || (int)$conf->config['login.enable'] === 0){
-			$conf->not_found(false, 'この機能は無効です。');
-		}
-		$this->own_dir = ['/', '/', '/', '/', '/'];
+		if(!isset($conf->config['login.enable'])||(int)$conf->config['login.enable']===0) $conf->not_found(false, 'この機能は無効です。');
+		$this->own_dir = ['/','/','/','/','/'];
 		if (isset($conf->config['login.dir'])){
 			$dirs = explode(' ', $conf->config['login.dir']);
-			if (count($dirs) === 5){
-				$this->own_dir = $dirs;
-			}
+			if(count($dirs)===5) $this->own_dir=$dirs;
 		}
 		$this->admin_revel = 3;
-		if (isset($conf->config['login.admin_revel']) && (int)$conf->config['login.admin_revel'] > 0){
+		if (isset($conf->config['login.admin_revel']) && (int)$conf->config['login.admin_revel']>0){
 			$this->admin_revel = (int)$conf->config['login.admin_revel'];
 		}
 		$this->user_dir = $conf->data_dir.'/users';
@@ -35,9 +28,7 @@ class GakuUraUser{
 		if (file_exists($this->user_list_file)){
 			$first = explode("\t", get($this->user_list_file, 1));
 			foreach ($this->user_list_keys as $k){
-				if (!in_array($k, $first, true)){
-					$conf->not_found();
-				}
+				if(!in_array($k,$first,true)) $conf->not_found();
 			}
 			$this->user_list_keys = $first;
 		} else {
@@ -55,11 +46,7 @@ class GakuUraUser{
 		$d = [];
 		$l = count($this->user_list_keys);
 		for ($i = 0;$i < $l;++$i){
-			if (isset($user_row[$i])){
-				$d[$this->user_list_keys[$i]] = $user_row[$i];
-			} else {
-				$d[$this->user_list_keys[$i]] = '';
-			}
+			$d[$this->user_list_keys[$i]] = (isset($user_row[$i])?$user_row[$i]:'');
 		}
 		return $d;
 	}
@@ -91,12 +78,8 @@ class GakuUraUser{
 			++$uid;
 			$d = $this->user_data_convert(explode("\t", $row));
 			if ((int)$d['enable'] === 1){
-				if (($name !== '') && ($d['name'] === $name)){
-					return $uid;
-				}
-				if ($mail !== '' && $d['mail'] === $mail){
-					return $uid;
-				}
+				if($name!==''&&$d['name']===$name) return $uid;
+				if($mail!==''&&$d['mail']===$mail) return $uid;
 			}
 		}
 		return 0;
@@ -108,9 +91,7 @@ class GakuUraUser{
 		$user_rows = get_rows($this->user_list_file, 1);
 		$user_row = '';
 		foreach ($this->user_list_keys as $k){
-			if (isset($user_data[$k])){
-				$user_row .= trim(self::h($user_data[$k]));
-			}
+			if(isset($user_data[$k])) $user_row.=trim(self::h($user_data[$k]));
 			$user_row .= "\t";
 		}
 		$user_row = rtrim(row($user_row));
@@ -119,9 +100,7 @@ class GakuUraUser{
 			$last = explode("\t", $user_rows[count($user_rows) -1]);
 			for ($i = 0;$i < count($this->user_list_keys);++$i){
 				if ($this->user_list_keys[$i] === 'id'){
-					if ($last[$i] === 'id'){
-						$last[$i] = 0;
-					}
+					if($last[$i]==='id') $last[$i]=0;
 					$user_d[$i] = (int)$last[$i] +1;
 					file_put_contents($this->user_list_file, implode("\t", $user_d)."\n", FILE_APPEND|LOCK_EX);
 					$_SESSION[self::SKEY_ID] = $user_d[$i];
