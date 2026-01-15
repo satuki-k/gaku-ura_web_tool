@@ -1,19 +1,12 @@
 <?php
-/*
- * gaku-ura9.6.1
-*/
+#gaku-ura9.6.5
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
-
 function is_editable(string $fname):bool{
-	if (stripos(mime_content_type($fname),'text/') === 0){
-		return true;
-	}
+	if(stripos(mime_content_type($fname),'text/')===0) return true;
 	$f = strtolower(basename($fname));
 	foreach (['txt','htaccess','php','py','rb','conf','ini','log','css','html','js','csv','tsv','c','cpp','cxx','gkrs','pl'] as $k){
-		if (str_ends_with($f, '.'.$k)){
-			return true;
-		}
+		if(str_ends_with($f,'.'.$k)) return true;
 	}
 	return false;
 }
@@ -57,15 +50,9 @@ function main(string $from):int{
 	$css_file = $user_dir.'/css';
 	$html_file = $user_dir.'/html/'.$from.'.html';
 	$js_file = $user_dir.'/js/'.$from.'.js';
-	if (!file_exists($html_file)){
-		$conf->not_found();
-	}
-	if (isset($_POST['submit_type'])){
-		$_POST['submit'] = $_POST['submit_type'];
-	}
-	if (isset($_POST['submit'])){
-		$submit = $_POST['submit'];
-	}
+	if(!is_file($html_file)) $conf->not_found();
+	if(isset($_POST['submit_type'])) $_POST['submit']=$_POST['submit_type'];
+	if(isset($_POST['submit'])) $submit=$_POST['submit'];
 	$login_data = $user->login_check();
 	$replace = ['GAKU_URA_VERSION'=>GAKU_URA_VERSION, 'WARNING'=>''];
 	$is_admin = false;
@@ -91,15 +78,9 @@ function main(string $from):int{
 				$new_passwd = row(h(GakuUraUser::h($_POST['new_passwd'])));
 				$profile = str_replace("\n", '&#10;', h(GakuUraUser::h($_POST['profile'])));
 				if (pass($passwd) === $login_data['user_data']['passwd']){
-					if (not_empty($name) && strlen($name) < 32){
-						$new_user_data['name'] = $name;
-					}
-					if (not_empty($new_passwd)){
-						$new_user_data['passwd'] = pass($new_passwd);
-					}
-					if ($user->user_exists('', $mail) === 0){
-						$new_user_data['mail'] = $mail;
-					}
+					if(not_empty($name)&&strlen($name)<32) $new_user_data['name']=$name;
+					if(not_empty($new_passwd)) $new_user_data['passwd']=pass($new_passwd);
+					if($user->user_exists('',$mail)===0) $new_user_data['mail']=$mail;
 					$new_user_data['profile'] = $profile;
 					$user->change_user_data($conf, $new_user_data);
 				}
@@ -112,15 +93,11 @@ function main(string $from):int{
 				$replace['PROFILE'] = $login_data['user_data']['profile'];
 				$replace['ADMIN'] = $login_data['user_data']['admin'];
 				$html = file_get_contents($html_file);
-				if ((int)$login_data['user_data']['admin'] >= $user->admin_revel){
-					$is_admin = true;
-				}
+				if((int)$login_data['user_data']['admin']>=$user->admin_revel) $is_admin=true;
 			}
 		} else {
 			$i = $user->user_exists(h(GakuUraUser::h($conf->url_param)));
-			if ($i === 0){
-				$conf->not_found();
-			}
+			if($i===0) $conf->not_found();
 			$u = $user->user_data_convert(explode("\t", get($user->user_list_file, $i+1)));
 			$html = '<h1>'.$u['name'].'</h1>権限:'.$u['admin'].'<div class="profile">'.to_html(str_replace('&#10;',"\n",$u['profile'])).'</div><p><br></p><p><a href="./">ユーザーホームへ</a></p>';
 			$conf->html($user_data['name'].'-', '', $html, $css_file, $js_file);
@@ -132,9 +109,7 @@ function main(string $from):int{
 			header('Location:../login/');
 			exit;
 		}
-		if ((int)$login_data['user_data']['admin'] < $user->admin_revel){
-			$conf->not_found();
-		}
+		if((int)$login_data['user_data']['admin']<$user->admin_revel) $conf->not_found();
 		$is_edit_mode = false;
 		$menu = isset($_GET['Menu'])?$_GET['Menu']:'';
 		$admin_dir = $user->own_dir[(int)$login_data['user_data']['admin']];
@@ -159,9 +134,7 @@ function main(string $from):int{
 		//現在位置を特定
 		if (isset($_GET['Dir']) && strpos($_GET['Dir'],'..')===false && is_dir($c_root.'/'.h($_GET['Dir']))){
 			$uri_dir = h($_GET['Dir']);
-			if ($uri_dir !== ''){
-				$current_dir = realpath($c_root.'/'.$uri_dir);
-			}
+			if($uri_dir!=='') $current_dir=realpath($c_root.'/'.$uri_dir);
 		}
 
 		//投稿
@@ -175,9 +148,7 @@ function main(string $from):int{
 						header('Location:./?Dir='.$uri_dir);
 						exit;
 					} else {
-						if ($_POST['perm'] !== 'no'){
-							chmod($path, $perm_list[$_POST['perm']]);
-						}
+						if($_POST['perm']!=='no') chmod($path,$perm_list[$_POST['perm']]);
 						if (not_empty($_POST['new_name']) && !file_exists($current_dir.'/'.h($_POST['new_name']))){
 							rename($path, $current_dir.'/'.h($_POST['new_name']));
 							$path = $current_dir.'/'.h($_POST['new_name']);
@@ -268,9 +239,7 @@ function main(string $from):int{
 							$cl['php'] .= "\n".'require __DIR__ .\'/../conf/conf.php\';'."\n".'function main():int{'."\n\t".'$conf = new GakuUra();'."\n\t".'return 0;'."\n".'}';
 						}
 						file_put_contents($new_path, $cl[$_POST['new']]."\n", LOCK_EX);
-						if (in_array($_POST['new'],['pl','py'], true)){
-							chmod($new_path, 0745);
-						}
+						if(in_array($_POST['new'],['pl','py'],true)) chmod($new_path, 0745);
 					}
 				}
 				//アップロード
@@ -307,9 +276,7 @@ function main(string $from):int{
 					//自分より権限が下か自分が最高権限か自分自身
 					if ($d['admin']<$login_data['user_data']['admin'] || (int)$login_data['user_data']['admin']===4 || (int)$login_data['user_data']['id']===(int)$d['id']){
 						foreach ($user->user_list_keys as $k){
-							if ($k === 'id'){
-								continue;
-							}
+							if ($k==='id') continue;
 							if (isset($_POST[$k.$d['id']])){
 								if (in_array($k,['name','enable','admin','passwd'],true) && !not_empty($_POST[$k.$d['id']])){
 									continue;
@@ -408,9 +375,7 @@ function main(string $from):int{
 			$replace['FILE_LIST'] .= '</td></tr>';
 			//先頭の/禁止
 			$u_dir = $uri_dir;
-			if ($u_dir !== ''){
-				$u_dir .= '/';
-			}
+			if($u_dir!=='') $u_dir.='/';
 			$files = array_diff(scandir($current_dir,SCANDIR_SORT_NONE),['.','..']);
 			file_sort($files, $current_dir);
 			foreach ($files as $f){
@@ -450,9 +415,7 @@ function main(string $from):int{
 							$f .= '<td><input type="text" name="'.$k.$d['id'].'" placeholder="変更なし"></td>';
 						} else {
 							$f .= '<td><input type="text" name="'.$k.$d['id'].'" value="'.$d[$k].'"';
-							if ($k !== 'mail' && $k !== 'profile'){
-								$f .= ' placeholder="変更なし"';
-							}
+							if($k!=='mail'&&$k!=='profile') $f.=' placeholder="変更なし"';
 							$f .= '></td>';
 						}
 					}
@@ -551,3 +514,4 @@ function main(string $from):int{
 	$conf->html($title.'-', '', $html, $css_file, $js_file);
 	return 0;
 }
+
