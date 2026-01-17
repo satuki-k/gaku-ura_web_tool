@@ -1,3 +1,4 @@
+<!include document.css>
 # 運営者情報
 <a href="./">トップページ</a>
 

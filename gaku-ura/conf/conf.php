@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.6.5';
+const GAKU_URA_VERSION = '9.6.6';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
 #UTF-8/LFにする
 function u8lf(string $t):string{
@@ -12,18 +12,15 @@ function u8lf(string $t):string{
 function expelliarmus(string $s):string{
 	foreach (['script','iframe','frame','embed','object'] as $t){
 		$s = str_ireplace('</'.$t.'>', '', $s);
-		$p1 = stripos($s, '<'.$t);
-		if ($p1 !== false){
-			$p2 = stripos($s, '>', $p1);
-			if($p2!==false) $s=str_replace(substr($s,$p1,$p2-$p1+1),'',$s);
+		while (($a=stripos($s,'<'.$t))!==false&&($b=stripos($s,'>',$a))!==false){
+			$s = str_replace(substr($s,$a,$b-$a+1),'',$s);
 		}
 	}
 	return $s;
 }
 #改行除去
 function row(string $s):string{
-	$s = str_replace("\n", '', $s);
-	return str_replace("\r", '', $s);
+	return str_replace("\r",'',str_replace("\n",'',$s));
 }
 function encode_a(string $s):string{
 	return str_replace('+','-',str_replace('/','_',base64_encode($s)));#URLに使用可能なbase64_encode
@@ -42,15 +39,18 @@ function subrpos(string $start, string $end, string $text):string{
 	}
 	return '';
 }
+function innerHTML(string $t, string $text):string{
+	return subrpos('<'.$t.'>', '</'.$t.'>', $text);
+}
 #任意の一つの行
 function get(string $file, int $l):string|false{
 	if (is_file($file)){
-		$fp = fopen($file, 'r');
-		for ($i=0;$i < $l;++$i){
-			$out = fgets($fp);
+		$f = fopen($file, 'r');
+		for ($i=0;$i<$l;++$i){
+			$o = fgets($f);
 		}
-		fclose($fp);
-		if(isset($out)) return trim($out);
+		fclose($f);
+		if(isset($o)) return trim($o);
 	}
 	return false;
 }
@@ -74,29 +74,28 @@ function path_list(string $dir):array{
 	$l = [];
 	if(!is_dir($dir)) return $l;
 	foreach (scandir($dir) as $d){
-		if ($d !== '.' && $d !== '..'){
+		if ($d!=='.' && $d!=='..'){
 			$f = $dir.'/'.$d;
 			$l[] = $f;
-			if(is_dir($f)) $l=array_merge($l, path_list($f));
+			if(is_dir($f)) $l=array_merge($l,path_list($f));
 		}
 	}
 	return $l;
 }
 #空じゃないフォルダも削除可
 function rmdir_all(string $dir):void{
-	if (is_dir($dir)){
-		foreach (scandir($dir) as $d){
-			if (($d !== '.') && ($d !== '..')){
-				$f = $dir.'/'.$d;
-				if (is_dir($f)){
-					rmdir_all($f);
-				} else {
-					unlink($f);
-				}
+	if(!is_dir($dir)) return;
+	foreach (scandir($dir) as $d){
+		if ($d!=='.' && $d!=='..'){
+			$f = $dir.'/'.$d;
+			if (is_dir($f)){
+				rmdir_all($f);
+			} else {
+				unlink($f);
 			}
 		}
-		rmdir($dir);
 	}
+	rmdir($dir);
 }
 #設定ファイル
 function read_conf(string $conf_file):array{
@@ -104,51 +103,50 @@ function read_conf(string $conf_file):array{
 	if(!is_file($conf_file)) return $c;
 	$fp = fopen($conf_file, 'r');
 	while (($i=fgets($fp)) !== false){
-		$row = trim($i);
-		$fi = substr($row, 0, 1);
-		if(in_array($fi,[';','#','['],true)||strpos($row,'=')===false) continue;
-		$peq = strpos($row, '=');
-		$key = trim(substr($row, 0, $peq));
-		$value = trim(substr($row, $peq +1));
-		if (is_numeric($value)){
-			$value = (int)$value;
+		$r = trim($i);
+		$f = substr($r, 0, 1);
+		if(in_array($f,[';','#','['],true)||strpos($r,'=')===false) continue;
+		$e = strpos($r, '=');
+		$k = trim(substr($r, 0, $e));
+		$v = trim(substr($r, $e +1));
+		if (is_numeric($v)){
+			$v = (int)$v;
 		} else {
-			$pos1 = subrpos("'", "'", $value);
-			$pos2 = subrpos('"', '"', $value);
-			$value = $pos2;
-			if($pos1!=='') $value=$pos1;
+			$a = subrpos("'", "'", $v);
+			$b = subrpos('"', '"', $v);
+			$v = ((strlen($a)>strlen($b))?$a:$b);
 		}
-		if($key!=='') $c[$key]=$value;
+		if($k!=='') $c[$k]=$v;
 	}
 	fclose($fp);
 	return $c;
 }
 #sha256ハッシュ
 function pass(string $passwd):string{
-	if ($passwd==='') return '';
+	if($passwd==='') return '';
 	return hash('sha256', $passwd);
 }
 #開始と終了で囲まれた文字列ごと削除(参照渡し)
 function remove_comment_rows(string &$code, string $s='/*', string $g='*/'):string{
-	while (($p=subrpos($s, $g, $code)) !== ''){
+	while (($p=subrpos($s,$g,$code)) !== ''){
 		$code = str_replace($s.$p.$g, '', $code);
 	}
 	return $code;
 }
 #css軽量化
 function css_out(string $css_file):string{
-	if ($css_file==='') return '';
+	if($css_file==='') return '';
 	$r = '';
-	$css_list = [];
+	$l = [];
 	if (is_dir($css_file)){
 		foreach (scandir($css_file) as $f){
-			if(str_ends_with(strtolower($f),'.css')) $css_list[]=$css_file.'/'.$f;
+			if(str_ends_with(strtolower($f),'.css')) $l[]=$css_file.'/'.$f;
 		}
 	} elseif (is_file($css_file)){
-		$css_list = [$css_file];
+		$l = [$css_file];
 	}
-	foreach ($css_list as $css){
-		$r .= file_get_contents($css);
+	foreach ($l as $c){
+		$r .= file_get_contents($c);
 	}
 	remove_comment_rows($r);
 	$r = preg_replace('/\r|\n|\r\n|\t/', '', $r);
@@ -156,25 +154,25 @@ function css_out(string $css_file):string{
 }
 #js軽量化
 function js_out(string $js_file, bool $minify=true):string{
-	if ($js_file==='') return '';
+	if($js_file==='') return '';
 	$r = '';
-	$js_list = [];
+	$l = [];
 	if (is_dir($js_file)){
 		foreach (scandir($js_file) as $f){
-			if(str_ends_with(strtolower($f),'.js')) $js_list[]=$js_file.'/'.$f;
+			if(str_ends_with(strtolower($f),'.js')) $l[]=$js_file.'/'.$f;
 		}
 	} elseif (is_file($js_file)){
-		$js_list = [$js_file];
+		$l = [$js_file];
 	}
-	foreach ($js_list as $js){
-		$j = file_get_contents($js);
+	foreach ($l as $f){
+		$j = file_get_contents($f);
 		if(subrpos('#!option ',';',$j)==='notminify') $minify=false;
 		remove_comment_rows($j, '#!option ', ';');
 		if ($minify){
 			remove_comment_rows($j);
 			$t = '';
-			foreach (explode("\n", $j) as $row){
-				$t .= preg_replace('/\/\/.*/', '', trim($row));
+			foreach (explode("\n",$j) as $i){
+				$t .= preg_replace('/\/\/.*/', '', trim($i));
 			}
 			$r .= preg_replace('/( |)(,|=|{|}|\(|\)|[|]|\?|!|\&|-|\+|<|>|:|;|\*|\/)( |)/', '$2', $t);
 		} else {
@@ -200,7 +198,7 @@ function list_isset(array $dict, array $keys):bool{
 }
 #html互換md
 function to_html(string $md_text):string{
-	$fls = ['ol'=>1, 'ul'=>1];
+	$fls = ['ol'=>1,'ul'=>1];
 	$t = '';
 	foreach (explode("\n", u8lf($md_text)) as $i){
 		$row = trim($i);
@@ -306,8 +304,7 @@ class GakuUra{
 	public string $canonical;#正規URL(URLにセッションIDがあるときに取り除いたURL)
 	public array $ld_json;#構造化データ辞書
 	private string $system_dir;
-	#trueでnonceが無効になる
-	function __construct(?bool $third_party=null){
+	function __construct(?bool $nonce=null){
 		header('Referrer-Policy:same-origin');
 		if(!isset($_SESSION)) session_start(['cookie_lifetime'=>time()+3600*2400]);
 		$this->d_root = realpath(__DIR__ .'/../..');
@@ -339,11 +336,11 @@ class GakuUra{
 			/* COOPなどは要検討 */
 			header('X-Frame-Options:SAMEORIGIN');
 		}
-		if ($third_party === null){
-			$third_party = isset($this->config['use_nonce'])&&$this->config['use_nonce']===0;
+		if ($nonce === null){
+			$nonce = isset($this->config['use_nonce'])&&$this->config['use_nonce']===0;
 		}
 		$this->nonce = '';
-		if (!$third_party){
+		if (!$nonce){
 			$this->nonce = one_time_pass(20, 30);
 			header("Content-Security-Policy:connect-src 'self';object-src 'none';base-uri 'self';script-src 'nonce-{$this->nonce}' 'strict-dynamic' https:;");
 		}
@@ -362,11 +359,8 @@ class GakuUra{
 	}
 	#ヘッダー content-type
 	public function content_type(string $type, string $char='UTF-8'):void{
-		if (strpos($type,'text/') !== false){
-			header('Content-Type:'.$type.';charset='.$char);
-		} else {
-			header('Content-Type:'.$type.';');
-		}
+		$a = (strpos($type,'text/')===0)?'charset='.$char:'';
+		header('Content-Type:'.$type.';'.$a);
 	}
 	public static function h(string $s):string{
 		return str_replace('{','&#123;', str_replace('}','&#125;',$s));#不意置換防止
@@ -410,88 +404,134 @@ class GakuUra{
 	}
 
 	#タイトル 説明 本文(bodyタグの中身) cssファイル jsファイル 検索に表示させたいか 共通cssを含むか jsの軽量化をするか 雛形のhtmlファイル(data_dir基準)
-	public function html(string $title,string $description,string $content,string $css='',string $js='',bool $robots=false,bool $css_default=true,bool $minify=true,string $htm='default/default.html'):void{
-		$html_file = $this->data_dir.'/'.$htm;
-		if (!is_file($html_file)){
-			echo '雛形のhtmlがありません';
-			exit;
-		}
-		$html = row(file_get_contents($html_file))."\n";
-		remove_comment_rows($html, '<!--', '-->');
+	public function html(string $title,string $description,string $content,string $css='',string $js='',bool $robots=false,bool $css_default=true,bool $minify=true,?string $htm=null):int{
+		if($htm===null) $htm='default/default.html';
+		$f = $this->data_dir.'/'.$htm;
+		if(!is_file($f)) return 1;
+		$h = row(file_get_contents($f))."\n";
+		remove_comment_rows($content, '<!','>');
+		remove_comment_rows($h, '<!--', '-->');
 		remove_comment_rows($title, '<', '>');
 		remove_comment_rows($description, '<', '>');
-		$replace = [
+		$r = [
 		'CSS_URL'=>$this->u_root.'css/?CSS='.str_replace($this->data_dir,'',$css).($css_default?'':'&STANDALONE'),
 		'JS_URL'=>$this->u_root.'js/?JS='.str_replace($this->data_dir,'',$js).($minify?'':'&NOTMINIFY'),
 		'NONCE'=>$this->nonce,
-		'DESCRIPTION'=>(not_empty($description)?self::h($description):'なし'),'TITLE'=>self::h($title),
-		'CONTENT'=>self::h($content),
+		'DESCRIPTION'=>(not_empty($description)?$description:'なし'),'TITLE'=>$title,
+		'CONTENT'=>$content,
 		'SITE_TITLE'=>(isset($this->config['title'])?$this->config['title']:'無題'),
 		'U_ROOT'=>$this->u_root];
 		if ($this->here !== $this->canonical){
-			$html = str_replace('</head>', '<link rel="canonical" href="'.$this->canonical.'"></head>', $html);
+			$h = str_replace('</head>', '<link rel="canonical" href="'.$this->canonical.'"></head>', $h);
 			$robots = false;
 		}
-		if(!$robots) $html=str_replace('<ti','<meta name="robots" content="noindex"><ti',$html);
-		if (strpos($html, '{CSS}') !== false){
-			$replace['CSS'] = '';
-			if($css_default) $replace['CSS'].=css_out($this->data_dir.'/default/default.css');
-			$replace['CSS'] .= css_out($css);
-			$replace['CSS'] = $this->include_lib($replace['CSS'], 'css');
+		if(!$robots) $h=str_replace('<ti','<meta name="robots" content="noindex"><ti',$h);
+		if (strpos($h,'{CSS}') !== false){
+			$r['CSS'] = '';
+			if($css_default) $r['CSS'].=css_out($this->data_dir.'/default/default.css');
+			$r['CSS'] .= css_out($css);
+			$r['CSS'] = $this->include_lib($r['CSS'], 'css');
 		}
-		if(strpos($html,'{JS}')!==false) $replace['JS']=$this->include_lib(js_out($js, $minify),'js');
-		foreach ($replace as $s=>$r){
-			$html = str_replace('{'.$s.'}', $r, $html);
+		if(strpos($h,'{JS}')!==false) $r['JS']=$this->include_lib(js_out($js,$minify),'js');
+		foreach ($r as $k=>$v){
+			$h = str_replace('{'.$k.'}', self::h($v), $h);
 		}
-		$html = str_replace(' nonce=""', '', $html);
+		$h = str_replace(' nonce=""', '', $h);
 		if ($robots && isset($this->config['seo.enable_ld_json']) && (int)$this->config['seo.enable_ld_json']===1){
 			if ($this->ld_json['@type'] !== 'Person'){
-				$this->ld_json['name'] = $replace['SITE_TITLE'];
-				$this->ld_json['headline'] = $replace['TITLE'].$replace['SITE_TITLE'];
+				$this->ld_json['name'] = $r['SITE_TITLE'];
+				$this->ld_json['headline'] = $r['TITLE'].$r['SITE_TITLE'];
 			}
 			$this->ld_json['description'] = $description;
 			$j = json_encode($this->ld_json, JSON_UNESCAPED_UNICODE);
-			$html = str_replace('</body>', '<script type="application/ld+json">'.$j.'</script></body>', $html);
+			$h = str_replace('</body>', '<script type="application/ld+json">'.$j.'</script></body>', $h);
 		}
-		echo $html;
+		echo $h;
+		return 0;
+	}
+	#dataプロジェクトパス, htmlまたはmdファイル名前だけ, 「{}」展開変数の連想配列, クロール可否
+	public function htmlf(string $project_name,string $file_name,array $replace,bool $robots=false):int{
+		$pr = $this->data_dir.'/'.$project_name;
+		$fn = basename($file_name);
+		if (strpos($fn,'.') === false){
+			if (is_file('html/'.$fn.'.md')){
+				$fn .= '.md';
+			} else {
+				$fn .= '.html';
+			}
+		}
+		$h = 'html/'.$fn;
+		if(!is_file($pr.'/'.$h)) return -1;
+		$c = file_get_contents($pr.'/'.$h);
+		if(str_ends_with($h,'.md')) $c=to_html($c);
+		$js = '';
+		$css = $pr.'/css/index.css';
+		while (($p=subrpos('<!include ','>',$c)) !== ''){
+			$t = '<!include '.$p.'>';
+			if (str_ends_with($p, '.js')){
+				if(file_exists($pr.'/js/'.$p)) $js=$pr.'/js/'.$p;
+			} elseif (str_ends_with($p, '.css')){
+				if(file_exists($pr.'/css/'.$p)) $css=$pr.'/css/'.$p;
+			} elseif (str_ends_with($p,'.html')){
+				if(is_file($pr.'/html/'.$p)) $c=str_replace($t,file_get_contents($pr.'/html/'.$p),$c);
+			} elseif (str_ends_with($p,'.md')){
+				if(is_file($pr.'/html/'.$p)) $c=str_replace($t,to_html(file_get_contents($pr.'/html/'.$p)),$c);
+			} elseif (is_file($pr.'/'.$p)){
+				$c = str_replace($t, file_get_contents($pr.'/'.$p), $c);
+			}
+			$c = str_replace($t, '', $c);
+		}
+		foreach ($replace as $k=>$v){
+			$c = str_replace('{'.$k.'}', self::h($v), $c);
+		}
+		$s = ['top_page'=>false,'title'=>self::h(innerHTML('h1',$c)),'description'=>self::h(innerHTML('p',$c)),'robots'=>$robots,'css_default_only'=>false,'css_standalone'=>false,'js_minify'=>true,'template'=>null];
+		while (($p=subrpos('<!option ','>',$c))!=='' && count($r=explode(' ',$p))>1 && isset($s[$r[0]])){
+			$v = implode(' ', array_slice($r,1));
+			if(in_array($r[0],['robots','css_default_only','css_standalone','js_minify'])) $v=(bool)$v;
+			$s[$r[0]] = $v;
+			$c = str_replace('<!option '.$p.'>', '', $c);
+		}
+		$s['title'] .= '-';
+		if($s['css_default_only']) $css='';
+		if($s['top_page']) $s['title']='';
+		return $this->html($s['title'], $s['description'], str_replace("\t",'',row($c)), $css, $js, $s['robots'], !$s['css_standalone'], $s['js_minify'], $s['template']);
 	}
 	#エラーページ
 	public function not_found(bool $is404=false, string $reason=''):void{
-		$perhaps = $this->u_root;
+		$h = $this->u_root;
 		if ($is404){
-			$this_file = $this->d_root.$_SERVER['REQUEST_URI'];
-			if (isset($_SERVER['REQUEST_URI']) && file_exists($this_file)){
-				if (is_file($this_file) && (preg_match('/(\.(cgi|pl|py|rb))$/si', $this_file) === 1)){
-					chmod($this_file, 0745);
-				} elseif (is_dir($this_file)){
-					foreach (scandir($this_file) as $f){
-						if(preg_match('/(\.(cgi|pl|py|rb))$/si',$f)===1) chmod($this_file.'/'.$f,0745);
+			$f = $this->d_root.$_SERVER['REQUEST_URI'];
+			if (isset($_SERVER['REQUEST_URI']) && file_exists($f)){
+				if (is_file($f) && (preg_match('/(\.(cgi|pl|py|rb))$/si', $f) === 1)){
+					chmod($f, 0745);
+				} elseif (is_dir($f)){
+					foreach (scandir($f) as $i){
+						if(preg_match('/(\.(cgi|pl|py|rb))$/si',$i)===1) chmod($f.'/'.$i,0745);
 					}
 				}
 			}
 			if (isset($this->config['error.moved_list'])){
-				foreach (explode(' ', $this->config['error.moved_list']) as $moved){
-					if (strpos($moved, '=>') !== false){
-						list($euri, $turi) = explode('=>', $moved);
-						if ($_SERVER['REQUEST_URI'] === trim($euri)){
-							$perhaps = trim($turi);
+				foreach (explode(' ', $this->config['error.moved_list']) as $m){
+					if (strpos($m, '=>') !== false){
+						list($e, $t) = explode('=>', $m);
+						if ($_SERVER['REQUEST_URI'] === trim($e)){
+							$h = trim($t);
 							break;
 						}
 					}
 				}
 			}
 		}
-		$html_file = $this->data_dir.'/404/html/index.html';
-		if (is_file($html_file)){
-			$html = file_get_contents($html_file);
-			foreach (['PERHAPS'=>$perhaps,'REASON'=>$reason] as $k=>$v){
-				$html = str_replace('{'.$k.'}', $v, $html);
+		$t = $this->data_dir.'/404/html/index.html';
+		if (is_file($t)){
+			$r = file_get_contents($t);
+			foreach (['PERHAPS'=>$h,'REASON'=>$reason] as $k=>$v){
+				$r = str_replace('{'.$k.'}', $v, $r);
 			}
-			$this->html(subrpos('<h1>','</h1>',$html).'-', '', $html, $this->data_dir.'/404/css');
+			$this->html(innerHTML('h1',$r).'-', '', $r, $this->data_dir.'/404/css');
 		}
 		exit;
 	}
-
 	/*
 	 * php.iniに以下を書くとクッキーが無効でもcheck_csrf_tokenを通過できます。
 	 * session.use_trans_sid = 1

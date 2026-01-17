@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.6.5
+#gaku-ura9.6.6
 //ログイン必須とは限らない機能を考慮し、ログインチェックは初期化では行わない
 class GakuUraUser{
 	public string $user_dir;
@@ -18,6 +18,8 @@ class GakuUraUser{
 			$dirs = explode(' ', $conf->config['login.dir']);
 			if(count($dirs)===5) $this->own_dir=$dirs;
 		}
+		#個別に設定出来るように
+		for($i=0;$i<5;++$i) if(isset($conf->config['login.dir'.$i])) $this->own_dir[$i]=$conf->config['login.dir'.$i];
 		$this->admin_revel = 3;
 		if (isset($conf->config['login.admin_revel']) && (int)$conf->config['login.admin_revel']>0){
 			$this->admin_revel = (int)$conf->config['login.admin_revel'];
@@ -102,7 +104,7 @@ class GakuUraUser{
 				if ($this->user_list_keys[$i] === 'id'){
 					if($last[$i]==='id') $last[$i]=0;
 					$user_d[$i] = (int)$last[$i] +1;
-					file_put_contents($this->user_list_file, implode("\t", $user_d)."\n", FILE_APPEND|LOCK_EX);
+					file_put_contents($this->user_list_file, implode("\t",$user_d)."\n", FILE_APPEND|LOCK_EX);
 					$_SESSION[self::SKEY_ID] = $user_d[$i];
 					$_SESSION[self::SKEY_PASSWD] = $user_data['passwd'];
 					break;
@@ -112,7 +114,7 @@ class GakuUraUser{
 			$row = get($this->user_list_file, $user_data['id'] +1);
 			if ($row !== $user_row){
 				$user_rows[$user_data['id']] = $user_row;
-				file_put_contents($this->user_list_file, implode("\n", $user_rows)."\n", LOCK_EX);
+				file_put_contents($this->user_list_file, implode("\n",$user_rows)."\n", LOCK_EX);
 			}
 		}
 		$conf->file_unlock('user_list');
