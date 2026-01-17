@@ -28,15 +28,19 @@ function file_perm(string $file):string{
 	return substr(sprintf('%o',fileperms($file)),-3);
 }
 function perm_opt(array $perm_list, string $now_p):string{
-	$r = '<label>ﾊﾟｰﾐｯｼｮﾝ<select name="perm"><option value="no">'.$now_p.' 変更しない</option>';
+	$r = '<label>ﾊﾟｰﾐｯｼｮﾝ<select name="perm">';
 	foreach ($perm_list as $k=>$v){
-		$r .= sprintf('<option value="%s">%o</option>',$k,$v);
+		if ($k === 'no'){
+			$r.='<option value="no">'.$now_p.'(変更しない)</option>';
+		} else {
+			$r .= sprintf('<option value="%s">%o</option>', $k, $v);
+		}
 	}
 	return $r.'</select></label>';
 }
 function form_fmt(array $hidden, string $content):string{
 	$f = '<form method="POST" action="" id="form">';
-	foreach ($hidden as $k => $v){
+	foreach ($hidden as $k=>$v){
 		$f .= '<input type="hidden" name="'.$k.'" value="'.$v.'">';
 	}
 	return $f.$content.'</form>';
@@ -500,7 +504,7 @@ function main(string $from):int{
 			$html = str_replace('<file_list>','',str_replace('</file_list>','',$html));
 		}
 	}
-	foreach ($replace as $k => $v){
+	foreach ($replace as $k=>$v){
 		$html = str_replace('{'.$k.'}', GakuUra::h($v), $html);
 	}
 	$title = subrpos('<h1>', '</h1>', $html);
@@ -511,7 +515,6 @@ function main(string $from):int{
 		}
 		$html .= 'id="gaku-ura_args">';
 	}
-	$conf->html($title.'-', '', $html, $css_file, $js_file);
-	return 0;
+	return $conf->html($title.'-', '', $html, $css_file, $js_file);
 }
 

@@ -37,7 +37,7 @@ class POPUP{
 		this.#window.append(p);
 		b.focus();
 		b.addEventListener("keydown", (e)=>{if(!(e.key==="Return"||e.key==="Enter"))e.preventDefault();});
-		b.addEventListener("click", ()=>this.disapear());
+		b.addEventListener("click", ()=>{this.disapear();});
 	}
 
 	/* 質問 */
@@ -60,13 +60,13 @@ class POPUP{
 		y.focus();
 		y.addEventListener("keydown", (e)=>{
 			if (!(e.key==="Return"||e.key==="Enter")){
-				if (e.key === "Tab") n.focus();
+				if(e.key==="Tab") n.focus();
 				e.preventDefault();
 			}
 		});
 		n.addEventListener("keydown", (e)=>{
 			if (!(e.key==="Return"||e.key==="Enter")){
-				if (e.key === "Tab") y.focus();
+				if(e.key==="Tab") y.focus();
 				e.preventDefault();
 			}
 		});
