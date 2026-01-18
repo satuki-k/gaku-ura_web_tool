@@ -172,6 +172,7 @@ function list_isset(array $dict, array $keys):bool{
 }
 #html互換md
 function to_html(string $text):string{
+	remove_comment_rows($text,'<!--','-->');
 	foreach(['|'=>124,'《'=>12298,'》'=>12299,'*'=>42,'#'=>35,'"'=>34,"'"=>39,'`'=>96,'~'=>126,'\\'=>92]as$k=>$v) $text=str_replace('\\'.$k,'&#'.$v.';',$text);
 	$rows = explode("\n", u8lf($text));
 	$r = '';
@@ -185,7 +186,7 @@ function to_html(string $text):string{
 			if(!$ul) $r.='<ul>';
 			$r .= '<li>'.trim(substr($l,strpos($l,'*')+1)).'</li>';
 			++$ul;
-		} elseif (sscanf($l,'%d.',$i)===1 && $i>=0){
+		} elseif (sscanf($l,'%d.',$i)===1 && strpos($l,$i.'. ')===0 && $i>=0){
 			if ($ul){
 				$r .= '</ul>';
 				$ul = 0;
