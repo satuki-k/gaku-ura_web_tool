@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.6.6';
+const GAKU_URA_VERSION = '9.6.7';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
 #UTF-8/LFにする
 function u8lf(string $t):string{
@@ -19,36 +19,27 @@ function expelliarmus(string $s):string{
 	return $s;
 }
 #改行除去
-function row(string $s):string{
-	return str_replace("\r",'',str_replace("\n",'',$s));
-}
-function encode_a(string $s):string{
-	return str_replace('+','-',str_replace('/','_',base64_encode($s)));#URLに使用可能なbase64_encode
-}
-function decode_a(string $s):string{
-	return base64_decode(str_replace('_','/',str_replace('-','+',$s)));#URLに使用可能なbase64_decode
-}
-function one_time_pass(int $min, int $max):string{
-	return encode_a(random_bytes(random_int($min,$max)));#乱数文字
-}
+function row(string $s):string{return str_replace("\r",'',str_replace("\n",'',$s));}
+#base64_URLencode
+function encode_a(string $s):string{return str_replace('+','-',str_replace('/','_',base64_encode($s)));}
+#base64_URLdecode
+function decode_a(string $s):string{return base64_decode(str_replace('_','/',str_replace('-','+',$s)));}
+#乱数文字列
+function one_time_pass(int $l,int $r):string{return encode_a(random_bytes(random_int($l,$r)));}
 #開始と終了の文字列で囲まれた中身の文字列
-function subrpos(string $start, string $end, string $text):string{
-	if (($s=strpos($text,$start))!==false && ($e=strpos($text,$end,$s))!==false){
-		$l = strlen($start);
-		return substr($text, $s+$l, $e-$s-$l);
+function subrpos(string $l, string $r, string $t):string{
+	if (($s=strpos($t,$l))!==false && ($e=strpos($t,$r,$s))!==false){
+		$n = strlen($l);
+		return substr($t, $s+$n, $e-$s-$n);
 	}
 	return '';
 }
-function innerHTML(string $t, string $text):string{
-	return subrpos('<'.$t.'>', '</'.$t.'>', $text);
-}
+function innerHTML(string $t,string $h):string{return subrpos('<'.$t.'>','</'.$t.'>',$h);}
 #任意の一つの行
 function get(string $file, int $l):string|false{
 	if (is_file($file)){
 		$f = fopen($file, 'r');
-		for ($i=0;$i<$l;++$i){
-			$o = fgets($f);
-		}
+		for($i=0;$i<$l;++$i) $o=fgets($f);
 		fclose($f);
 		if(isset($o)) return trim($o);
 	}
@@ -57,13 +48,12 @@ function get(string $file, int $l):string|false{
 #任意の行以降全部
 function get_rows(string $file, int $start):array|false{
 	$r = file($file, FILE_IGNORE_NEW_LINES);
-	if($r===false) return $r;
-	return array_slice($r, $start -1);
+	return ($r===false)?$r:array_slice($r,$start-1);
 }
 #任意時間以上更新ないファイル削除
 function unlink_by_date(string $dir, int $ds):void{
 	if (is_dir($dir)){
-		foreach (scandir($dir) as $i){
+		foreach (scandir($dir)as$i){
 			$f = $dir.'/'.$i;
 			if(is_file($f)&&time()-filemtime($f)>$ds) unlink($f);
 		}
@@ -88,25 +78,21 @@ function rmdir_all(string $dir):void{
 	foreach (scandir($dir) as $d){
 		if ($d!=='.' && $d!=='..'){
 			$f = $dir.'/'.$d;
-			if (is_dir($f)){
-				rmdir_all($f);
-			} else {
-				unlink($f);
-			}
+			is_dir($f)?rmdir_all($f):unlink($f);
 		}
 	}
 	rmdir($dir);
 }
 #設定ファイル
-function read_conf(string $conf_file):array{
+function read_conf(string $file):array{
 	$c = [];
-	if(!is_file($conf_file)) return $c;
-	$fp = fopen($conf_file, 'r');
+	if(!is_file($file)) return $c;
+	$fp = fopen($file, 'r');
 	while (($i=fgets($fp)) !== false){
 		$r = trim($i);
-		$f = substr($r, 0, 1);
-		if(in_array($f,[';','#','['],true)||strpos($r,'=')===false) continue;
 		$e = strpos($r, '=');
+		$f = substr($r, 0, 1);
+		if($e===false||in_array($f,[';','#','['],true)) continue;
 		$k = trim(substr($r, 0, $e));
 		$v = trim(substr($r, $e +1));
 		if (is_numeric($v)){
@@ -122,16 +108,11 @@ function read_conf(string $conf_file):array{
 	return $c;
 }
 #sha256ハッシュ
-function pass(string $passwd):string{
-	if($passwd==='') return '';
-	return hash('sha256', $passwd);
-}
+function pass(string $pw):string{return ($pw===''?'':hash('sha256',$pw));}
 #開始と終了で囲まれた文字列ごと削除(参照渡し)
-function remove_comment_rows(string &$code, string $s='/*', string $g='*/'):string{
-	while (($p=subrpos($s,$g,$code)) !== ''){
-		$code = str_replace($s.$p.$g, '', $code);
-	}
-	return $code;
+function remove_comment_rows(string &$t, string $s='/*', string $g='*/'):string{
+	while(($p=subrpos($s,$g,$t))!=='') $t=str_replace($s.$p.$g,'',$t);
+	return $t;
 }
 #css軽量化
 function css_out(string $css_file):string{
@@ -145,11 +126,9 @@ function css_out(string $css_file):string{
 	} elseif (is_file($css_file)){
 		$l = [$css_file];
 	}
-	foreach ($l as $c){
-		$r .= file_get_contents($c);
-	}
+	foreach($l as $c) $r.=file_get_contents($c);
 	remove_comment_rows($r);
-	$r = preg_replace('/\r|\n|\r\n|\t/', '', $r);
+	$r = str_replace("\t", '', row($r));
 	return preg_replace('/( |)(,|:|;|{|})( |)/', '$2', $r);
 }
 #js軽量化
@@ -183,81 +162,82 @@ function js_out(string $js_file, bool $minify=true):string{
 }
 #全ての不可視文字はfalse
 function not_empty(string $s):bool{
-	foreach (["\t","\v",' ','　'] as $i){
-		$s = str_replace($i, '', $s);
-	}
-	if (row($s)!=='') return true;
-	return false;
+	foreach(["\t","\v",' ','　']as$i) $s=str_replace($i,'',$s);
+	return (row($s)!=='');
 }
 #連想配列の一括キー存在確認
 function list_isset(array $dict, array $keys):bool{
-	foreach ($keys as $k){
-		if(!isset($dict[$k])) return false;
-	}
+	foreach($keys as $k) if(!isset($dict[$k]))return false;
 	return true;
 }
 #html互換md
-function to_html(string $md_text):string{
-	$fls = ['ol'=>1,'ul'=>1];
-	$t = '';
-	foreach (explode("\n", u8lf($md_text)) as $i){
-		$row = trim($i);
-		$fstc = substr($row, 0, 1);
-		if ($fstc === '*'){
-			if ($fls['ul']){
-				$t .= '<ul>';
-				$fls['ul'] = 0;
+function to_html(string $text):string{
+	foreach(['|'=>124,'《'=>12298,'》'=>12299,'*'=>42,'#'=>35,'"'=>34,"'"=>39,'`'=>96,'~'=>126,'\\'=>92]as$k=>$v) $text=str_replace('\\'.$k,'&#'.$v.';',$text);
+	$rows = explode("\n", u8lf($text));
+	$r = '';
+	for ($ol=0,$ul=0,$len=count($rows),$j=0; $j < $len; ++$j){
+		$l = trim($rows[$j]);
+		if (str_starts_with($l,'*') && substr_count($l,'*')%2){
+			if ($ol){
+				$r .= '</ol>';
+				$ol = 0;
 			}
-			$t .= '<li>'.trim(substr($row,1)).'</li>';
-			continue;
-		} elseif (!$fls['ul']){
-			$t .= '</ul>';
-			$fls['ul'] = 1;
-		}
-		if (preg_match('/^[0-9]+\. .+$/', $row) === 1){
-			$row = preg_replace('/^[0-9]+\./', '', $row);
-			if ($fls['ol']){
-				$t .= '<ol>';
-				$fls['ol'] = 0;
+			if(!$ul) $r.='<ul>';
+			$r .= '<li>'.trim(substr($l,strpos($l,'*')+1)).'</li>';
+			++$ul;
+		} elseif (sscanf($l,'%d.',$i)===1 && $i>=0){
+			if ($ul){
+				$r .= '</ul>';
+				$ul = 0;
 			}
-			$t .= '<li>'.trim($row).'</li>';
-			continue;
-		} elseif (!$fls['ol']){
-			$t .= '</ol>';
-			$fls['ol'] = 1;
-		}
-		for ($i=6,$cp='######'; $i>0; --$i,$cp=substr($cp,0,$i)){
-			if (substr($row,0,$i) === $cp){
-				$t .= '<h'.$i.'>'.trim(substr($row,$i)).'</h'.$i.'>';
-				continue 2;
+			if ($i < $ol){
+				$r .= '</ol>';
+				$ol = 0;
 			}
-		}
-		if ($fstc === '`'){
-			$t .= $row;
-			continue;
-		} elseif ($fstc === '<'){
-			$nf = true;
-			foreach (['a','b','del','i','img','q','s','span','u'] as $pt){
-				if (substr($row,1,strlen($pt)+1) === $pt.' '){
-					$nf = false;
+			if(!$ol) $r.='<ol>';
+			$r .= '<li>'.trim(substr($l,strpos($l,$i.'.')+strlen($i.'.'))).'</li>';
+			++$ol;
+		} elseif ($ul){
+			$r .= '</ul>';
+			$ul = 0;
+		} elseif ($ol){
+			$r .= '</ol>';
+			$ol = 0;
+		} elseif (str_starts_with($l,'#')){
+			for ($i=6; $i > 0; --$i){
+				$p = str_repeat('#', $i);
+				if (substr($l,0,$i) === $p){
+					$r .= sprintf('<h%d>%s</h%d>', $i,trim(substr($l,$i)),$i);
 					break;
 				}
 			}
-			if ($nf){
-				$t .= $row;
-				continue;
+		} elseif (str_starts_with($l,'<')){
+			$i = 0;
+			foreach (['a','b','del','i','img','q','s','span','u'] as $t){
+				if (substr($l,1,strlen($t)) === $t){
+					$i = 1;
+					break;
+				}
 			}
+			if ($i){
+				$r .= '<p>'.$l.'</p>';
+			} else {
+				$r .= $l;
+			}
+		} elseif (str_starts_with($l,'`')){
+			$r .= $l;
+		} else {
+			if($l==='') $l='<br>';
+			$r .= '<p>'.$l.'</p>';
 		}
-		if($row==='') $row='<br>';
-		$t .= '<p>'.$row.'</p>';
 	}
 	foreach (['~~'=>'del','**'=>'b','```'=>'blockquote','`'=>'code','*'=>'i'] as $wrap=>$tag){
-		$len = strlen($t);
+		$len = strlen($r);
 		$wlen = strlen($wrap);
 		$nt = '';
 		$fl = 0;
 		for ($i = 0; $i < $len; ++$i){
-			if ($i < $len -$wlen && substr($t,$i,$wlen)===$wrap){
+			if ($i < $len -$wlen && substr($r,$i,$wlen)===$wrap){
 				if ($fl === 0){
 					$fl = 1;
 					$nt .= '<'.$tag.'>';
@@ -267,26 +247,25 @@ function to_html(string $md_text):string{
 				}
 				$i += $wlen -1;
 			} else {
-				$nt .= substr($t, $i, 1);
+				$nt .= substr($r, $i, 1);
 			}
 		}
-		$t = $nt;
+		$r = $nt;
 	}
-	for ($p=strpos($t,'|');($c=subrpos('|','》',substr($t,(int)$p)))!=='';$p=strpos($t,'|')){
+	for ($p=strpos($r,'|');($c=subrpos('|','》',substr($r,(int)$p)))!=='';$p=strpos($r,'|')){
 		if (count($l=explode('《',$c)) === 2){
-			$t = str_replace('|'.$c.'》', '<ruby><rb>'.$l[0].'</rb><rt>'.$l[1].'</rt></ruby>', $t);
+			$r = str_replace('|'.$c.'》', '<ruby><rb>'.$l[0].'</rb><rt>'.$l[1].'</rt></ruby>', $r);
 		}
 	}
-	return str_replace('\\', '', str_replace('\\\\', '&#92;', $t));
+	return str_replace('\\', '', $r);
 }
 #真のIP入手
 function get_ip():string{
 	if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])){
-		$ipAddresses = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-		return trim($ipAddresses[0]);
+		$i = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+		return trim($i[0]);
 	}
-	if(isset($_SERVER['HTTP_CLIENT_IP'])) return $_SERVER['HTTP_CLIENT_IP'];
-	if(isset($_SERVER['HTTP_X_REAL_IP'])) return $_SERVER['HTTP_X_REAL_IP'];
+	foreach(['HTTP_CLIENT_IP','HTTP_X_REAL_IP']as$k) if(isset($_SERVER[$k]))return $_SERVER[$k];
 	return $_SERVER['REMOTE_ADDR'];
 }
 
@@ -319,9 +298,7 @@ class GakuUra{
 		$this->canonical = preg_replace('/((\?|\&)'.ini_get('session.name').'.+)/', '', $this->here);
 		$this->referer = (isset($_SERVER['HTTP_REFERER'])?$_SERVER['HTTP_REFERER']:'');
 		$this->u_root = ((isset($this->config['u_root'])&&not_empty($this->config['u_root']))?$this->config['u_root']:'/');
-		$this->ld_json = [
-		'@context'=>'https://schema.org','@type'=>'WebPage','url'=>$this->canonical,
-		'author'=>['@type'=>'Person','name'=>'unknown'],'image'=>'/favicon.ico'];
+		$this->ld_json = ['@context'=>'https://schema.org','@type'=>'WebPage','url'=>$this->canonical,'author'=>['@type'=>'Person','name'=>'unknown'],'image'=>'/favicon.ico'];
 		if (isset($this->config['seo.author']) && count($d=explode(',',$this->config['seo.author']))>1){
 			$this->ld_json['author']['@type'] = trim($d[0]);
 			$this->ld_json['author']['name'] = trim($d[1]);
@@ -345,16 +322,11 @@ class GakuUra{
 			header("Content-Security-Policy:connect-src 'self';object-src 'none';base-uri 'self';script-src 'nonce-{$this->nonce}' 'strict-dynamic' https:;");
 		}
 		if (isset($_COOKIE)){
-			foreach ($_COOKIE as $k=>$v){
-				if ($k !== ini_get('session.name')){
-					setcookie($k, $v, time() +3600*2400, '/');
-				}
-			}
+			$n = ini_get('session.name');
+			foreach($_COOKIE as $k=>$v) if($k!==$n)setcookie($k,$v,time()+3600*2400,'/');
 		}
 		if (isset($_POST)){
-			foreach ($_POST as $k=>$v){
-				$_POST[$k] = u8lf($v);
-			}
+			foreach($_POST as $k=>$v) $_POST[$k]=u8lf($v);
 		}
 	}
 	#ヘッダー content-type
@@ -433,9 +405,7 @@ class GakuUra{
 			$r['CSS'] = $this->include_lib($r['CSS'], 'css');
 		}
 		if(strpos($h,'{JS}')!==false) $r['JS']=$this->include_lib(js_out($js,$minify),'js');
-		foreach ($r as $k=>$v){
-			$h = str_replace('{'.$k.'}', self::h($v), $h);
-		}
+		foreach($r as $k=>$v) $h=str_replace('{'.$k.'}',self::h($v),$h);
 		$h = str_replace(' nonce=""', '', $h);
 		if ($robots && isset($this->config['seo.enable_ld_json']) && (int)$this->config['seo.enable_ld_json']===1){
 			if ($this->ld_json['@type'] !== 'Person'){
@@ -481,9 +451,7 @@ class GakuUra{
 			}
 			$c = str_replace($t, '', $c);
 		}
-		foreach ($replace as $k=>$v){
-			$c = str_replace('{'.$k.'}', self::h($v), $c);
-		}
+		foreach($replace as $k=>$v) $c=str_replace('{'.$k.'}',self::h($v),$c);
 		$s = ['top_page'=>false,'title'=>self::h(innerHTML('h1',$c)),'description'=>self::h(innerHTML('p',$c)),'robots'=>$robots,'css_default_only'=>false,'css_standalone'=>false,'js_minify'=>true,'template'=>null];
 		while (($p=subrpos('<!option ','>',$c))!=='' && count($r=explode(' ',$p))>1 && isset($s[$r[0]])){
 			$v = implode(' ', array_slice($r,1));
@@ -505,9 +473,7 @@ class GakuUra{
 				if (is_file($f) && (preg_match('/(\.(cgi|pl|py|rb))$/si', $f) === 1)){
 					chmod($f, 0745);
 				} elseif (is_dir($f)){
-					foreach (scandir($f) as $i){
-						if(preg_match('/(\.(cgi|pl|py|rb))$/si',$i)===1) chmod($f.'/'.$i,0745);
-					}
+					foreach(scandir($f)as$i) if(preg_match('/(\.(cgi|pl|py|rb))$/si',$i)===1)chmod($f.'/'.$i,0745);
 				}
 			}
 			if (isset($this->config['error.moved_list'])){
@@ -525,9 +491,7 @@ class GakuUra{
 		$t = $this->data_dir.'/404/html/index.html';
 		if (is_file($t)){
 			$r = file_get_contents($t);
-			foreach (['PERHAPS'=>$h,'REASON'=>$reason] as $k=>$v){
-				$r = str_replace('{'.$k.'}', $v, $r);
-			}
+			foreach(['PERHAPS'=>$h,'REASON'=>$reason]as$k=>$v) $r=str_replace('{'.$k.'}',$v,$r);
 			$this->html(innerHTML('h1',$r).'-', '', $r, $this->data_dir.'/404/css');
 		}
 		exit;
@@ -538,16 +502,16 @@ class GakuUra{
 	 * session.trans_sid_tags = "form="
 	*/
 	#csrfトークンが返り値
-	public function set_csrf_token(string $name, int $min=32, int $max=64):string{
-		$t = one_time_pass($min, $max);
+	public function set_csrf_token(string $name, int $l=32, int $r=64):string{
+		$t = one_time_pass($l, $r);
 		$_SESSION['csrf_token__'.$name] = implode("'",[$t,$this->here]);
 		return $t;
 	}
 	#labelはsetとcheckで同じ文字列にする。strictをtrueにするとリファラチェックする
-	public function check_csrf_token(string $name, string $token, bool $strict):bool{
+	public function check_csrf_token(string $name, string $t, bool $strict):bool{
 		if (isset($_SESSION['csrf_token__'.$name])){
 			$d = explode("'", $_SESSION['csrf_token__'.$name]);
-			if($d[0]===$token&&($d[1]===$this->referer||!$strict)) return true;
+			if($d[0]===$t&&($d[1]===$this->referer||!$strict)) return true;
 		}
 		return false;
 	}

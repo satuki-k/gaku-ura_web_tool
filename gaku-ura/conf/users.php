@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.6.6
+#gaku-ura9.6.7
 //ログイン必須とは限らない機能を考慮し、ログインチェックは初期化では行わない
 class GakuUraUser{
 	public string $user_dir;
@@ -12,7 +12,7 @@ class GakuUraUser{
 	public const SKEY_FROM = 'gaku-ura_login:from';
 	//GakuUraオブジェクトが引数
 	function __construct(object &$conf){
-		if(!isset($conf->config['login.enable'])||(int)$conf->config['login.enable']===0) $conf->not_found(false, 'この機能は無効です。');
+		if(!isset($conf->config['login.enable'])||(int)$conf->config['login.enable']===0) $conf->not_found(false,'この機能は無効です。');
 		$this->own_dir = ['/','/','/','/','/'];
 		if (isset($conf->config['login.dir'])){
 			$dirs = explode(' ', $conf->config['login.dir']);
@@ -28,11 +28,9 @@ class GakuUraUser{
 		$this->user_list_file = $this->user_dir.'/user_list.tsv';
 		$this->user_list_keys = ['id','name','mail','passwd','admin','profile','enable'];
 		if (file_exists($this->user_list_file)){
-			$first = explode("\t", get($this->user_list_file, 1));
-			foreach ($this->user_list_keys as $k){
-				if(!in_array($k,$first,true)) $conf->not_found();
-			}
-			$this->user_list_keys = $first;
+			$f = explode("\t", get($this->user_list_file, 1));
+			foreach($this->user_list_keys as $k) if(!in_array($k,$f,true))$conf->not_found(false,'ユーザー管理ファイルに'.$k.'列がありません');
+			$this->user_list_keys = $f;
 		} else {
 			file_put_contents($this->user_list_file, implode("\t",$this->user_list_keys)."\n", LOCK_EX);
 		}
@@ -44,12 +42,10 @@ class GakuUraUser{
 	}
 
 	//ユーザー情報の単純配列を、ユーザー一覧ファイルの1行目をキーにした連想配列に変換
-	public function user_data_convert(array $user_row):array{
+	public function user_data_convert(array $row):array{
 		$d = [];
 		$l = count($this->user_list_keys);
-		for ($i = 0;$i < $l;++$i){
-			$d[$this->user_list_keys[$i]] = (isset($user_row[$i])?$user_row[$i]:'');
-		}
+		for($i=0;$i<$l;++$i) $d[$this->user_list_keys[$i]]=(isset($row[$i])?$row[$i]:'');
 		return $d;
 	}
 
@@ -74,14 +70,13 @@ class GakuUraUser{
 	}
 
 	public function user_exists(string $name, string $mail=''):int{
-		$l = count($this->user_list_keys);
-		$uid = 0;
-		foreach (get_rows($this->user_list_file, 2) as $row){
-			++$uid;
-			$d = $this->user_data_convert(explode("\t", $row));
+		$i = 0;
+		foreach (get_rows($this->user_list_file,2) as $l){
+			++$i;
+			$d = $this->user_data_convert(explode("\t", $l));
 			if ((int)$d['enable'] === 1){
-				if($name!==''&&$d['name']===$name) return $uid;
-				if($mail!==''&&$d['mail']===$mail) return $uid;
+				if($name!==''&&$d['name']===$name) return $i;
+				if($mail!==''&&$d['mail']===$mail) return $i;
 			}
 		}
 		return 0;
