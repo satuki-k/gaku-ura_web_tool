@@ -232,28 +232,16 @@ function to_html(string $text):string{
 			$r .= '<p>'.$l.'</p>';
 		}
 	}
-	foreach (['~~'=>'del','**'=>'b','```'=>'blockquote','`'=>'code','*'=>'i'] as $wrap=>$tag){
-		$len = strlen($r);
-		$wlen = strlen($wrap);
-		$nt = '';
-		$fl = 0;
-		for ($i = 0; $i < $len; ++$i){
-			if ($i < $len -$wlen && substr($r,$i,$wlen)===$wrap){
-				if ($fl === 0){
-					$fl = 1;
-					$nt .= '<'.$tag.'>';
-				} elseif ($fl === 1){
-					$fl = 0;
-					$nt .= '</'.$tag.'>';
-				}
-				$i += $wlen -1;
-			} else {
-				$nt .= substr($r, $i, 1);
-			}
+	foreach (['~~'=>'del','**'=>'b','```'=>'blockquote','`'=>'code','*'=>'i'] as $w=>$t){
+		$l = strlen($w);
+		while (($b=strpos($r,$w))!==false && ($a=strpos($r,$w,$b+$l))!==false){
+			$s = substr($r, 0, $b);
+			$c = substr($r, $b+$l, $a-$b-$l);
+			$g = substr($r, $a+$l);
+			$r = $s.'<'.$t.'>'.$c.'</'.$t.'>'.$g;
 		}
-		$r = $nt;
 	}
-	for ($p=strpos($r,'|');($c=subrpos('|','》',substr($r,(int)$p)))!=='';$p=strpos($r,'|')){
+	for ($i=0;$i!==false&&($c=subrpos('|','》',substr($r,$i)))!=='';$i=strpos($r,'|',$i+1)){
 		if (count($l=explode('《',$c)) === 2){
 			$r = str_replace('|'.$c.'》', '<ruby><rb>'.$l[0].'</rb><rt>'.$l[1].'</rt></ruby>', $r);
 		}
@@ -340,10 +328,9 @@ class GakuUra{
 	}
 	#ファイル同時アクセス防止
 	public function file_lock(string $label):void{
-		$s = $this->system_dir.'/flock/';
+		$s = $this->system_dir.'/flock';
 		if(!is_dir($s)) mkdir($s);
-		$s .= '.';
-		for($f=$s.$label;is_file($f);unlink_by_date($s,60));
+		for($f=$s.'/.'.$label;is_file($f);unlink_by_date($s,60)) usleep(100);
 		touch($f);
 	}
 	public function file_unlock(string $label):void{
