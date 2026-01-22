@@ -1,32 +1,26 @@
 /* ポップアップ画面の作成 */
-
-//多重includeは未然にシステムによって防止されます。(一回includeしたファイルは記録されて次回は無視されます)
-#!include element.js;
-
 class POPUP{
-	#window;
+	#w;
 	constructor(style=""){
-		this.#window = document.createElement("div");
-		this.#window.style = "font-size:1.2em;padding:1em;position:fixed;top:25%;left:50%;transform:translateX(-50%);width:70%;background:#fff;color:#000;box-shadow:.3em .2em #ccc;pointer-events:auto;animation:POPUP_fade .5s 1;"+style;
-		this.#window.style.display = "none";
-		this.#window.id = "POPUP";
-		$QS("body").append(this.#window);
+		this.#w = document.createElement("div");
+		this.#w.style = "padding:1em;position:fixed;top:25%;left:50%;transform:translateX(-50%);width:70%;background:#fff;color:#000;pointer-events:auto;"+style;
+		this.#w.style.display = "none";
+		this.#w.id = "POPUP";
+		document.body.append(this.#w);
 	}
 	apear(){
-		this.#window.style.display = "block";
-		$QS("body").style.pointerEvents = "none";
+		this.#w.style.display = "block";
+		document.body.style.pointerEvents = "none";
 	}
 	disapear(){
-		this.#window.style.display = "none";
-		this.#window.innerHTML = "";
-		$QS("body").style.pointerEvents = "auto";
+		this.#w.style.display = "none";
+		this.#w.innerHTML = "";
+		document.body.style.pointerEvents = "auto";
 	}
-
-
 	/* 通常の警告 */
 	alert(msg, ok="はーい( ´ ▽ ` )ﾉ"){
 		this.apear();
-		this.#window.innerHTML = "<p>"+msg+"</p>";
+		this.#w.innerHTML = "<p>"+msg+"</p>";
 		const p = document.createElement("p");
 		const b = document.createElement("button");
 		p.style = "text-align:center;";
@@ -34,16 +28,15 @@ class POPUP{
 		b.id = "POPUP_OK";
 		b.innerHTML = ok;
 		p.append(b);
-		this.#window.append(p);
+		this.#w.append(p);
 		b.focus();
 		b.addEventListener("keydown", (e)=>{if(!(e.key==="Return"||e.key==="Enter"))e.preventDefault();});
 		b.addEventListener("click", ()=>{this.disapear();});
 	}
-
 	/* 質問 */
 	async confirm(msg, yes="うん分かった", no="い、、、嫌じゃ"){
 		this.apear();
-		this.#window.innerHTML = "<p>"+msg+"</p>";
+		this.#w.innerHTML = "<p>"+msg+"</p>";
 		const p = document.createElement("p");
 		const y = document.createElement("button");
 		const n = document.createElement("button");
@@ -56,31 +49,31 @@ class POPUP{
 		n.innerHTML = no;
 		p.append(n);
 		p.append(y);
-		this.#window.append(p);
+		this.#w.append(p);
 		y.focus();
 		y.addEventListener("keydown", (e)=>{
-			if (!(e.key==="Return"||e.key==="Enter")){
-				if(e.key==="Tab") n.focus();
+			if (e.key!=="Return"&&e.key!=="Enter"){
 				e.preventDefault();
+				if(e.key==="Tab") n.focus();
 			}
 		});
 		n.addEventListener("keydown", (e)=>{
-			if (!(e.key==="Return"||e.key==="Enter")){
-				if(e.key==="Tab") y.focus();
+			if (e.key!=="Return"&&e.key!=="Enter"){
 				e.preventDefault();
+				if(e.key==="Tab") y.focus();
 			}
 		});
-		return new Promise(resolve=>{
-			const e = fl=>()=>{
+		return new Promise((r)=>{
+			const e = (f)=>()=>{
+				y.removeEventListener("click", Y);
+				n.removeEventListener("click", N);
 				this.disapear();
-				y.removeEventListener("click", YES);
-				n.removeEventListener("click", NO);
-				resolve(fl);
+				r(f);
 			};
-			const YES = e(true);
-			const NO = e(false);
-			y.addEventListener("click", YES);
-			n.addEventListener("click", NO);
+			const Y = e(true);
+			const N = e(false);
+			y.addEventListener("click", Y);
+			n.addEventListener("click", N);
 		});
 	}
 }

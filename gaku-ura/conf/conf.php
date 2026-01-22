@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.6.7';
+const GAKU_URA_VERSION = '9.6.8';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
 #UTF-8/LFにする
 function u8lf(string $t):string{
@@ -17,6 +17,16 @@ function expelliarmus(string $s):string{
 		}
 	}
 	return $s;
+}
+#replace回数指定
+function nreplace(string $subject, string $search, string $replace, int $n):string{
+	$l = strlen($search);
+	for ($p=0,$i=0;$i<$n&&($p=strpos($subject,$search,$p))!==false;++$i){
+		$b = substr($subject, 0, $p);
+		$a = substr($subject, $p+$l);
+		$subject = $b.$replace.$a;
+	}
+	return $subject;
 }
 #改行除去
 function row(string $s):string{return str_replace("\r",'',str_replace("\n",'',$s));}
@@ -186,7 +196,7 @@ function to_html(string $text):string{
 			if(!$ul) $r.='<ul>';
 			$r .= '<li>'.trim(substr($l,strpos($l,'*')+1)).'</li>';
 			++$ul;
-		} elseif (sscanf($l,'%d.',$i)===1 && strpos($l,$i.'. ')===0 && $i>=0){
+		} elseif (sscanf($l,'%d',$i)===1 && strpos($l,$i.'. ')===0 && $i>=0){
 			if ($ul){
 				$r .= '</ul>';
 				$ul = 0;
@@ -208,7 +218,7 @@ function to_html(string $text):string{
 			for ($i=6; $i > 0; --$i){
 				$p = str_repeat('#', $i);
 				if (substr($l,0,$i) === $p){
-					$r .= sprintf('<h%d>%s</h%d>', $i,trim(substr($l,$i)),$i);
+					$r .= '<h'.$i.'>'.trim(substr($l,$i)).'</h'.$i.'>';
 					break;
 				}
 			}
@@ -257,7 +267,6 @@ function get_ip():string{
 	foreach(['HTTP_CLIENT_IP','HTTP_X_REAL_IP']as$k) if(isset($_SERVER[$k]))return $_SERVER[$k];
 	return $_SERVER['REMOTE_ADDR'];
 }
-
 class GakuUra{
 	public string $d_root;
 	public string $u_root;
@@ -272,7 +281,7 @@ class GakuUra{
 	public string $canonical;#正規URL(URLにセッションIDがあるときに取り除いたURL)
 	public array $ld_json;#構造化データ辞書
 	private string $system_dir;
-	function __construct(?bool $nonce=null){
+	function __construct(?bool $third=null){
 		header('Referrer-Policy:same-origin');
 		if(!isset($_SESSION)) session_start(['cookie_lifetime'=>time()+3600*2400]);
 		$this->d_root = realpath(__DIR__ .'/../..');
@@ -280,47 +289,42 @@ class GakuUra{
 		$this->data_dir = $this->system_dir.'/data';
 		$this->config_file = __DIR__ .'/gaku-ura.conf';
 		$this->config = read_conf($this->config_file);
-		$this->domain = (empty($_SERVER['HTTPS'])?'http://':'https://').(isset($_SERVER['HTTP_HOST'])?$_SERVER['HTTP_HOST']:'');
-		$this->here = $this->domain.(isset($_SERVER['REQUEST_URI'])?$_SERVER['REQUEST_URI']:'');
+		$this->domain = (empty($_SERVER['HTTPS'])?'http://':'https://').($_SERVER['HTTP_HOST']??'');
+		$this->here = $this->domain.($_SERVER['REQUEST_URI']??'');
 		$this->domain .= '/';
-		$this->url_param = (isset($_SERVER['QUERY_STRING'])?urldecode($_SERVER['QUERY_STRING']):'');
-		$this->canonical = preg_replace('/((\?|\&)'.ini_get('session.name').'.+)/', '', $this->here);
-		$this->referer = (isset($_SERVER['HTTP_REFERER'])?$_SERVER['HTTP_REFERER']:'');
-		$this->u_root = ((isset($this->config['u_root'])&&not_empty($this->config['u_root']))?$this->config['u_root']:'/');
+		$this->url_param = urldecode($_SERVER['QUERY_STRING']??'');
+		$c = $this->here;
+		$n = ini_get('session.name');
+		if (isset($_GET[$n])){
+			$s = $n.'='.$_GET[$n];
+			foreach(['?','&']as$i) $c=str_replace($i.$s,'',$c);
+		}
+		$this->canonical = $c;
+		$this->referer = $_SERVER['HTTP_REFERER']??'';
+		$u = $this->config['u_root']??'';
+		$this->u_root = not_empty($u)?$u:'/';
 		$this->ld_json = ['@context'=>'https://schema.org','@type'=>'WebPage','url'=>$this->canonical,'author'=>['@type'=>'Person','name'=>'unknown'],'image'=>'/favicon.ico'];
 		if (isset($this->config['seo.author']) && count($d=explode(',',$this->config['seo.author']))>1){
 			$this->ld_json['author']['@type'] = trim($d[0]);
 			$this->ld_json['author']['name'] = trim($d[1]);
 		}
-		if ($this->here===$this->domain || $this->here.'/'===$this->domain){
-			$this->ld_json['@type'] = 'WebSite';
-		}
-		if (!empty($_SERVER['HTTPS'])){
-			header('Strict-Transport-Security:max-age=63072000;includeSubDomains;preload');
-		}
-		if (!isset($this->config['header_scrict']) || $this->config['header_scrict']===1){
-			/* COOPなどは要検討 */
+		if($this->here===$this->domain||$this->here.'/'===$this->domain) $this->ld_json['@type']='WebSite';
+		if(!empty($_SERVER['HTTPS'])) header('Strict-Transport-Security:max-age=63072000;includeSubDomains;preload');
+		if ((int)($this->config['header_scrict']??0)===1){
 			header('X-Frame-Options:SAMEORIGIN');
 		}
-		if ($nonce === null){
-			$nonce = isset($this->config['use_nonce'])&&$this->config['use_nonce']===0;
-		}
+		if($third===null) $third=(int)($this->config['use_nonce']??1)===0;
 		$this->nonce = '';
-		if (!$nonce){
+		if (!$third){
 			$this->nonce = one_time_pass(20, 30);
 			header("Content-Security-Policy:connect-src 'self';object-src 'none';base-uri 'self';script-src 'nonce-{$this->nonce}' 'strict-dynamic' https:;");
 		}
-		if (isset($_COOKIE)){
-			$n = ini_get('session.name');
-			foreach($_COOKIE as $k=>$v) if($k!==$n)setcookie($k,$v,time()+3600*2400,'/');
-		}
-		if (isset($_POST)){
-			foreach($_POST as $k=>$v) $_POST[$k]=u8lf($v);
-		}
+		if(isset($_COOKIE)) foreach($_COOKIE as $k=>$v)if($k!==$n)setcookie($k,$v,time()+3600*2400,'/');
+		if(isset($_POST)) foreach($_POST as $k=>$v)$_POST[$k]=u8lf($v);
 	}
 	#ヘッダー content-type
-	public function content_type(string $type, string $char='UTF-8'):void{
-		$a = (strpos($type,'text/')===0)?'charset='.$char:'';
+	public function content_type(string $type, string $c='UTF-8'):void{
+		$a = (strpos($type,'text/')===0)?'charset='.$c:'';
 		header('Content-Type:'.$type.';'.$a);
 	}
 	public static function h(string $s):string{
@@ -337,14 +341,13 @@ class GakuUra{
 		$f = $this->system_dir.'/flock/.'.$label;
 		if(is_file($f)) unlink($f);
 	}
-
 	#ライブラリのinclude
 	public function include_lib(string $code, string $mode):string{
 		$ald = [];
 		while (($p=subrpos('#!include ', ';', $code)) !== ''){
 			$f = $this->data_dir.'/default/lib/'.$mode.'/'.trim($p);
 			$r = '';
-			if (!in_array($f, $ald, true) && file_exists($f)){
+			if (!in_array($f,$ald,true) && file_exists($f)){
 				if ($mode === 'js'){
 					$r = js_out($f);
 				} elseif ($mode === 'css'){
@@ -363,7 +366,6 @@ class GakuUra{
 		}
 		return $l.$code;
 	}
-
 	#タイトル 説明 本文(bodyタグの中身) cssファイル jsファイル 検索に表示させたいか 共通cssを含むか jsの軽量化をするか 雛形のhtmlファイル(data_dir基準)
 	public function html(string $title,string $description,string $content,string $css='',string $js='',bool $robots=false,bool $css_default=true,bool $minify=true,?string $htm=null):int{
 		if($htm===null) $htm='default/default.html';
@@ -371,32 +373,24 @@ class GakuUra{
 		if(!is_file($f)) return 1;
 		$h = row(file_get_contents($f))."\n";
 		remove_comment_rows($content, '<!','>');
-		remove_comment_rows($h, '<!--', '-->');
-		remove_comment_rows($title, '<', '>');
-		remove_comment_rows($description, '<', '>');
+		remove_comment_rows($h, '<!--','-->');
+		remove_comment_rows($title, '<','>');
+		remove_comment_rows($description, '<','>');
 		$r = [
-		'CSS_URL'=>$this->u_root.'css/?CSS='.str_replace($this->data_dir,'',$css).($css_default?'':'&STANDALONE'),
-		'JS_URL'=>$this->u_root.'js/?JS='.str_replace($this->data_dir,'',$js).($minify?'':'&NOTMINIFY'),
-		'NONCE'=>$this->nonce,
-		'DESCRIPTION'=>(not_empty($description)?$description:'なし'),'TITLE'=>$title,
-		'CONTENT'=>$content,
-		'SITE_TITLE'=>(isset($this->config['title'])?$this->config['title']:'無題'),
-		'U_ROOT'=>$this->u_root];
+		'CSS_URL'=>$this->u_root.'css/?'.str_replace($this->data_dir,'',$css).($css_default?'':'&STANDALONE'),
+		'JS_URL'=>$this->u_root.'js/?'.str_replace($this->data_dir,'',$js).($minify?'':'&NOTMINIFY'),
+		'NONCE'=>$this->nonce,'DESCRIPTION'=>self::h(not_empty($description)?$description:'なし'),'TITLE'=>self::h($title),
+		'CONTENT'=>self::h($content),'SITE_TITLE'=>self::h($this->config['title']??'無題'),'U_ROOT'=>$this->u_root];
 		if ($this->here !== $this->canonical){
 			$h = str_replace('</head>', '<link rel="canonical" href="'.$this->canonical.'"></head>', $h);
 			$robots = false;
 		}
 		if(!$robots) $h=str_replace('<ti','<meta name="robots" content="noindex"><ti',$h);
-		if (strpos($h,'{CSS}') !== false){
-			$r['CSS'] = '';
-			if($css_default) $r['CSS'].=css_out($this->data_dir.'/default/default.css');
-			$r['CSS'] .= css_out($css);
-			$r['CSS'] = $this->include_lib($r['CSS'], 'css');
-		}
+		if(strpos($h,'{CSS}')!==false) $r['CSS']=$this->include_lib(($css_default?css_out($this->data_dir.'/default/default.css'):'').css_out($css),'css');
 		if(strpos($h,'{JS}')!==false) $r['JS']=$this->include_lib(js_out($js,$minify),'js');
-		foreach($r as $k=>$v) $h=str_replace('{'.$k.'}',self::h($v),$h);
+		foreach($r as $k=>$v) $h=str_replace('{'.$k.'}',$v,$h);
 		$h = str_replace(' nonce=""', '', $h);
-		if ($robots && isset($this->config['seo.enable_ld_json']) && (int)$this->config['seo.enable_ld_json']===1){
+		if ($robots && (int)($this->config['seo.enable_ld_json']??0)===1){
 			if ($this->ld_json['@type'] !== 'Person'){
 				$this->ld_json['name'] = $r['SITE_TITLE'];
 				$this->ld_json['headline'] = $r['TITLE'].$r['SITE_TITLE'];
@@ -465,14 +459,13 @@ class GakuUra{
 					foreach(scandir($f)as$i) if(preg_match('/(\.(cgi|pl|py|rb))$/si',$i)===1)chmod($f.'/'.$i,0745);
 				}
 			}
-			if (isset($this->config['error.moved_list'])){
-				foreach (explode(' ', $this->config['error.moved_list']) as $m){
-					if (strpos($m, '=>') !== false){
-						list($e, $t) = explode('=>', $m);
-						if ($_SERVER['REQUEST_URI'] === trim($e)){
-							$h = trim($t);
-							break;
-						}
+			$l = $this->config['error.moved_list']??'';
+			foreach (explode(' ',$l) as $m){
+				if (strpos($m,'=>') !== false){
+					list($e, $t) = explode('=>', $m);
+					if ($_SERVER['REQUEST_URI'] === trim($e)){
+						$h = trim($t);
+						break;
 					}
 				}
 			}
