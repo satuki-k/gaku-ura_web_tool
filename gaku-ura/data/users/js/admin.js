@@ -53,6 +53,13 @@ class TextEditor{
 		p.append(w);
 		$ID("form").before(p);
 		$ID("form").after(this.#ae);
+		if ($ID("text").value===""){
+			this.reload();
+		} else {
+			this.setup();
+		}
+	}
+	setup(){
 		this.#m1.addEventListener("change", ()=>{this.editor();});
 		this.#f.addEventListener("input", ()=>{this.zoom();});
 		this.#w.addEventListener("change", ()=>{this.row();});
@@ -61,11 +68,18 @@ class TextEditor{
 		});
 		this.editor();
 		this.zoom();
+		window.addEventListener("wheel", (e)=>{
+			if (e.ctrlKey){
+				e.preventDefault();
+				(e.deltaY<0)?this.#f.value++:this.#f.value--;
+				this.zoom();
+			}
+		},{passive:false});
 		window.addEventListener("keydown", (e)=>{
 			if(e.ctrlKey){
 				if(~["s","+","-",";","="].indexOf(e.key)) e.preventDefault();
 				if (e.key === "s"){
-					$QS('button[type="submit"]').click();
+					$QS('[type="submit"]').click();
 				} else if (~["+",";","-","="].indexOf(e.key)){
 					~["+",";"].indexOf(e.key)?this.#f.value++:this.#f.value--;
 					this.zoom();
@@ -115,12 +129,25 @@ class TextEditor{
 		if(!this.#h){
 			this.#h = ace.edit(this.#ae.id,{
 				useSoftTabs:false,
-				mode:"ace/mode/"+(l[f]?l[f]:f),
+				mode:"ace/mode/"+(l[f]??f),
 				theme:"ace/theme/Tomorrow"
 			});
+			this.#ae.addEventListener("wheel",(e)=>{e.preventDefault();},{passive:false});
 			this.zoom();
 		}
 		this.#h.getSession().setValue($ID("text").value);
+	}
+	//readfileじゃないと取得出来ないファイルの閲覧
+	async reload(){
+		try{
+			const d = q.get("Dir");
+			const f = q.get("File");
+			const r = await fetch("?Dir="+d+"&File="+f+"&download");
+			const t = await r.text();
+			$ID("text").value = t;
+			if(this.#m==="ace") this.#h.getSession().setValue(v);
+		}catch{}
+		this.setup();
 	}
 	zoom(){
 		const v = (this.#f.value<1)?1:this.#f.value;
@@ -136,59 +163,72 @@ class TextEditor{
 		}
 	}
 }
-
 /* 編集画面 */
 if (q.get("Menu") === "edit"){
 	//submitメソッドを使えるようにする
 	$ID("form").innerHTML += '<input type="hidden" name="submit_type" value="'+$QS('button[type="submit"]').value+'">';
 	//エディター
-	if($ID("text")) new TextEditor();
+	if($ID("text")){
+		new TextEditor();
+	} else if (q.get("File")){
+		const p = document.createElement("div");
+		const r = document.createElement("a");
+		p.style.margin = "1em";
+		r.style = "color:#fff;background:#00c;padding:.2em;border:solid 1px #fff;";
+		r.innerHTML = "無理やり編集する";
+		p.append(r);
+		$ID("form").after(p);
+		r.addEventListener("click", (e)=>{
+			e.preventDefault();
+			p.remove();
+			const l = document.createElement("p");
+			const b = document.createElement("label");
+			const t = document.createElement("textarea");
+			t.name = "content";
+			t.rows = 25;
+			t.id = "text";
+			b.append(t);
+			l.append(b);
+			$QS('form').append(l);
+			new TextEditor();
+		});
+	}
 	//削除の警告
 	$ID("form").addEventListener("submit", async (e)=>{
 		if ($QS('[name="remove"]:checked').value === 'yes'){
 			e.preventDefault();
-			if(await popup.confirm("貴方はこのファイルを<b>削除</b>しよとしています。<br>フォルダの場合は中身も含めて全て消えます。<br>本当に削除しますか？")) $ID("form").submit();
+			if(await popup.confirm("一度削除すると復元出来ません。<br>本当に削除しますか?")) $ID("form").submit();
 		}
 	});
 } else if ($ID("files")){
 	/* ファイル一覧 */
-	const ins_flist = (files)=>{
-		const d = new DataTransfer();
-		files.forEach((f)=>{d.items.add(f);});
-		return d.files;
-	};
-	const drpA = $QS("body");
-	const iptF = $ID("files");
-	const drpC = drpA.style.background;
-	let fc = 0;
-	drpA.addEventListener("dragover", (e)=>{
+	const dpa = $QS("body");
+	const fls = $ID("files");
+	const dpc = dpa.style.background;
+	dpa.addEventListener("dragover", (e)=>{
 		e.preventDefault();
-		drpA.style.background = "#eef";
+		dpa.style.background = "#eef";
 	});
-	drpA.addEventListener("dragleave",()=>{drpA.style.background=drpC;});
-	drpA.addEventListener("drop", (e)=>{
+	dpa.addEventListener("dragleave",()=>{dpa.style.background=dpc;});
+		dpa.addEventListener("drop", async (e)=>{
 		e.preventDefault();
-		drpA.style.background = drpC;
+		dpa.style.background = dpc;
 		const fl = e.dataTransfer.files;
-		if(!fl || fl.length===0) return;
 		for (let i = 0;i < fl.length;i++){
-			if(!fl[i].type || fl[i].size===0) continue;
-			const lb = document.createElement("span");
-			const ipt = document.createElement("input");
-			ipt.type = "file";
-			ipt.name = "file"+fc;
-			ipt.style.display = "none";
-			lb.style = "font-size:.8em;display:inline-block;border:solid 1px #eee;background:#f0c;color:#111;margin:.2em;";
-			lb.innerHTML = fl[i].name;
-			lb.append(ipt);
-			ipt.files = ins_flist([fl[i]]);
-			iptF.appendChild(lb);
-			fc++;
-			lb.addEventListener("click",(e)=>{e.preventDefault();});
+			const f = fl[i];
+			if(f.type===""&&(f.size===0||f.size===4096)) continue;
+			if(i===20&&(await popup.confirm("ファイル数が多いです。処理が門前払いされる可能性があります。中止しますか?"))) break;
+			const c = document.createElement("input");
+			const d = new DataTransfer();
+			c.type = "file";
+			c.name = "file"+i;
+			c.style.display = "none";
+			d.items.add(f);
+			c.files = d.files;
+			fls.appendChild(c);
 		}
-		if(fc > 20) popup.alert("ファイル数が20を超えています。処理が門前払いされるかもしれません。");
+		$QS('[type="submit"]').click();
 	});
-
 	/* 操作メニュー */
 	const cm = document.createElement("pre");
 	cm.style = "background:#fff;position:fixed;display:none;";
@@ -206,7 +246,7 @@ if (q.get("Menu") === "edit"){
 	const arg = $ID("gaku-ura_args");
 	const d_root = arg.getAttribute("d_root");
 	const u_root = arg.getAttribute("u_root");
-	const udr = arg&&d_root!==null&&(d_root===""||~(q.get("Dir")?q.get("Dir"):"").indexOf(d_root));
+	const udr = arg&&d_root!==null&&(d_root===""||~(q.get("Dir")??"").indexOf(d_root));
 	f.addEventListener("contextmenu", function(e){e.preventDefault();});
 	for (let i = 0; i < fl; ++i){
 		const c = fe[i];
@@ -232,14 +272,42 @@ if (q.get("Menu") === "edit"){
 				if(u_root) u=u_root+u;
 				m.push(["WEBページとして開く",u,1]);
 			}
+			const s = "color:#111;padding:.2em;display:block;";
 			m.forEach((i)=>{
 				const o = document.createElement("a");
 				o.innerHTML = i[0];
 				o.href = i[1];
-				o.style = "color:#111;padding:.2em;display:block;";
+				o.style = s;
 				if(i[2]) o.target = "_blank";
 				cm.append(o);
 			});
+			const o = document.createElement("a");
+			o.innerHTML = "削除";
+			o.href = "#";
+			o.style = s;
+			o.addEventListener("click", async (e)=>{
+				e.preventDefault();
+				if(!(await popup.confirm(a.innerHTML+" を削除しますか？"))) return;
+				try{
+					const r = await fetch(a2.href);
+					const t = await r.text();
+					const h = document.createElement("div");
+					h.style.display = "none";
+					h.innerHTML = "<form "+subrpos("<form ","</form>",t)+"</form>";
+					document.body.append(h);
+					const j = {"remove":"yes","submit":"edit_file","new_name":"","perm":"no","submit":h.querySelector('button[type="submit"]').value};
+					h.querySelectorAll('input[type="hidden"]').forEach((i)=>{j[i.name]=i.value;});
+					const p = await new URLSearchParams(j);
+					await fetch(a2.href,{
+						referrer:a2.href,
+						method:"POST",
+						headers:{"content-type":"application/x-www-form-urlencoded"},
+						body:p.toString()
+					});
+				}catch{}
+				location.reload();
+			});
+			cm.append(o);
 			cm.style.display = "block";
 			cm.style.left = Math.min(e.pageX-scrollX,innerWidth-cm.offsetWidth)+"px";
 			cm.style.top = Math.min(e.pageY-scrollY,innerHeight-cm.offsetHeight)+"px";

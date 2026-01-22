@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.6.7
+#gaku-ura9.6.8
 //ログイン必須とは限らない機能を考慮し、ログインチェックは初期化では行わない
 class GakuUraUser{
 	public string $user_dir;
@@ -12,7 +12,7 @@ class GakuUraUser{
 	public const SKEY_FROM = 'gaku-ura_login:from';
 	//GakuUraオブジェクトが引数
 	function __construct(object &$conf){
-		if(!isset($conf->config['login.enable'])||(int)$conf->config['login.enable']===0) $conf->not_found(false,'この機能は無効です。');
+		if((int)($conf->config['login.enable']??0)===0) $conf->not_found(false,'この機能は無効です。');
 		$this->own_dir = ['/','/','/','/','/'];
 		if (isset($conf->config['login.dir'])){
 			$dirs = explode(' ', $conf->config['login.dir']);
@@ -20,10 +20,8 @@ class GakuUraUser{
 		}
 		#個別に設定出来るように
 		for($i=0;$i<5;++$i) if(isset($conf->config['login.dir'.$i])) $this->own_dir[$i]=$conf->config['login.dir'.$i];
-		$this->admin_revel = 3;
-		if (isset($conf->config['login.admin_revel']) && (int)$conf->config['login.admin_revel']>0){
-			$this->admin_revel = (int)$conf->config['login.admin_revel'];
-		}
+		$this->admin_revel = (int)($conf->config['login.admin_revel']??3);
+		if($this->admin_revel < 1) $conf->not_found(false,'管理者権限の要件が1未満で危険です');
 		$this->user_dir = $conf->data_dir.'/users';
 		$this->user_list_file = $this->user_dir.'/user_list.tsv';
 		$this->user_list_keys = ['id','name','mail','passwd','admin','profile','enable'];
@@ -45,7 +43,7 @@ class GakuUraUser{
 	public function user_data_convert(array $row):array{
 		$d = [];
 		$l = count($this->user_list_keys);
-		for($i=0;$i<$l;++$i) $d[$this->user_list_keys[$i]]=(isset($row[$i])?$row[$i]:'');
+		for($i=0;$i<$l;++$i) $d[$this->user_list_keys[$i]]=$row[$i]??'';
 		return $d;
 	}
 
@@ -63,7 +61,7 @@ class GakuUraUser{
 				}
 			}
 		}
-		if (!$r['result'] && isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'],'/login/')===false){
+		if (!$r['result'] && strpos($_SERVER['REQUEST_URI']??'','/login/')===false){
 			$_SESSION[self::SKEY_FROM] = $_SERVER['REQUEST_URI']; //ログイン後復帰する用
 		}
 		return $r;
