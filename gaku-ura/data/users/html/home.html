@@ -1,3 +1,4 @@
+<!option robots 0>
 <h1>ようこそ、{NAME} さん</h1>
 <h2>登録情報</h2>
 <form action="" method="POST" id="form">
@@ -12,13 +13,9 @@
 </form>
 <p><a href="?{NAME}">自分のユーザーページ</a></p>
 <p><br></p>
+{FOR_ADMIN}
 
-<admin>
-	<h2><a href="./admin/">管理ページ</a></h2>
-	<p>{NAME}さんは、管理機能を使用する権限があります。</p>
-	<p>サイトの編集や、他のユーザーに対して操作が可能です。</p>
-	<p><br></p>
-</admin>
+<!include custom/custom.html>
 
 <p><form action="" method="POST"><input type="hidden" name="session_token" value="{SESSION_TOKEN}"><label><button type="submit" name="submit" value="logout">ログアウト</button></label></form></p>
 

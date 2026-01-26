@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.6.8';
+const GAKU_URA_VERSION = '9.6.9';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
 #UTF-8/LFにする
 function u8lf(string $t):string{
@@ -379,7 +379,7 @@ class GakuUra{
 		$r = [
 		'CSS_URL'=>$this->u_root.'css/?'.str_replace($this->data_dir,'',$css).($css_default?'':'&STANDALONE'),
 		'JS_URL'=>$this->u_root.'js/?'.str_replace($this->data_dir,'',$js).($minify?'':'&NOTMINIFY'),
-		'NONCE'=>$this->nonce,'DESCRIPTION'=>self::h(not_empty($description)?$description:'なし'),'TITLE'=>self::h($title),
+		'NONCE'=>$this->nonce,'DESCRIPTION'=>self::h(($robots&&not_empty($description))?$description:'なし'),'TITLE'=>self::h($title),
 		'CONTENT'=>self::h($content),'SITE_TITLE'=>self::h($this->config['title']??'無題'),'U_ROOT'=>$this->u_root];
 		if ($this->here !== $this->canonical){
 			$h = str_replace('</head>', '<link rel="canonical" href="'.$this->canonical.'"></head>', $h);

@@ -53,17 +53,13 @@ class TextEditor{
 		p.append(w);
 		$ID("form").before(p);
 		$ID("form").after(this.#ae);
-		if ($ID("text").value===""){
-			this.reload();
-		} else {
-			this.setup();
-		}
+		$ID("text").value===""?this.reload():this.setup();
 	}
 	setup(){
 		this.#m1.addEventListener("change", ()=>{this.editor();});
 		this.#f.addEventListener("input", ()=>{this.zoom();});
 		this.#w.addEventListener("change", ()=>{this.row();});
-		this.#f.addEventListener("keydown", function(e){
+		this.#f.addEventListener("keydown", (e)=>{
 			if(e.key=="Enter"||e.key==="Return") e.preventDefault();
 		});
 		this.editor();
@@ -92,7 +88,7 @@ class TextEditor{
 		if(this.#m===this.#mf) return;
 		switch (this.#m){
 			case "normal":
-			if(this.#h) $ID("text").value = this.#h.getValue();
+			if(this.#h) $ID("text").value=this.#h.getValue();
 			this.#ae.style.display = "none";
 			$ID("text").style.display = "block";
 			break;
@@ -132,7 +128,9 @@ class TextEditor{
 				mode:"ace/mode/"+(l[f]??f),
 				theme:"ace/theme/Tomorrow"
 			});
-			this.#ae.addEventListener("wheel",(e)=>{e.preventDefault();},{passive:false});
+			this.#ae.addEventListener("wheel",
+				(e)=>{e.preventDefault();},
+				{passive:false});
 			this.zoom();
 		}
 		this.#h.getSession().setValue($ID("text").value);
@@ -159,7 +157,6 @@ class TextEditor{
 			this.#h.session.setUseWrapMode(this.#w.checked);
 		} else {
 			this.#w.checked = !this.#w.checked;
-			popup.alert("通常モードはこの機能を使えません。","仕方ないね");
 		}
 	}
 }
@@ -170,7 +167,7 @@ if (q.get("Menu") === "edit"){
 	//エディター
 	if($ID("text")){
 		new TextEditor();
-	} else if (q.get("File")){
+	} else if (q.get("File")&&$QS('input[name="name"]')){
 		const p = document.createElement("div");
 		const r = document.createElement("a");
 		p.style.margin = "1em";
@@ -201,123 +198,167 @@ if (q.get("Menu") === "edit"){
 		}
 	});
 } else if ($ID("files")){
+	let move_file = 0;
+	//ini_get
+	const arg = $ID("gaku-ura_args");
+	const maxfc = parseInt(arg.getAttribute("max_file_uploads")??20);
 	/* ファイル一覧 */
-	const dpa = $QS("body");
-	const fls = $ID("files");
-	const dpc = dpa.style.background;
-	dpa.addEventListener("dragover", (e)=>{
+	const d = document.body;
+	const t = $ID("files");
+	const b = d.style.background;
+	d.addEventListener("dragover", (e)=>{
 		e.preventDefault();
-		dpa.style.background = "#eef";
+		d.style.background = "#eef";
 	});
-	dpa.addEventListener("dragleave",()=>{dpa.style.background=dpc;});
-		dpa.addEventListener("drop", async (e)=>{
+	d.addEventListener("dragleave",()=>{d.style.background=b;});
+	d.addEventListener("drop", async (e)=>{
 		e.preventDefault();
-		dpa.style.background = dpc;
-		const fl = e.dataTransfer.files;
-		for (let i = 0;i < fl.length;i++){
-			const f = fl[i];
-			if(f.type===""&&(f.size===0||f.size===4096)) continue;
-			if(i===20&&(await popup.confirm("ファイル数が多いです。処理が門前払いされる可能性があります。中止しますか?"))) break;
-			const c = document.createElement("input");
-			const d = new DataTransfer();
-			c.type = "file";
-			c.name = "file"+i;
-			c.style.display = "none";
-			d.items.add(f);
-			c.files = d.files;
-			fls.appendChild(c);
+		d.style.background = b;
+		if (move_file){
+			popup.alert("別の操作を実行中です。");
+			return;
 		}
-		$QS('[type="submit"]').click();
+		move_file = 1;
+		const l = e.dataTransfer.files;
+		for (let c=0,i=0;i < l.length;++i,++c){
+			const f = l[i];
+			if(f.type===""&&(f.size===0||f.size===4096)) continue;
+			if (c === maxfc){
+				if(await popup.confirm("ファイル数が多いです。ここまでか、これ以降のどちらを投稿しますか?<br>(ここから:"+f.name+")","ここまで","これ以降")) break;
+				t.innerHTML = "";
+				c = 0;
+			}
+			const p = document.createElement("input");
+			const d = new DataTransfer();
+			p.type = "file";
+			p.name = "file"+i;
+			p.style.display = "none";
+			d.items.add(f);
+			p.files = d.files;
+			t.appendChild(p);
+		}
+		if(l.length>0) $QS('[type="submit"]').click();
+		move_file = 0;
 	});
 	/* 操作メニュー */
-	const cm = document.createElement("pre");
-	cm.style = "background:#fff;position:fixed;display:none;";
-	$QS("body").append(cm);
-	const mclose = ()=>{
-		cm.style.display="none";
-		cm.innerHTML = "";
-		$QSA('.select_row').forEach((i)=>{
-			i.classList.remove("select_row");
-		});
-	};
+	const g = document.createElement("pre");//クリックメニュー
+	g.style = "background:#fff;position:fixed;display:none;";
+	document.body.append(g);
+	function mclose(){
+		g.style.display="none";
+		g.innerHTML = "";
+		$QSA('.select_row').forEach((i)=>{i.classList.remove("select_row");});
+	}
 	const f = $QS('table tbody');
-	const fe = f.children;
-	const fl = fe.length;
-	const arg = $ID("gaku-ura_args");
-	const d_root = arg.getAttribute("d_root");
-	const u_root = arg.getAttribute("u_root");
-	const udr = arg&&d_root!==null&&(d_root===""||~(q.get("Dir")??"").indexOf(d_root));
-	f.addEventListener("contextmenu", function(e){e.preventDefault();});
-	for (let i = 0; i < fl; ++i){
-		const c = fe[i];
+	const r = f.children;
+	const dr = arg.getAttribute("d_root");
+	const ur = arg.getAttribute("u_root");
+	const udr = arg&&dr!==null&&(dr===""||~(q.get("Dir")??"").indexOf(dr));
+	f.addEventListener("contextmenu", (e)=>{e.preventDefault();});
+	f.addEventListener("click", (e)=>{if(g.style.display==="none")e.stopPropagation();});
+	function mopen(e, n){
+		e.preventDefault();
+		if (move_file){
+			popup.alert("別の操作を実行中です。");
+			return;
+		}
+		if(g.style.display!=="none") mclose();
+		const c = r[n];
 		const a = c.querySelector('a');
-		const _ = c.querySelectorAll('a');
-		if(!a||!_[1]||c.querySelector('[colspan]')) continue;
-		const a2 = _[1];
-		c.addEventListener("contextmenu", (e)=>{
-			e.preventDefault();
-			mclose();
-			//編集
-			const m = [['編集する',a2.href]];
-			//ダウンロード
-			a.getAttribute("class")==="dir"?m.unshift(['開く',a.href]):m.push(['ダウンロード',a.href+'&download']);
-			//実際のURL算出(hrefに「./」使用禁止)
-			if (udr){
-				let u = "/";
-				const cf = a.href.slice(a.href.indexOf("=")+1);
-				d_root===""||cf===d_root? u+=cf.replace(d_root,""):u+=cf.replace(d_root+"/","");
-				if(~u.indexOf("&")) u=u.slice(0, u.indexOf("&"));
-				if(u!=="/") u+="/";
-				if(a.getAttribute("class")!=="dir") u+=a.textContent;
-				if(u_root) u=u_root+u;
-				m.push(["WEBページとして開く",u,1]);
-			}
-			const s = "color:#111;padding:.2em;display:block;";
-			m.forEach((i)=>{
-				const o = document.createElement("a");
-				o.innerHTML = i[0];
-				o.href = i[1];
-				o.style = s;
-				if(i[2]) o.target = "_blank";
-				cm.append(o);
-			});
+		const a2 = c.querySelectorAll('a')[1];
+		g.innerHTML = "";
+		//編集
+		const m = [['編集する',a2.href]];
+		//ダウンロード
+		a.getAttribute("class")==="dir"?m.unshift(['開く',a.href]):m.push(['ダウンロード',a.href+'&download']);
+		//実際のURL算出(hrefに「./」使用禁止)
+		if (udr){
+			let u = "/";
+			const cf = a.href.slice(a.href.indexOf("=")+1);
+			dr===""||cf===dr? u+=cf.replace(dr,""):u+=cf.replace(dr+"/","");
+			if(~u.indexOf("&")) u=u.slice(0, u.indexOf("&"));
+			if(u!=="/") u+="/";
+			if(a.getAttribute("class")!=="dir") u+=a.textContent;
+			if(ur) u=ur+u;
+			m.push(["WEBページとして開く",u,1]);
+		}
+		const s = "color:#111;padding:.2em;display:block;";
+		m.forEach((i)=>{
 			const o = document.createElement("a");
-			o.innerHTML = "削除";
-			o.href = "#";
+			o.innerHTML = i[0];
+			o.href = i[1];
 			o.style = s;
-			o.addEventListener("click", async (e)=>{
-				e.preventDefault();
-				if(!(await popup.confirm(a.innerHTML+" を削除しますか？"))) return;
+			if(i[2]) o.target = "_blank";
+			g.append(o);
+		});
+		const o = document.createElement("a");
+		o.innerHTML = "削除";
+		o.href = "#";
+		o.style = s;
+		o.addEventListener("click", async (e)=>{
+			e.preventDefault();
+			move_file = 1;
+			const s = f.querySelectorAll(".select_row");
+			const n = [];
+			s.forEach((i)=>{
+				const a = i.querySelector('a');
+				n.push(a.innerHTML);
+			});
+			if (!(await popup.confirm('<div style="overflow-y:scroll;max-height:50vh;">'+n.join("　")+"</div> を削除しますか？ 実行すると<b>停止できません。</b>"))){
+				move_file = 0;
+				return;
+			}
+			for (let i = 0; i < s.length; ++i){
+				if (s[i].getAttribute("removing")){
+					popup.alert("このファイルは無効です。");
+					continue;
+				}
+				s[i].setAttribute("removing", 1);
 				try{
-					const r = await fetch(a2.href);
+					const l = s[i].querySelectorAll("a")[1].href;
+					const r = await fetch(l);
 					const t = await r.text();
 					const h = document.createElement("div");
 					h.style.display = "none";
 					h.innerHTML = "<form "+subrpos("<form ","</form>",t)+"</form>";
 					document.body.append(h);
 					const j = {"remove":"yes","submit":"edit_file","new_name":"","perm":"no","submit":h.querySelector('button[type="submit"]').value};
-					h.querySelectorAll('input[type="hidden"]').forEach((i)=>{j[i.name]=i.value;});
+					h.querySelectorAll('input[type="hidden"]').forEach((k)=>{j[k.name]=k.value;});
 					const p = await new URLSearchParams(j);
-					await fetch(a2.href,{
-						referrer:a2.href,
+					await fetch(l,{
+						referrer:l,
 						method:"POST",
 						headers:{"content-type":"application/x-www-form-urlencoded"},
 						body:p.toString()
 					});
+					s[i].remove();
 				}catch{}
-				location.reload();
-			});
-			cm.append(o);
-			cm.style.display = "block";
-			cm.style.left = Math.min(e.pageX-scrollX,innerWidth-cm.offsetWidth)+"px";
-			cm.style.top = Math.min(e.pageY-scrollY,innerHeight-cm.offsetHeight)+"px";
-			c.classList.add("select_row");
+			}
+			location.reload();//dom更新しないと次の操作が出来ない
+			//move_file = 0;
 		});
-		c.addEventListener("dblclick", (e)=>{
+		g.append(o);
+		g.style.display = "block";
+		g.style.left = Math.min(e.pageX-scrollX,innerWidth-g.offsetWidth)+"px";
+		g.style.top = Math.min(e.pageY-scrollY,innerHeight-g.offsetHeight)+"px";
+		c.classList.add("select_row");
+	}
+	for (let i = 1; i < r.length; ++i){
+		r[i].addEventListener("click",(e)=>{r[i].classList.toggle("select_row");});
+		r[i].addEventListener("contextmenu",(e)=>{mopen(e,i);});
+		r[i].addEventListener("dblclick",(e)=>{
 			e.preventDefault();
-			a.click();
+			r[i].querySelector("a").click();
 		});
 	}
 	window.addEventListener("click", mclose);
+	window.addEventListener("keydown", (e)=>{
+		if (e.ctrlKey){
+			if (e.key === "a"){
+				e.preventDefault();
+				for(let i=1;i<r.length;++i) r[i].classList.add("select_row");
+			}
+		}
+	});
 }
 
