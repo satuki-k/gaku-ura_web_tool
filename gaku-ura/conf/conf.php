@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.6.8';
+const GAKU_URA_VERSION = '9.6.9';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
 #UTF-8/LFにする
 function u8lf(string $t):string{

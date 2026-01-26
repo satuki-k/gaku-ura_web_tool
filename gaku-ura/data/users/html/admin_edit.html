@@ -1,0 +1,17 @@
+<!include admin.js>
+<h1>{TITLE}</h1>
+<form method="POST" action="" id="form">
+	<input type="hidden" name="session_token" value="{SESSION_TOKEN}">
+	<p><a href="{EXIT}" id="exit">戻る</a>{FORM_ITEMS}<button type="submit" name="submit_type" value="{SUBMIT_TYPE}">保存</button></p>
+	{FORM_AFTER}
+</form>
+
+<p>{DOWNLOAD}</p>
+
+<p><br></p>
+<p><a href="../">ユーザーページへ</a></p>
+
+<p><br></p>
+<p id="version">gaku-ura{GAKU_URA_VERSION}</p>
+<p style="display:none;" {API_ARGS}id="gaku-ura_args"></p>
+
