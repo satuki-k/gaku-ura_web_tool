@@ -40,7 +40,7 @@ tbody a{
 	text-decoration:none;
 	font-weight:bold;
 }
-tbody tr:hover, .select_row{
+tbody td:hover, .select_row{
 	background:#531;
 }
 
