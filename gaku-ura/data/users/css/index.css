@@ -13,12 +13,12 @@ select,option{
 	background:#fff;
 	color:#000;
 }
-input[type="text"],input[type="password"]{
+input[type="text"], input[type="password"]{
 	border:solid 1px #fff;
 	font-size:1em;
 	width:10em;
 }
-form table input[type="text"],table input[type="password"]{
+tbody input[type="text"]{
 	width:95%;
 	border:none;
 	outline:none;
@@ -40,7 +40,10 @@ tbody a{
 	text-decoration:none;
 	font-weight:bold;
 }
-tbody td:hover, .select_row{
+tbody tr:hover{
+	background:#335;
+}
+.select_row, .select_row:hover{
 	background:#531;
 }
 
@@ -64,17 +67,15 @@ button:hover{
 	background:#f0b;
 	padding:.2em;
 }
-#my,#my *{
+#my, #my input{
 	background:#555;
 	font-weight:bold;
 }
-
 /* ディレクトリだけ見分けをつける */
 .dir:before{
 	content:'■';
 	color:#fff;
 }
-
 
 .profile h1{
 	text-align:left;
