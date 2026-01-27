@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.6.9
+#gaku-ura9.6.10
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
 function is_editable(string $fname):bool{
@@ -18,8 +18,8 @@ function file_sort(array &$files, string $c_dir):void{
 	natsort($f);
 	$files = array_merge($d, $f);
 }
-function file_perm(string $file):string{
-	return substr(sprintf('%o',fileperms($file)),-3);
+function file_perm(string $f):string{
+	return substr(sprintf('%o',fileperms($f)),-3);
 }
 function perm_opt(array $perm_list, string $now_p):string{
 	$r = '<label>ﾊﾟｰﾐｯｼｮﾝ<select name="perm">';
@@ -41,6 +41,7 @@ function main(string $from):int{
 	$api_args = [];
 	if(isset($_POST['submit_type'])) $_POST['submit']=$_POST['submit_type'];
 	if(isset($_POST['submit'])) $submit=$_POST['submit'];
+	$is_async = isset($_GET['async']);
 	$login_data = $user->login_check();
 	$replace = ['GAKU_URA_VERSION'=>GAKU_URA_VERSION,'WARNING'=>''];
 	if ($from === 'home'){
@@ -104,8 +105,6 @@ function main(string $from):int{
 		$perm_list = ['no'=>0,'DIR'=>0755,'CGI'=>0745,'STATIC'=>0644,'PRIVATE'=>0600];
 		$rm_option = '<label><input type="radio" name="remove" value="no" checked>削除しない</label> <label><input type="radio" name="remove" value="yes">削除する</label>';
 		$replace['TITLE'] = '管理機能';
-		$replace['EDIT_AREA'] = '';
-		$replace['FILE_LIST'] = '';
 		$replace['TOP'] = '';
 		$replace['CONFIG'] = '';
 		foreach(['max_file_uploads']as$i) $api_args[$i]=ini_get($i);
@@ -119,9 +118,15 @@ function main(string $from):int{
 			$replace['TOP'] = '<a href="?Dir='.$api_args['d_root'].'">ドキュメントルート</a>';
 		}
 		//現在位置を特定
-		if (isset($_GET['Dir']) && strpos($_GET['Dir'],'..')===false && is_dir($c_root.'/'.h($_GET['Dir']))){
-			$uri_dir = h($_GET['Dir']);
-			if($uri_dir!=='') $current_dir=realpath($c_root.'/'.$uri_dir);
+		if (($_GET['Dir']??'')!=='' && strpos($_GET['Dir'],'..')===false){
+			$u = h($_GET['Dir']);
+			$d = $c_root.'/'.$u;
+			if (is_dir($d)){
+				$uri_dir = $u;
+				$current_dir = $d;
+			} elseif ($is_async){
+				return 1;
+			}
 		}
 
 		//投稿
@@ -243,7 +248,8 @@ function main(string $from):int{
 								rename($t, $p);
 							}
 							//403防止
-							if (str_ends_with($n,'.cgi') || str_ends_with($n,'.pl') || str_ends_with($n,'.rb')){
+							$l = get($p, 1);
+							if ($l && strpos($l,'#!/')===0){
 								chmod($p, 0745);
 							} else {
 								chmod($p, $perm_list['STATIC']);
@@ -290,48 +296,56 @@ function main(string $from):int{
 			exit;
 		}
 		//ファイルがある
-		if (isset($_GET['File']) && strpos($_GET['File'],'..')===false && strpos($_GET['File'], '/')===false && is_file($current_dir.'/'.h($_GET['File']))){
-			$bname = h($_GET['File']);
-			$current_file = $current_dir.'/'.$bname;
-			if (!isset($_GET['download'])){
-				$is_edit_mode = true;
-				if ($current_file===$user->user_list_file){
-					//ユーザー管理
-					$menu = 'user';
-				} elseif ($menu==='edit' || is_editable($current_file)){
-					//編集
-					$replace['TITLE'] = str_replace($c_root,'',$current_file);
-					$replace['EXIT'] = '?Dir='.$uri_dir;
-					$replace['FORM_ITEMS'] = '<input type="hidden" name="name" value="'.$bname.'"><label>名前<input type="text" name="new_name" value="'.$bname.'" placeholder="変更なし"></label> '.perm_opt($perm_list,file_perm($current_file)).$rm_option;
-					$replace['SUBMIT_TYPE'] = 'edit_file';
-					$m = mime_content_type($current_file);
-					$d = '?Dir='.$uri_dir.'&File='.$bname.'&download';
-					if (is_editable($current_file)){
-						$c = str_replace("\t",'&#9;',str_replace("\n",'&#10;',u8lf(h(file_get_contents($current_file)))));
-						$replace['FORM_AFTER'] = '<p><label><textarea rows="25" name="content" id="text">'.$c.'</textarea></label></p>';
-					} elseif (stripos($m,'image/') !== false){
-						$replace['FORM_AFTER'] = '<p><img style="max-width:100%;height:auto;" src="'.$d.'"></p>';
-					} elseif (stripos($m,'audio/') !== false){
-						$replace['FORM_AFTER'] = '<p><audio controls src="'.$d.'"></audio></p>';
-					} elseif (stripos($m,'video/') !== false){
-						$replace['FORM_AFTER'] = '<p><video controls src="'.$d.'"></video></p>';
+		if (($_GET['File']??'')!=='' && strpos($_GET['File'],'..')===false && strpos($_GET['File'], '/')===false){
+			$b = h($_GET['File']);
+			$d = $current_dir.'/'.$b;
+			if (is_file($d)){
+				$bname = $b;
+				$current_file = $d;
+				if (!isset($_GET['download'])){
+					$is_edit_mode = true;
+					if ($current_file===$user->user_list_file){
+						//ユーザー管理
+						$menu = 'user';
+					} elseif ($menu==='edit' || is_editable($current_file)){
+						//編集
+						$replace['TITLE'] = str_replace($c_root,'',$current_file);
+						$replace['EXIT'] = '?Dir='.$uri_dir;
+						$replace['FORM_ITEMS'] = '<input type="hidden" name="name" value="'.$bname.'"><label>名前<input type="text" name="new_name" value="'.$bname.'" placeholder="変更なし"></label> '.perm_opt($perm_list,file_perm($current_file)).$rm_option;
+						$replace['SUBMIT_TYPE'] = 'edit_file';
+						$m = mime_content_type($current_file);
+						$d = '?Dir='.$uri_dir.'&File='.$bname.'&download';
+						if (is_editable($current_file)){
+							$c = str_replace("\t",'&#9;',str_replace("\n",'&#10;',u8lf(h(file_get_contents($current_file)))));
+							$replace['FORM_AFTER'] = '<p><label><textarea rows="25" name="content" id="text">'.$c.'</textarea></label></p>';
+						} elseif (stripos($m,'image/') !== false){
+							$replace['FORM_AFTER'] = '<p><img style="max-width:100%;height:auto;" src="'.$d.'"></p>';
+						} elseif (stripos($m,'audio/') !== false){
+							$replace['FORM_AFTER'] = '<p><audio controls src="'.$d.'"></audio></p>';
+						} elseif (stripos($m,'video/') !== false){
+							$replace['FORM_AFTER'] = '<p><video controls src="'.$d.'"></video></p>';
+						} else {
+							$replace['FORM_AFTER'] = '';
+						}
+						$replace['DOWNLOAD'] = '<p><a href="'.$d.'">ダウンロードする</a></p><p><br></p>';
+						$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__edit_file');
+					} else {
+						$is_edit_mode = false;
 					}
-					$replace['DOWNLOAD'] = '<p><a href="'.$d.'">ダウンロードする</a></p><p><br></p>';
-					$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__edit_file');
-				} else {
-					$is_edit_mode = false;
 				}
-			}
-			if (!$is_edit_mode){
-				header('Content-Description:File Transfer');
-				$conf->content_type(mime_content_type($current_file));
-				header('Content-Disposition:attachment;filename="'.$bname.'"');
-				header('Expires:0');
-				header('Cache-Control:must-revalidate');
-				header('Pragma:public');
-				header('Content-Length:'.filesize($current_file));
-				readfile($current_file);
-				exit;
+				if (!$is_edit_mode){
+					header('Content-Description:File Transfer');
+					$conf->content_type(mime_content_type($current_file));
+					header('Content-Disposition:attachment;filename="'.$bname.'"');
+					header('Expires:0');
+					header('Cache-Control:must-revalidate');
+					header('Pragma:public');
+					header('Content-Length:'.filesize($current_file));
+					readfile($current_file);
+					exit;
+				}
+			} elseif ($is_async){
+				return 2;
 			}
 		} elseif (not_empty($uri_dir) && $menu==='edit'){
 			//ディレクトリの編集
@@ -351,7 +365,7 @@ function main(string $from):int{
 			$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__edit_dir');
 		} elseif (!$is_edit_mode){
 			$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__new');
-			$replace['FILE_LIST'] .= '<tr><td colspan="5">';
+			$replace['FILE_LIST'] = '<tr><td colspan="5">';
 			if ($uri_dir === ''){
 				$replace['FILE_LIST'] .= '(TOP)';
 			} else {
@@ -417,6 +431,7 @@ function main(string $from):int{
 		if ($is_edit_mode){
 			$html = 'admin_edit';
 		} elseif ($menu==='edit'){
+			if($is_async) return 3;
 			header('Location:?Dir='.$uri_dir);
 			exit;
 		}

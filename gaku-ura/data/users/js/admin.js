@@ -315,12 +315,14 @@ if (q.get("Menu") === "edit"){
 				}
 				s[i].setAttribute("removing", 1);
 				try{
-					const l = s[i].querySelectorAll("a")[1].href;
+					const l = s[i].querySelectorAll("a")[1].href+"&async";
 					const r = await fetch(l);
 					const t = await r.text();
+					const f = subrpos("<form ", "</form>", t);
+					if(!f) continue;
 					const h = document.createElement("div");
 					h.style.display = "none";
-					h.innerHTML = "<form "+subrpos("<form ","</form>",t)+"</form>";
+					h.innerHTML = "<form "+f+"</form>";
 					document.body.append(h);
 					const j = {"remove":"yes","submit":"edit_file","new_name":"","perm":"no","submit":h.querySelector('button[type="submit"]').value};
 					h.querySelectorAll('input[type="hidden"]').forEach((k)=>{j[k.name]=k.value;});
