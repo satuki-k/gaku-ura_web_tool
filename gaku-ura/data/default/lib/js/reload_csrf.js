@@ -6,7 +6,7 @@
 //token再取得
 async function reload_csrf(name){
 	const e = $QS('input[name='+name+']');
-	if(!e) return;
+	if(!e) return false;
 	try{
 		const r = await fetch(location.href);
 		const t = await r.text();
@@ -17,12 +17,8 @@ async function reload_csrf(name){
 		h.querySelectorAll('input[type="hidden"]').forEach((k)=>{
 			if(k.name===e.name&&k.type===e.type) e.value=k.value;
 		});
+		return true;
 	}catch{}
+	return false;
 }
-//画面再アクティブで再取得
-function reactive_reload(name){
-	window.addEventListener('focus', ()=>{reload_csrf(name)}, false);
-}
-
-
 

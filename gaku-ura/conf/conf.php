@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.6.11';
+const GAKU_URA_VERSION = '9.6.12';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
 #UTF-8/LFにする
 function u8lf(string $t):string{
@@ -27,6 +27,16 @@ function nreplace(string $subject, string $search, string $replace, int $n):stri
 		$subject = $b.$replace.$a;
 	}
 	return $subject;
+}
+#先頭で見つかったときのみ置換(第一引数が全体の文字列)
+function lreplace(string $s, string $left, string $replace=''):string{
+	if(str_starts_with($s,$left)) return $replace.substr($s,strlen($left));
+	return $s;
+}
+#末尾で
+function rreplace(string $s, string $right, string $replace=''):string{
+	if(str_ends_with($s,$right)) return substr($s,0,strpos($s,$right)).$replace;
+	return $s;
 }
 #改行除去
 function row(string $s):string{return str_replace("\r",'',str_replace("\n",'',$s));}
@@ -71,8 +81,8 @@ function unlink_by_date(string $dir, int $ds):void{
 }
 #パス一覧再帰取得
 function path_list(string $dir):array{
+	if(!is_dir($dir)) return [$dir];
 	$l = [];
-	if(!is_dir($dir)) return $l;
 	foreach (scandir($dir) as $d){
 		if ($d!=='.' && $d!=='..'){
 			$f = $dir.'/'.$d;
@@ -343,8 +353,11 @@ class GakuUra{
 	}
 	#ライブラリのinclude
 	public function include_lib(string $code, string $mode):string{
+		remove_comment_rows($code, '/*', '*/');
+		$b = '#!include ';
+		$e = ';';
 		$ald = [];
-		while (($p=subrpos('#!include ', ';', $code)) !== ''){
+		while (($p=subrpos($b,$e,$code)) !== ''){
 			$f = $this->data_dir.'/default/lib/'.$mode.'/'.trim($p);
 			$r = '';
 			if (!in_array($f,$ald,true) && file_exists($f)){
@@ -355,14 +368,13 @@ class GakuUra{
 				}
 				$ald[] = $f;
 			}
-			$code = str_replace('#!include '.$p.';', $r, $code);
+			$code = str_replace($b.$p.$e, $r, $code);
 		}
-		remove_comment_rows($code, '/*', '*/');
 		if($mode!=='css') return $code;
 		$l = '';
-		while (($p=subrpos('@import',';',$code)) !== ''){
-			$l .= '@import'.$p.';';
-			$code = str_replace('@import'.$p.';', '', $code);
+		while (($p=subrpos('@import',$e,$code)) !== ''){
+			$l .= '@import'.$p.$e;
+			$code = str_replace('@import'.$p.$e, '', $code);
 		}
 		return $l.$code;
 	}
@@ -372,13 +384,12 @@ class GakuUra{
 		$f = $this->data_dir.'/'.$htm;
 		if(!is_file($f)) return 1;
 		$h = row(file_get_contents($f))."\n";
-		remove_comment_rows($content, '<!','>');
 		remove_comment_rows($h, '<!--','-->');
 		remove_comment_rows($title, '<','>');
 		remove_comment_rows($description, '<','>');
 		$r = [
-		'CSS_URL'=>$this->u_root.'css/?'.str_replace($this->data_dir,'',$css).($css_default?'':'&STANDALONE'),
-		'JS_URL'=>$this->u_root.'js/?'.str_replace($this->data_dir,'',$js).($minify?'':'&NOTMINIFY'),
+		'CSS_URL'=>$this->u_root.'css/?'.lreplace($css,$this->data_dir).($css_default?'':'&STANDALONE'),
+		'JS_URL'=>$this->u_root.'js/?'.lreplace($js,$this->data_dir).($minify?'':'&NOTMINIFY'),
 		'NONCE'=>$this->nonce,'DESCRIPTION'=>self::h(($robots&&not_empty($description))?$description:'なし'),'TITLE'=>self::h($title),
 		'CONTENT'=>self::h($content),'SITE_TITLE'=>self::h($this->config['title']??'無題'),'U_ROOT'=>$this->u_root];
 		if ($this->here !== $this->canonical){
@@ -417,6 +428,7 @@ class GakuUra{
 		if(!is_file($pr.'/'.$h)) return -1;
 		$c = file_get_contents($pr.'/'.$h);
 		if(str_ends_with($h,'.md')) $c=to_html($c);
+		remove_comment_rows($c, '<!--','-->');
 		$js = '';
 		$css = $pr.'/css/index.css';
 		while (($p=subrpos('<!include ','>',$c)) !== ''){
@@ -442,23 +454,20 @@ class GakuUra{
 			$s[$r[0]] = $v;
 			$c = str_replace('<!option '.$p.'>', '', $c);
 		}
+		remove_comment_rows($c, '<!','>');
 		$s['title'] .= '-';
 		if($s['css_default_only']) $css='';
 		if($s['top_page']) $s['title']='';
 		return $this->html($s['title'], $s['description'], str_replace("\t",'',row($c)), $css, $js, $s['robots'], !$s['css_standalone'], $s['js_minify'], $s['template']);
 	}
 	#エラーページ
-	public function not_found(bool $is404=false, string $reason=''):void{
+	public function not_found(bool $is404=false, string $reason=''):int{
 		$h = $this->u_root;
-		if ($is404){
+		if (http_response_code()===500 && isset($_SERVER['REQUEST_URI'])){
 			$f = $this->d_root.$_SERVER['REQUEST_URI'];
-			if (isset($_SERVER['REQUEST_URI']) && file_exists($f)){
-				if (is_file($f) && (preg_match('/(\.(cgi|pl|py|rb))$/si', $f) === 1)){
-					chmod($f, 0745);
-				} elseif (is_dir($f)){
-					foreach(scandir($f)as$i) if(preg_match('/(\.(cgi|pl|py|rb))$/si',$i)===1)chmod($f.'/'.$i,0745);
-				}
-			}
+			if(is_file($f) && str_starts_with(get($f,'#!/',1))) chmod($f, 0745);
+		}
+		if ($is404){
 			$l = $this->config['error.moved_list']??'';
 			foreach (explode(' ',$l) as $m){
 				if (strpos($m,'=>') !== false){
@@ -470,13 +479,7 @@ class GakuUra{
 				}
 			}
 		}
-		$t = $this->data_dir.'/404/html/index.html';
-		if (is_file($t)){
-			$r = file_get_contents($t);
-			foreach(['PERHAPS'=>$h,'REASON'=>$reason]as$k=>$v) $r=str_replace('{'.$k.'}',$v,$r);
-			$this->html(innerHTML('h1',$r).'-', '', $r, $this->data_dir.'/404/css');
-		}
-		exit;
+		return $this->htmlf('404', 'index', ['PERHAPS'=>$h,'REASON'=>$reason]);
 	}
 	/*
 	 * php.iniに以下を書くとクッキーが無効でもcheck_csrf_tokenを通過できます。

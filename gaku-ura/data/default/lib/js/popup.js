@@ -1,4 +1,5 @@
 /* ポップアップ画面の作成 */
+#!include keyboard.js;
 class POPUP{
 	#w;
 	constructor(style=""){
@@ -18,7 +19,7 @@ class POPUP{
 		document.body.style.pointerEvents = "auto";
 	}
 	/* 通常の警告 */
-	alert(msg, ok="はーい( ´ ▽ ` )ﾉ"){
+	async alert(msg, ok="はーい( ´ ▽ ` )ﾉ"){
 		this.apear();
 		this.#w.innerHTML = "<p>"+msg+"</p>";
 		const p = document.createElement("p");
@@ -30,8 +31,17 @@ class POPUP{
 		p.append(b);
 		this.#w.append(p);
 		b.focus();
-		b.addEventListener("keydown", (e)=>{if(!(e.key==="Return"||e.key==="Enter"))e.preventDefault();});
+		b.addEventListener("keydown", (e)=>{if(!isEnterKey(e))e.preventDefault();});
 		b.addEventListener("click", ()=>{this.disapear();});
+		return new Promise((r)=>{
+			const e = (f)=>()=>{
+				b.removeEventListener("click", Y);
+				this.disapear();
+				r(f);
+			};
+			const Y = e(true);
+			b.addEventListener("click", Y);
+		});
 	}
 	/* 質問 */
 	async confirm(msg, yes="うん分かった", no="い、、、嫌じゃ"){
@@ -58,7 +68,7 @@ class POPUP{
 			}
 		});
 		n.addEventListener("keydown", (e)=>{
-			if (e.key!=="Return"&&e.key!=="Enter"){
+			if (!isEnterKey(e)){
 				e.preventDefault();
 				if(e.key==="Tab") y.focus();
 			}

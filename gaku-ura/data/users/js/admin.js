@@ -6,7 +6,6 @@
 #!include reload_csrf.js;
 const q = (new URL(document.location)).searchParams;
 const popup = new POPUP();
-reactive_reload('session_token');
 let move_file = 0;
 //ini_get
 const arg = $ID("gaku-ura_args");
@@ -34,9 +33,12 @@ d.addEventListener("drop", async (e)=>{
 		if(f.type===""&&(f.size===0||f.size===4096)){
 			const n = $QS('#form input[name="name"]');
 			if (n.value === ""){
-				n.value = f.name;
-				$QS('#form select[name="new"]').value = "folder";
+				await popup.alert("フォルダは作成出来ますが中身はアップロード出来ません。");
+			} else {
+				n.value += "\\";
 			}
+			n.value += f.name;
+			$QS('#form select[name="new"]').value = "folder";
 			continue;
 		}
 		if (c === maxfc){
@@ -53,7 +55,7 @@ d.addEventListener("drop", async (e)=>{
 		p.files = d.files;
 		t.appendChild(p);
 	}
-	if(l.length>0) $QS('[type="submit"]').click();
+	if((await reload_csrf("session_token"))&&l.length>0) $QS('[type="submit"]').click();
 	move_file = 0;
 });
 /* 操作メニュー */
@@ -173,6 +175,7 @@ function mopen(e, c){
 				fm();
 			}catch{}
 		}
+		await reload_csrf("session_token");
 		move_file = 0;
 	});
 	g.append(o);
@@ -192,5 +195,4 @@ window.addEventListener("keydown", (e)=>{
 	}
 });
 fm();
-
 
