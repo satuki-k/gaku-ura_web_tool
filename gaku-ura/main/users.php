@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.6.10
+#gaku-ura9.6.12
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
 function is_editable(string $fname):bool{
@@ -102,7 +102,7 @@ function main(string $from):int{
 		$c_root = realpath($conf->d_root.$admin_dir);
 		$current_dir = $c_root;
 		$uri_dir = '';
-		$perm_list = ['no'=>0,'DIR'=>0755,'CGI'=>0745,'STATIC'=>0644,'PRIVATE'=>0600];
+		$perm_list = ['no'=>0,'DIR'=>0755,'CGI'=>0745,'STATIC'=>0644,'MPRIVATE'=>0604,'PRIVATE'=>0600];
 		$rm_option = '<label><input type="radio" name="remove" value="no" checked>削除しない</label> <label><input type="radio" name="remove" value="yes">削除する</label>';
 		$replace['TITLE'] = '管理機能';
 		$replace['TOP'] = '';
@@ -110,17 +110,17 @@ function main(string $from):int{
 		foreach(['max_file_uploads']as$i) $api_args[$i]=ini_get($i);
 		if ((int)$login_data['user_data']['admin']>=4 && str_starts_with($conf->config_file,$c_root)){
 			$b = basename($conf->config_file);
-			$replace['CONFIG'] = '<a href="?Dir='.str_replace($c_root.'/','',str_replace('/'.$b,'',$conf->config_file)).'&File='.$b.'&Menu=edit">設定</a>';
+			$replace['CONFIG'] = '<a href="?Dir='.lreplace(rreplace($conf->config_file,'/'.$b),$conf->d_root.'/').'&File='.$b.'&Menu=edit">設定</a>';
 		}
 		if (str_starts_with($conf->d_root,$c_root)){
-			$api_args['d_root'] = ($c_root===$conf->d_root?'':str_replace($c_root.'/','',$conf->d_root));
+			$api_args['d_root'] = ($c_root===$conf->d_root?'':lreplace($conf->d_root,$c_root.'/'));
 			$api_args['u_root'] = substr($conf->u_root,0,-1);
 			$replace['TOP'] = '<a href="?Dir='.$api_args['d_root'].'">ドキュメントルート</a>';
 		}
 		//現在位置を特定
 		if (($_GET['Dir']??'')!=='' && strpos($_GET['Dir'],'..')===false){
 			$u = h($_GET['Dir']);
-			$d = $c_root.'/'.$u;
+			$d = realpath($c_root.'/'.$u);
 			if (is_dir($d)){
 				$uri_dir = $u;
 				$current_dir = $d;
@@ -189,7 +189,7 @@ function main(string $from):int{
 				}
 				if ($_POST['new'] === '.htaccess'){
 					touch($current_dir.'/.htaccess');
-				} elseif ($_POST['new']==='/sitemap.xml' && strpos($conf->d_root,$c_root)!==false){
+				} elseif ($_POST['new']==='/sitemap.xml' && str_starts_with($conf->d_root,$c_root)){
 					$url_list = [''];
 					foreach (scandir($conf->data_dir.'/home/html') as $f){
 						if (preg_match('/(\.(html|md))$/',$f) === 1){
@@ -203,17 +203,17 @@ function main(string $from):int{
 					$t = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'."\n";
 					foreach(array_unique($url_list)as$i) $t.='<url><loc>'.$conf->domain.$i.'</loc></url>'."\n";
 					file_put_contents($conf->d_root.'/sitemap.xml', $t.'</urlset>'."\n", LOCK_EX);
-					header('Location:?Dir='.str_replace($c_root,'',$conf->d_root).'&File=sitemap.xml&Menu=edit');
+					header('Location:?Dir='.lreplace($c_root,$conf->d_root.'/').'&File=sitemap.xml&Menu=edit');
 					exit;
-				} elseif ($_POST['new']==='/robots.txt' && strpos($conf->d_root, $c_root)!==false){
+				} elseif ($_POST['new']==='/robots.txt' && str_starts_with($conf->d_root,$c_root)){
 					file_put_contents($conf->d_root.'/robots.txt', "User-agent:*\nSitemap:{$conf->domain}sitemap.xml\n", LOCK_EX);
-					header('Location:?Dir='.str_replace($c_root,'',$conf->d_root).'&File=robots.txt&Menu=edit');
+					header('Location:?Dir='.lreplace($c_root,$conf->d_root.'/').'&File=robots.txt&Menu=edit');
 					exit;
 				} elseif (not_empty($name) && !file_exists($current_dir.'/'.$name)){
 					if ($_POST['new'] === 'folder'){
-						mkdir($current_dir.'/'.$name);
+						foreach(explode('\\',$name)as$n) if(!file_exists($current_dir.'/'.$n))mkdir($current_dir.'/'.$n);
 					} elseif ($_POST['new'] === 'file'){
-						touch($current_dir.'/'.$name);
+						foreach(explode('\\',$name)as$n) if(!file_exists($current_dir.'/'.$n))touch($current_dir.'/'.$n);
 					} else {
 						if (strpos($name,'.'.$_POST['new'])===false && in_array($_POST['new'],['php','html','css','js','pl','py'],true)){
 							$name .= '.'.$_POST['new'];
@@ -249,7 +249,7 @@ function main(string $from):int{
 							}
 							//403防止
 							$l = get($p, 1);
-							if ($l && strpos($l,'#!/')===0){
+							if ($l && str_starts_with($l,'#!/')){
 								chmod($p, 0745);
 							} else {
 								chmod($p, $perm_list['STATIC']);
@@ -309,7 +309,7 @@ function main(string $from):int{
 						$menu = 'user';
 					} elseif ($menu==='edit' || is_editable($current_file)){
 						//編集
-						$replace['TITLE'] = str_replace($c_root,'',$current_file);
+						$replace['TITLE'] = lreplace($current_file, $c_root.'/');
 						$replace['EXIT'] = '?Dir='.$uri_dir;
 						$replace['FORM_ITEMS'] = '<input type="hidden" name="name" value="'.$bname.'"><label>名前<input type="text" name="new_name" value="'.$bname.'" placeholder="変更なし"></label> '.perm_opt($perm_list,file_perm($current_file)).$rm_option;
 						$replace['SUBMIT_TYPE'] = 'edit_file';
@@ -318,11 +318,11 @@ function main(string $from):int{
 						if (is_editable($current_file)){
 							$c = str_replace("\t",'&#9;',str_replace("\n",'&#10;',u8lf(h(file_get_contents($current_file)))));
 							$replace['FORM_AFTER'] = '<p><label><textarea rows="25" name="content" id="text">'.$c.'</textarea></label></p>';
-						} elseif (stripos($m,'image/') !== false){
+						} elseif (str_starts_with($m,'image/')){
 							$replace['FORM_AFTER'] = '<p><img style="max-width:100%;height:auto;" src="'.$d.'"></p>';
-						} elseif (stripos($m,'audio/') !== false){
+						} elseif (str_starts_with($m,'audio/')){
 							$replace['FORM_AFTER'] = '<p><audio controls src="'.$d.'"></audio></p>';
-						} elseif (stripos($m,'video/') !== false){
+						} elseif (str_starts_with($m,'video/')){
 							$replace['FORM_AFTER'] = '<p><video controls src="'.$d.'"></video></p>';
 						} else {
 							$replace['FORM_AFTER'] = '';
@@ -334,6 +334,9 @@ function main(string $from):int{
 					}
 				}
 				if (!$is_edit_mode){
+					if ($current_file===$user->user_list_file && (int)$login_data['user_data']['admin']<4){
+						return $conf->not_found(false, '権限がありません。');
+					}
 					header('Content-Description:File Transfer');
 					$conf->content_type(mime_content_type($current_file));
 					header('Content-Disposition:attachment;filename="'.$bname.'"');
@@ -352,7 +355,7 @@ function main(string $from):int{
 			foreach(['DOWNLOAD','FORM_AFTER']as$i) $replace[$i]='';
 			$is_edit_mode = true;
 			$bname = basename($current_dir);
-			$replace['TITLE'] = str_replace($c_root,'',$current_dir);
+			$replace['TITLE'] = lreplace($current_dir, $c_root.'/');
 			$up_to = '';
 			if ($uri_dir !== ''){
 				$up_to = explode('/', $uri_dir);
@@ -423,8 +426,10 @@ function main(string $from):int{
 			}
 			$replace['FORM_AFTER'] .= '</table>';
 			$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__user_list');
-			if (strpos($user->user_list_file, $c_root) !== false){
-				$replace['DOWNLOAD'] = '<a href="?Dir='.dirname(str_replace($c_root.'/','',$user->user_list_file)).'&File='.basename($user->user_list_file).'&download">ダウンロードする</a>';
+			$replace['DOWNLOAD'] = '';
+			if (str_starts_with($user->user_list_file, $c_root) && (int)$login_data['user_data']['admin']>=4){
+				$b = basename($user->user_list_file);
+				$replace['DOWNLOAD'] = '<a href="?Dir='.lreplace(rreplace($user->user_list_file,'/'.$b),$c_root.'/').'&File='.$b.'&download">ダウンロードする</a>';
 			}
 			$replace['FORM_AFTER'] .= 'enableを0にするとそのユーザーはログイン出来なくなりますが、削除にはなりません。';
 		}
