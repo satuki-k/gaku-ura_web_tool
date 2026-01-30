@@ -86,7 +86,8 @@ function fmd(e){
 	this.querySelector("a").click();
 }
 function fm(){
-	for (let i = 1; i < r.length; ++i){
+	let i = r.length;
+	while (--i){
 		r[i].removeEventListener("click", fmc);
 		r[i].removeEventListener("contextmenu", fmo);
 		r[i].removeEventListener("dblclick", fmd);
@@ -105,9 +106,8 @@ function mopen(e, c){
 	const a = c.querySelector('a');
 	const a2 = c.querySelectorAll('a')[1];
 	g.innerHTML = "";
-	//編集
-	const m = [['編集する',a2.href]];
-	//ダウンロード
+	const m = [];
+	m.push(['編集する',a2.href]);
 	a.getAttribute("class")==="dir"?m.unshift(['開く',a.href]):m.push(['ダウンロード',a.href+'&download']);
 	//実際のURL算出(hrefに「./」使用禁止)
 	if (udr){
@@ -147,11 +147,6 @@ function mopen(e, c){
 			return;
 		}
 		for (let i = 0; i < s.length; ++i){
-			if (s[i].getAttribute("removing")){
-				popup.alert("このファイルは無効です。");
-				continue;
-			}
-			s[i].setAttribute("removing", 1);
 			try{
 				const l = s[i].querySelectorAll("a")[1].href+"&async";
 				const r = await fetch(l);
