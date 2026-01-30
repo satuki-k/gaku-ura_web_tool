@@ -110,7 +110,7 @@ function main(string $from):int{
 		foreach(['max_file_uploads']as$i) $api_args[$i]=ini_get($i);
 		if ((int)$login_data['user_data']['admin']>=4 && str_starts_with($conf->config_file,$c_root)){
 			$b = basename($conf->config_file);
-			$replace['CONFIG'] = '<a href="?Dir='.lreplace(rreplace($conf->config_file,'/'.$b),$conf->d_root.'/').'&File='.$b.'&Menu=edit">設定</a>';
+			$replace['CONFIG'] = '<a href="?Dir='.lreplace(rreplace($conf->config_file,'/'.$b),$c_root.'/').'&File='.$b.'&Menu=edit">設定</a>';
 		}
 		if (str_starts_with($conf->d_root,$c_root)){
 			$api_args['d_root'] = ($c_root===$conf->d_root?'':lreplace($conf->d_root,$c_root.'/'));
