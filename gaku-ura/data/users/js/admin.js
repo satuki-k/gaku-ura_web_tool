@@ -4,7 +4,7 @@
 #!include string.js;
 #!include keyboard.js;
 #!include reload_csrf.js;
-const q = (new URL(document.location)).searchParams;
+const q = (new URL(window.location)).searchParams;
 const popup = new POPUP();
 let move_file = 0;
 //ini_get
@@ -12,23 +12,18 @@ const arg = $ID("gaku-ura_args");
 const maxfc = parseInt(arg.getAttribute("max_file_uploads")??20);
 /* ファイル一覧 */
 const d = document.body;
-const t = $ID("files");
 const b = d.style.background;
-d.addEventListener("dragover", (e)=>{
-	e.preventDefault();
-	d.style.background = "#eef";
-});
-d.addEventListener("dragleave",()=>{d.style.background=b;});
-d.addEventListener("drop", async (e)=>{
-	e.preventDefault();
-	d.style.background = b;
+async function dg(e){
+	if(e.type!=="dragleave") e.preventDefault();
+	d.style.background = e.type==="dragover"?"#eef":b;
+	if(!e.type==="drop") return;
 	if (move_file){
 		popup.alert("別の操作を実行中です。");
 		return;
 	}
-	move_file = 1;
 	const l = e.dataTransfer.files;
 	for (let c=0,i=0;i < l.length;++i,++c){
+		move_file = 1;
 		const f = l[i];
 		if(f.type===""&&(f.size===0||f.size===4096)){
 			const n = $QS('#form input[name="name"]');
@@ -43,7 +38,7 @@ d.addEventListener("drop", async (e)=>{
 		}
 		if (c === maxfc){
 			if(await popup.confirm("ファイル数が多いです。ここまでか、これ以降のどちらを投稿しますか?<br>(ここから:"+f.name+")","ここまで","これ以降")) break;
-			t.innerHTML = "";
+			$ID("files").innerHTML = "";
 			c = 0;
 		}
 		const p = document.createElement("input");
@@ -53,11 +48,12 @@ d.addEventListener("drop", async (e)=>{
 		p.style.display = "none";
 		d.items.add(f);
 		p.files = d.files;
-		t.appendChild(p);
+		$ID("files").appendChild(p);
 	}
 	if((await reload_csrf("session_token"))&&l.length>0) $QS('[type="submit"]').click();
 	move_file = 0;
-});
+}
+["dragover","dragleave","drop"].forEach((i)=>{d.addEventListener(i,dg);});
 /* 操作メニュー */
 const g = document.createElement("pre");//クリックメニュー
 g.style = "background:#fff;position:fixed;display:none;";
@@ -112,9 +108,8 @@ function mopen(e, c){
 	//実際のURL算出(hrefに「./」使用禁止)
 	if (udr){
 		let u = "/";
-		const cf = a.href.slice(a.href.indexOf("=")+1);
-		dr===""||cf===dr? u+=cf.replace(dr,""):u+=cf.replace(dr+"/","");
-		if(~u.indexOf("&")) u=u.slice(0, u.indexOf("&"));
+		const f = a.href.slice(a.href.indexOf("=")+1).slice(dr.length);
+		u += ~f.indexOf("&")?f.slice(0,f.indexOf("&")):f;
 		if(u!=="/") u+="/";
 		if(a.getAttribute("class")!=="dir") u+=a.textContent;
 		if(ur) u=ur+u;
@@ -170,8 +165,8 @@ function mopen(e, c){
 				fm();
 			}catch{}
 		}
-		await reload_csrf("session_token");
 		move_file = 0;
+		await reload_csrf("session_token");
 	});
 	g.append(o);
 	g.style.display = "block";
