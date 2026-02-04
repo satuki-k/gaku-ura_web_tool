@@ -107,9 +107,9 @@ function mopen(e, c){
 	a.getAttribute("class")==="dir"?m.unshift(['開く',a.href]):m.push(['ダウンロード',a.href+'&download']);
 	//実際のURL算出(hrefに「./」使用禁止)
 	if (udr){
-		let u = "/";
 		const f = a.href.slice(a.href.indexOf("=")+1).slice(dr.length);
-		u += ~f.indexOf("&")?f.slice(0,f.indexOf("&")):f;
+		let u = ~f.indexOf("&")?f.slice(0,f.indexOf("&")):f;
+		if(u.slice(0,1)!=="/") u="/"+u;
 		if(u!=="/") u+="/";
 		if(a.getAttribute("class")!=="dir") u+=a.textContent;
 		if(ur) u=ur+u;
