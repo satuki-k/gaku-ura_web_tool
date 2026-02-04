@@ -1,6 +1,8 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.6.12';
+const GAKU_URA_VERSION = '9.6.13';
+#mbstringの代替関数を使うときは以下のコメントを外す
+//include __DIR__ .'/alt-mbstring.php';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
 #UTF-8/LFにする
 function u8lf(string $t):string{
@@ -461,7 +463,7 @@ class GakuUra{
 		return $this->html($s['title'], $s['description'], str_replace("\t",'',row($c)), $css, $js, $s['robots'], !$s['css_standalone'], $s['js_minify'], $s['template']);
 	}
 	#エラーページ
-	public function not_found(bool $is404=false, string $reason=''):int{
+	public function not_found(bool $is404=false, string $reason=''):void{
 		$h = $this->u_root;
 		if (http_response_code()===500 && isset($_SERVER['REQUEST_URI'])){
 			$f = $this->d_root.$_SERVER['REQUEST_URI'];
@@ -479,7 +481,8 @@ class GakuUra{
 				}
 			}
 		}
-		return $this->htmlf('404', 'index', ['PERHAPS'=>$h,'REASON'=>$reason]);
+		$this->htmlf('404', 'index', ['PERHAPS'=>$h,'REASON'=>$reason]);
+		exit;
 	}
 	/*
 	 * php.iniに以下を書くとクッキーが無効でもcheck_csrf_tokenを通過できます。
