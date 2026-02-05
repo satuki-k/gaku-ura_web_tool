@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.6.13
+#gaku-ura9.6.14
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
 function is_editable(string $fname):bool{
@@ -55,19 +55,20 @@ function main(string $from):int{
 		if ($conf->url_param === ''){
 			if (list_isset($_POST,['submit','session_token']) && $_POST['submit']==='logout' && $conf->check_csrf_token('user_home',$_POST['session_token'],true)){
 				unset($_SESSION[GakuUraUser::SKEY_ID]);
+				unset($_SESSION[GakuUraUser::SKEY_NAME]);
 				unset($_SESSION[GakuUraUser::SKEY_PASSWD]);
 				header('Location:./');
 				exit;
 			} elseif (list_isset($_POST,['session_token','name','mail','passwd','new_passwd','profile']) && $conf->check_csrf_token('user_home',$_POST['session_token'],true)){
 				$p = [];
 				foreach(['name','mail','passwd','new_passwd','profile']as$k) $p[$k]=row(h(GakuUraUser::h($_POST[$k])));
-				$p['passwd'] = pass($p['passwd']);
 				$p['profile'] = str_replace("\n", '&#10;', $p['profile']);
-				if ($p['passwd'] === $user_data['passwd']){
+				if (password_verify($p['passwd'], $user_data['passwd'])){
 					if(not_empty($p['name'])&&strlen($p['name'])<32) $user_data['name']=$p['name'];
-					if(not_empty($p['new_passwd'])) $user_data['passwd']=$p['new_passwd'];
+					if(not_empty($p['new_passwd'])) $user_data['passwd']=password_hash($p['new_passwd'],PASSWORD_BCRYPT);
 					if($user->user_exists('',$p['mail'])===0) $user_data['mail']=$p['mail'];
 					$user_data['profile'] = $p['profile'];
+					$_SESSION[GakuUraUser::SKEY_NAME] = $p['name'];
 					$user->change_user_data($conf, $user_data);
 				}
 				header('Location:./');
@@ -280,7 +281,7 @@ function main(string $from):int{
 									}
 								}
 								if ($k === 'passwd'){
-									$d[$k] = pass(row(h(GakuUra::h($_POST[$k.$d['id']]))));
+									$d[$k] = password_hash(row(h(GakuUra::h($_POST[$k.$d['id']]))), PASSWORD_BCRYPT);
 								} else {
 									$d[$k] = row(h(GakuUra::h($_POST[$k.$d['id']])));
 								}
@@ -449,13 +450,23 @@ function main(string $from):int{
 		}
 		if (list_isset($_POST,['name','passwd','session_token']) && $conf->check_csrf_token('login',$_POST['session_token'],true)){
 			$name = h($_POST['name']);
-			$passwd = pass(h($_POST['passwd']));
-			foreach (get_rows($user->user_list_file, 2) as $row){
-				$d = $user->user_data_convert(explode("\t", $row));
-				if ($d['name']===$name && $d['passwd']===$passwd){
-					session_regenerate_id(true);
+			$passwd = h($_POST['passwd']);
+			$m = ($_POST['mail']??'')==='true';
+			$i = $user->user_exists(($m?'':$name), ($m?$name:''));
+			if (not_empty($name) && not_empty($passwd) && $i){
+				$d = $user->user_data_convert(explode("\t", get($user->user_list_file,$i+1)));
+				$p = 0;
+				if (substr($d['passwd'],0,1)==='$' && subrpos('$','$',$d['passwd'])!==''){
+					if(password_verify($passwd,$d['passwd'])) $p=1;
+				} elseif (pass($passwd) === $d['passwd']){
+					$d['passwd'] = password_hash($passwd, PASSWORD_BCRYPT);
+					$user->change_user_data($conf, $d);
+					$p = 1;
+				}
+				if ($p){
 					$_SESSION[GakuUraUser::SKEY_ID] = $d['id'];
-					$_SESSION[GakuUraUser::SKEY_PASSWD] = $passwd;
+					$_SESSION[GakuUraUser::SKEY_NAME] = $d['name'];
+					$_SESSION[GakuUraUser::SKEY_PASSWD] = $d['passwd'];
 					header('Location:'.($_SESSION[GakuUraUser::SKEY_FROM]??'../'));
 					exit;
 				}
@@ -472,7 +483,7 @@ function main(string $from):int{
 			if (not_empty($p['name']) && not_empty($p['passwd'])){
 				if (strlen($p['name']) < 32){
 					if ($user->user_exists($p['name'],$p['mail']) === 0){
-						$p['passwd'] = pass($p['passwd']);
+						$p['passwd'] = password_hash($p['passwd'], PASSWORD_BCRYPT);
 						$user->change_user_data($conf, $p);
 						header('Location:../../');
 						exit;

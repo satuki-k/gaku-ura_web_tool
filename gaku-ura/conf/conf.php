@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.6.13';
+const GAKU_URA_VERSION = '9.6.14';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
@@ -50,8 +50,8 @@ function decode_a(string $s):string{return base64_decode(str_replace('_','/',str
 function one_time_pass(int $l,int $r):string{return encode_a(random_bytes(random_int($l,$r)));}
 #開始と終了の文字列で囲まれた中身の文字列
 function subrpos(string $l, string $r, string $t):string{
-	if (($s=strpos($t,$l))!==false && ($e=strpos($t,$r,$s))!==false){
-		$n = strlen($l);
+	$n = strlen($l);
+	if (($s=strpos($t,$l))!==false && ($e=strpos($t,$r,$s+$n))!==false){
 		return substr($t, $s+$n, $e-$s-$n);
 	}
 	return '';
@@ -129,7 +129,7 @@ function read_conf(string $file):array{
 	fclose($fp);
 	return $c;
 }
-#sha256ハッシュ
+#簡易的なパスキー認証以外は非推奨
 function pass(string $pw):string{return ($pw===''?'':hash('sha256',$pw));}
 #開始と終了で囲まれた文字列ごと削除(参照渡し)
 function remove_comment_rows(string &$t, string $s='/*', string $g='*/'):string{
