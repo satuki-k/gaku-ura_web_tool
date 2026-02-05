@@ -1,6 +1,6 @@
 <?php
-#gaku-ura9.6.8
-//ログイン必須とは限らない機能を考慮し、ログインチェックは初期化では行わない
+#gaku-ura9.6.14
+#ログイン必須とは限らない機能を考慮し、ログインチェックは初期化では行わない
 class GakuUraUser{
 	public string $user_dir;
 	public string $user_list_file;
@@ -9,8 +9,9 @@ class GakuUraUser{
 	public int $admin_revel;
 	public const SKEY_ID = 'gaku-ura_login:id';
 	public const SKEY_PASSWD = 'galu-ura_login:passwd';
+	public const SKEY_NAME = 'gaku-ura_login:name';
 	public const SKEY_FROM = 'gaku-ura_login:from';
-	//GakuUraオブジェクトが引数
+	#GakuUraオブジェクトが引数
 	function __construct(object &$conf){
 		if((int)($conf->config['login.enable']??0)===0) $conf->not_found(false,'この機能は無効です。');
 		$this->own_dir = ['/','/','/','/','/'];
@@ -33,28 +34,28 @@ class GakuUraUser{
 			file_put_contents($this->user_list_file, implode("\t",$this->user_list_keys)."\n", LOCK_EX);
 		}
 	}
-
-	//区切り文字エスケープ
+	#区切り文字エスケープ
 	public static function h(string $t):string{
 		return str_replace("\t", '', $t);
 	}
-
-	//ユーザー情報の単純配列を、ユーザー一覧ファイルの1行目をキーにした連想配列に変換
+	#ユーザー情報の単純配列を、ユーザー一覧ファイルの1行目をキーにした連想配列に変換
 	public function user_data_convert(array $row):array{
 		$d = [];
 		$l = count($this->user_list_keys);
 		for($i=0;$i<$l;++$i) $d[$this->user_list_keys[$i]]=$row[$i]??'';
 		return $d;
 	}
-
 	public function login_check():array{
 		$r = ['result'=>false];
-		if (list_isset($_SESSION,[self::SKEY_ID,self::SKEY_PASSWD]) && (int)$_SESSION[self::SKEY_ID]>0 && not_empty($_SESSION[self::SKEY_PASSWD])){
-			$l = get($this->user_list_file, (int)$_SESSION[self::SKEY_ID] +1);
-			if ($l !== false){
+		$m = [self::SKEY_ID, self::SKEY_NAME, self::SKEY_PASSWD];
+		if (list_isset($_SESSION,$m) && (int)$_SESSION[$m[0]]>0){
+			$s = [];
+			foreach($m as $i) $s[]=$_SESSION[$i];
+			$l = get($this->user_list_file, (int)$s[0]+1);
+			if ($l){
 				$u = $this->user_data_convert(explode("\t", $l));
-				if (isset($u['enable']) && ((int)$u['enable'] === 1)){
-					if (list_isset($u,['id','passwd']) && (int)$u['id']===(int)$_SESSION[self::SKEY_ID] && $u['passwd']===$_SESSION[self::SKEY_PASSWD]){
+				if ((int)$u['enable']){
+					if ((int)$u['id']===(int)$s[0] && $u['name']===$s[1] && $u['passwd']===$s[2]){
 						$r['result'] = true;
 						$r['user_data'] = $u;
 					}
@@ -62,11 +63,10 @@ class GakuUraUser{
 			}
 		}
 		if (!$r['result'] && strpos($_SERVER['REQUEST_URI']??'','/login/')===false){
-			$_SESSION[self::SKEY_FROM] = $_SERVER['REQUEST_URI']; //ログイン後復帰する用
+			$_SESSION[self::SKEY_FROM] = $_SERVER['REQUEST_URI'];#ログイン後復帰する用
 		}
 		return $r;
 	}
-
 	public function user_exists(string $name, string $mail=''):int{
 		$i = 0;
 		foreach (get_rows($this->user_list_file,2) as $l){
@@ -79,35 +79,35 @@ class GakuUraUser{
 		}
 		return 0;
 	}
-
-	//idが0なら新規登録になる
+	#idが0なら新規登録になる
 	public function change_user_data(object &$conf, array $user_data):void{
 		$conf->file_lock('user_list');
-		$user_rows = get_rows($this->user_list_file, 1);
-		$user_row = '';
+		$rows = get_rows($this->user_list_file, 1);
+		$row = '';
 		foreach ($this->user_list_keys as $k){
-			if(isset($user_data[$k])) $user_row.=trim(self::h($user_data[$k]));
-			$user_row .= "\t";
+			if(isset($user_data[$k])) $row.=trim(self::h($user_data[$k]));
+			$row .= "\t";
 		}
-		$user_row = rtrim(row($user_row));
+		$row = rtrim(row($row));
 		if (!isset($user_data['id']) || ($user_data['id'] < 1)){
-			$user_d = explode("\t", $user_row);
-			$last = explode("\t", $user_rows[count($user_rows) -1]);
+			$d = explode("\t", $row);
+			$l = explode("\t", $rows[count($rows)-1]);
 			for ($i = 0;$i < count($this->user_list_keys);++$i){
 				if ($this->user_list_keys[$i] === 'id'){
-					if($last[$i]==='id') $last[$i]=0;
-					$user_d[$i] = (int)$last[$i] +1;
-					file_put_contents($this->user_list_file, implode("\t",$user_d)."\n", FILE_APPEND|LOCK_EX);
-					$_SESSION[self::SKEY_ID] = $user_d[$i];
+					if($l[$i]==='id') $l[$i]=0;
+					$d[$i] = (int)$l[$i] +1;
+					file_put_contents($this->user_list_file, implode("\t",$d)."\n", FILE_APPEND|LOCK_EX);
+					$_SESSION[self::SKEY_ID] = $d[$i];
+					$_SESSION[self::SKEY_NAME] = $user_data['name'];
 					$_SESSION[self::SKEY_PASSWD] = $user_data['passwd'];
 					break;
 				}
 			}
 		} else {
-			$row = get($this->user_list_file, $user_data['id'] +1);
-			if ($row !== $user_row){
-				$user_rows[$user_data['id']] = $user_row;
-				file_put_contents($this->user_list_file, implode("\n",$user_rows)."\n", LOCK_EX);
+			$l = get($this->user_list_file, $user_data['id']+1);
+			if ($l !== $row){
+				$rows[$user_data['id']] = $row;
+				file_put_contents($this->user_list_file, implode("\n",$rows)."\n", LOCK_EX);
 			}
 		}
 		$conf->file_unlock('user_list');
