@@ -11,8 +11,8 @@ function h(s){
 //切り抜き
 function subrpos(l, r, t){
 	const s = t.indexOf(l);
-	const e = t.indexOf(r,s);
-	return((s!==-1&&e!==-1)?t.slice(s+l.length,e):"");
+	const e = t.indexOf(r, s+l.length);
+	return (~s&&~e)?t.slice(s+l.length,e):"";
 }
 //切除
 function remove_comment_rows(code, s, e){
