@@ -60,13 +60,13 @@ function main(string $from):int{
 				header('Location:./');
 				exit;
 			} elseif (list_isset($_POST,['session_token','name','mail','passwd','new_passwd','profile']) && $conf->check_csrf_token('user_home',$_POST['session_token'],true)){
+				$_POST['profile'] = str_replace("\n", '&#10;', $_POST['profile']);
 				$p = [];
-				foreach(['name','mail','passwd','new_passwd']as$k) $p[$k]=row(h(GakuUraUser::h($_POST[$k])));
-				$p['profile'] = row(h(GakuUraUser::h(str_replace("\n",'&#10;',$p['profile']))));
-				if (password_verify($p['passwd'],$user_data['passwd']) && $user->user_exists($p['name'],$p['mail'])===0){
-					if(not_empty($p['name'])&&strlen($p['name'])<32) $user_data['name']=$p['name'];
+				foreach(['name','mail','passwd','new_passwd','profile']as$k) $p[$k]=row(h(GakuUraUser::h($_POST[$k])));
+				if (password_verify($p['passwd'],$user_data['passwd'])){
+					if(not_empty($p['name'])&&strlen($p['name'])<32&&$user->user_exists($p['name'])===0) $user_data['name']=$p['name'];
 					if(not_empty($p['new_passwd'])) $user_data['passwd']=password_hash($p['new_passwd'],PASSWORD_BCRYPT);
-					if(filter_var($p['mail'],FILTER_VALIDATE_EMAIL)) $user_data['mail']=$p['mail'];
+					if(filter_var($p['mail'],FILTER_VALIDATE_EMAIL)&&$user->user_exists('',$p['mail'])===0) $user_data['mail']=$p['mail'];
 					$user_data['profile'] = $p['profile'];
 					$_SESSION[GakuUraUser::SKEY_NAME] = $p['name'];
 					$user->change_user_data($conf, $user_data);

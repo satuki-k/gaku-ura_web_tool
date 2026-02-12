@@ -122,13 +122,21 @@ class TextEditor{
 		localStorage.setItem(key_m, this.#mt.indexOf(this.#m));
 	}
 	ace(){
+		const t = $ID("text").value;
 		const l = {"md":"markdown","py":"python","pl":"perl","rb":"ruby","js":"javascript","conf":"ini","htaccess":"ini"};
 		const v = $QS('input[name="new_name"]').value;
 		const f = v.slice(v.indexOf(".")+1);
+		let m = l[f]??f;
+		if (t.slice(0,3)==='#!/'){
+			const r = t.split("\n")[0];
+			["perl","python","python3","ruby","php","sh","bash"].forEach((i)=>{
+				if(r.endsWith(i)) m=i;
+			});
+		}
 		if(!this.#h){
 			this.#h = ace.edit(this.#ae.id,{
 				useSoftTabs:false,
-				mode:"ace/mode/"+(l[f]??f),
+				mode:"ace/mode/"+m,
 				theme:"ace/theme/Tomorrow"
 			});
 			this.#ae.addEventListener("wheel",
@@ -136,7 +144,7 @@ class TextEditor{
 				{passive:false});
 			this.zoom();
 		}
-		this.#h.getSession().setValue($ID("text").value);
+		this.#h.getSession().setValue(t);
 	}
 	//readfileじゃないと取得出来ないファイルの閲覧
 	async reload(){

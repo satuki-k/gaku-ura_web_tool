@@ -3,6 +3,8 @@
 #!include popup.js;
 #!include reload_csrf.js;
 const popup = new POPUP();
+//submitメソッドを使えるようにする
+$ID("form").innerHTML += '<input type="hidden" name="submit_type" value="'+$QS('#form [type="submit"]').value+'">';
 
 //削除の警告
 const r = $QS('[name="remove"]:checked');
