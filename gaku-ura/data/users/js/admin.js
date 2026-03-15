@@ -104,7 +104,16 @@ function mopen(e, c){
 	g.innerHTML = "";
 	const m = [];
 	m.push(['編集する',a2.href]);
-	a.getAttribute("class")==="dir"?m.unshift(['開く',a.href]):m.push(['ダウンロード',a.href+'&download']);
+	if (a.getAttribute("class") === "dir"){
+		m.unshift(['開く',a.href]);
+	} else {
+		if(a.textContent.endsWith(".db")){
+			let u = a.href.replace(/(Menu=[^&]*)/, "Menu=edit_db");
+			if(!(~u.indexOf("Menu="))) u+="&Menu=edit_db";
+			m.push(['SQLで編集',u]);
+		}
+		m.push(['ダウンロード',a.href+'&download']);
+	}
 	//実際のURL算出(hrefに「./」使用禁止)
 	if (udr){
 		const f = a.href.slice(a.href.indexOf("=")+1).slice(dr.length);

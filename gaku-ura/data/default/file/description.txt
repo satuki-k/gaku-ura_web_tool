@@ -1,0 +1,17 @@
+*gaku-ura9.6.16から
+管理ツール(/user/admin/)で、新規作成するファイルのテンプレートです。
+ここのファイルを編集することで、作成時のテンプレートをカスタムできます。
+
+gaku-ura/data/default/file
+├── description.txt	このファイル
+├── index.css	新規作成->css
+├── index.html	新規作成->html
+├── index.js	新規作成->javascript
+├── index.php	新規作成->php(通常)
+├── main.php	新規作成->php(gaku-ura/main 以下の作成時)
+├── index.pl	新規作成->perl
+├── index.py	新規作成->python
+├── robots.txt	新規作成->/robots.txt
+└── sitemap.xml	新規作成->/sitemap.xml
+
+
