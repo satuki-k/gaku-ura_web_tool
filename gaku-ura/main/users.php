@@ -1,14 +1,19 @@
 <?php
-#gaku-ura9.6.15
+#gaku-ura9.6.16
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
+require __DIR__ .'/../conf/db.php';
 function is_editable(string $fname):bool{
 	if(stripos(mime_content_type($fname),'text/')===0) return true;
-	$f = strtolower(basename($fname));
-	foreach (['txt','htaccess','php','py','rb','conf','ini','log','css','html','js','csv','tsv','c','cpp','cxx','gkrs','pl'] as $k){
-		if(str_ends_with($f,'.'.$k)) return true;
+	$f = fopen($fname, 'r');
+	while (($l=fgets($f)) !== false){
+		if (strpos($l,"\0") !== false){
+			fclose($f);
+			return false;
+		}
 	}
-	return false;
+	fclose($f);
+	return true;
 }
 function file_sort(array &$files, string $c_dir):void{
 	$d = [];
@@ -23,16 +28,9 @@ function file_perm(string $f):string{
 }
 function perm_opt(array $perm_list, string $now_p):string{
 	$r = '<label>ﾊﾟｰﾐｯｼｮﾝ<select name="perm">';
-	foreach ($perm_list as $k=>$v){
-		if ($k === 'no'){
-			$r.='<option value="no">'.$now_p.'(変更しない)</option>';
-		} else {
-			$r .= sprintf('<option value="%s">%o</option>', $k, $v);
-		}
-	}
+	foreach($perm_list as $k=>$v) $r.='<option value="'.$k.'">'.($k==='no'?$now_p.' 変更しない':$v.' '.$k).'</option>';
 	return $r.'</select></label>';
 }
-
 function main(string $from):int{
 	$conf = new GakuUra();
 	$user = new GakuUraUser($conf);
@@ -132,7 +130,7 @@ function main(string $from):int{
 
 		#投稿
 		if (isset($submit,$_POST['session_token']) && $conf->check_csrf_token('admin__'.$_POST['submit'],$_POST['session_token'],true)){
-			if ($submit==='edit_file' && list_isset($_POST,['name','new_name','perm']) && is_file($current_dir.'/'.h($_POST['name'])) && isset($perm_list[$_POST['perm']])){
+			if ($submit==='edit_file' && list_isset($_POST,['name','new_name','perm']) && strpos($_POST['name'],'..')===false && strpos($_POST['name'], '/')===false && is_file($current_dir.'/'.h($_POST['name'])) && isset($perm_list[$_POST['perm']])){
 				$path = $current_dir.'/'.h($_POST['name']);
 				#削除
 				if ($path!==$user->user_list_file||$path!==$conf->config_file || (int)$user_data['admin']>=4){
@@ -184,30 +182,33 @@ function main(string $from):int{
 				header('Location:?Dir='.$up_to);
 				exit;
 			} elseif ($submit==='new' && list_isset($_POST,['new','name'])){
+				$template_dir = $conf->data_dir.'/default/file';
 				$name = str_replace('..','', str_replace('/','',h($_POST['name'])));
-				if (in_array($_POST['new'],['.htaccess','/sitemap.xml','/robots.txt']) && !str_starts_with($conf->d_root,$c_root)){
+				if (in_array($_POST['new'],['.htaccess','/sitemap.xml','/robots.txt'],true) && !str_starts_with($conf->d_root,$c_root)){
 					$conf->not_found(false, '権限がありません');
 				}
 				if ($_POST['new'] === '.htaccess'){
 					touch($current_dir.'/.htaccess');
-				} elseif ($_POST['new']==='/sitemap.xml' && str_starts_with($conf->d_root,$c_root)){
+				} elseif ($_POST['new']==='/sitemap.xml' && str_starts_with($conf->d_root,$c_root) && is_file($template_dir.$_POST['new'])){
+					$f = $template_dir.$_POST['new'];
 					$url_list = [''];
-					foreach (scandir($conf->data_dir.'/home/html') as $f){
-						if (preg_match('/(\.(html|md))$/',$f) === 1){
-							$m = preg_replace('/(\.(html|md))$/', '', $f);
-							if ($m!=='index' && preg_match('/^[0-9]+$/',$m)!==1){
-								$url_list[] = '?Page='.$m;
-							}
+					$d = $conf->data_dir.'/home/html';
+					foreach (scandir($d) as $i){
+						if (preg_match('/(\.(html|md))$/',$i)===1&&!str_starts_with($i,'index.')){
+							if((int)$i===0) $url_list[]='?Page='.rreplace(rreplace($i,'.html'),'.md');
 						}
 					}
 					if((int)($conf->config['login.enable']??0)===1) $url_list[]='users/';
-					$t = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'."\n";
+					$t = '';
 					foreach(array_unique($url_list)as$i) $t.='<url><loc>'.$conf->domain.$i.'</loc></url>'."\n";
-					file_put_contents($conf->d_root.'/sitemap.xml', $t.'</urlset>'."\n", LOCK_EX);
-					header('Location:?Dir='.lreplace($c_root,$conf->d_root.'/').'&File=sitemap.xml&Menu=edit');
+					$s = str_replace('{URL_LIST}', $t, file_get_contents($f));
+					file_put_contents($conf->d_root.$_POST['new'], $s, LOCK_EX);
+					header('Location:?Dir='.lreplace($c_root,$conf->d_root.'/').'&File='.basename($f).'&Menu=edit');
 					exit;
-				} elseif ($_POST['new']==='/robots.txt' && str_starts_with($conf->d_root,$c_root)){
-					file_put_contents($conf->d_root.'/robots.txt', "User-agent:*\nSitemap:{$conf->domain}sitemap.xml\n", LOCK_EX);
+				} elseif ($_POST['new']==='/robots.txt' && str_starts_with($conf->d_root,$c_root) && is_file($template_dir.$_POST['new'])){
+					$s = file_get_contents($template_dir.$_POST['new']);
+					$s = str_replace('{DOMAIN}', $conf->domain, $s);
+					file_put_contents($conf->d_root.'/robots.txt', $s, LOCK_EX);
 					header('Location:?Dir='.lreplace($c_root,$conf->d_root.'/').'&File=robots.txt&Menu=edit');
 					exit;
 				} elseif (not_empty($name) && !file_exists($current_dir.'/'.$name)){
@@ -216,22 +217,22 @@ function main(string $from):int{
 					} elseif ($_POST['new'] === 'file'){
 						foreach(explode('\\',$name)as$n) if(!file_exists($current_dir.'/'.$n))touch($current_dir.'/'.$n);
 					} else {
-						if (!str_ends_with($name,'.'.$_POST['new']) && in_array($_POST['new'],['php','html','css','js','pl','py'],true)){
+						if (!str_ends_with($name,'.'.$_POST['new']) && in_array($_POST['new'],['php','html','css','js','pl','py','db'],true)){
 							$name .= '.'.$_POST['new'];
 						}
 						$new_path = $current_dir.'/'.str_replace('..','.',$name);
-						$cl = [
-							'php'=>'<?php',
-							'html'=>'<!DOCTYPE html>'."\n".'<html lang="ja">'."\n".'<head>'."\n".'<meta http-equiv="content-type" content="text/html;charset=UTF-8">'."\n".'<meta name="viewport" content="width=device-width,initial-scale=1.0">'."\n".'<title></title>'."\n".'<style></style>'."\n".'</head>'."\n".'<body>'."\n".'<h1></h1>'."\n".'</body>'."\n".'</html>',
-							'css'=>'/*'."\n".'gaku-uraを使用する場合は以下の機能が適用されます'."\n".'#!include [lib_name.css]; (data/dafault/lib/css の中を使う場合)'."\n".'@import は自動的に順序を保持してCSSの先頭に移動します'."\n".'*/',
-							'js'=>'/*'."\n".'gaku-uraを使用する場合は以下の機能が適用されます'."\n".'#!include [lib_name].js; (data/default/lib/js の中を使う場合)'."\n".'*/',
-							'pl'=>'#!/usr/bin/env perl'."\n".'use strict;'."\n".'use warnings;'."\n".'print "content-type:text/html;charset=UTF-8\n\n";',
-							'py'=>'#!/usr/bin/env python3'."\n".'import cgi'."\n".'print("content-type:text/html;charset=UTF-8\n")'];
-						if ($_POST['new']==='php' && $current_dir===__DIR__){
-							$cl['php'] .= "\n".'require __DIR__ .\'/../conf/conf.php\';'."\n".'function main():int{'."\n\t".'$conf = new GakuUra();'."\n\t".'return 0;'."\n".'}';
-						}
-						file_put_contents($new_path, ($cl[$_POST['new']]??'')."\n", LOCK_EX);
+						$t = $template_dir.'/index.'.$_POST['new'];
+						if($_POST['new']==='php' && $current_dir===__DIR__) $t=$template_dir.'/main.php';
+						$s = "\n";
+						if(is_file($t)) $s=file_get_contents($t);
+						$r = ['DOMAIN'=>$conf->domain,'GAKU_URA_VERSION'=>GAKU_URA_VERSION,'SITE_TITLE'=>($conf->config['title']??'無題')];
+						foreach($r as $k=>$v) $s=str_replace('{'.$k.'}',$v,$s);
+						file_put_contents($new_path, $s, LOCK_EX);
 						if(in_array($_POST['new'],['pl','py'],true)) chmod($new_path, 0745);
+						if ($_POST['new'] === 'db'){
+							header('Location:./?Dir='.$uri_dir.'&File='.basename($new_path).'&Menu=edit_db');
+							exit;
+						}
 					}
 				}
 				#アップロード
@@ -260,6 +261,101 @@ function main(string $from):int{
 				}
 				header('Location:./?Dir='.$uri_dir);
 				exit;
+			} elseif ($submit==='edit_db'&&list_isset($_POST,['dbtype','dbname','query','table'])){
+				#SQLite
+				if ($_POST['dbtype']==='sqlite' && strpos($_POST['dbname'],'..')===false && strpos($_POST['dbname'], '/')===false && is_file($current_dir.'/'.$_POST['dbname'])){
+					$current_table = h(($_POST['table']??''));
+					$dbname = h($_POST['dbname']);
+					$table = h($_POST['ctable']);
+					$g = new GakuUraSQL($_POST['dbtype'], $current_dir.'/'.$_POST['dbname']);
+					#削除とtable切替を同時に行うと切替の優先で意図しない削除を防止
+					if ($g->table_exists($table)){
+						header('Location:./?Dir='.$uri_dir.'&File='.$dbname.'&Menu='.$submit.'&table='.$table);
+						exit;
+					}
+					if ($current_table === ''){
+						$tl = $g->get_tables();
+						$current_table = $tl[0]??'';
+					}
+					#table削除
+					if (($_POST['remove_table']??'')==='true' && not_empty($current_table)){
+						$g->remove_table($current_table);
+						header('Location:./?Dir='.$uri_dir.'&File='.$dbname.'&Menu='.$_GET['Menu']);
+						exit;
+					}
+					$c = $g->get_cols($current_table);
+					$l = $g->count_rows($current_table);
+					#SQL文実行
+					$is_export = ($_POST['export']??'')==='true';
+					$sql = $_POST['query'];
+					if(not_empty($current_table)&&$is_export&&!not_empty($sql)) $sql='SELECT * FROM '.$current_table.';';
+					if (not_empty($sql)){
+						$r = $g->exec($sql);
+						if ($is_export){
+							$conf->content_type('text/plain');
+							if (!$r){
+								echo $g->error_msg;
+								exit;
+							}
+							header('Content-Description:File Transfer');
+							header('Content-Disposition:attachment;filename="'.$current_table.'.csv"');
+							$y = [];
+							foreach ($r as $i){
+								if (!$y){
+									foreach(array_keys($i)as$j)if(in_array($j,$c)) $y[]=($j===null||h($j)===(string)$j)?$j:'"'.$j.'"';
+									echo implode(',' ,$y)."\n";
+								}
+								$k = [];
+								foreach($i as $y=>$j)if(in_array($y,$c)) $k[]=($j===null||h($j)===(string)$j)?$j:'"'.$j.'"';
+								echo implode(',', $k)."\n";
+							}
+							exit;
+						}
+					}
+					#table変更
+					if (($_POST['table_name']??'')!=='' && $_POST['table_name']!==$current_table){
+						if($g->change_table($current_table, $_POST['table_name'])) $current_table=$_POST['table_name'];
+					}
+					#列変更
+					foreach ($c as $i=>$j){
+						if ($j!=='id' && ($_POST['col,'.$j]??'')!=='' && $_POST['col,'.$j]!==$j){
+							if($g->change_col($current_table, $j, $_POST['col,'.$j])) $c[$i]=$_POST['col,'.$j];
+						}
+					}
+					#id列が無いデータベースは未対応
+					if (in_array('id',$c,true)){
+						foreach ($g->get_rows($current_table) as $r){
+							if (isset($r['id']) && ($_POST['remove_row,'.$r['id']]??'') === 'true'){
+								#行削除
+								$g->remove_row($current_table, 'id=?', [$r['id']]);
+							} else {
+								#行編集
+								$is_change = false;
+								$change_row = [];
+								foreach ($c as $k){
+									if (isset($_POST[$r['id'].','.$k]) && $_POST[$r['id'].','.$k]!=strval($r[$k]??'')){
+										$change_row[$k] = $_POST[$r['id'].','.$k];
+										$is_change = true;
+									}
+								}
+								if($is_change) $g->change_row($current_table, $change_row, 'id=?', [$r['id']]);
+							}
+						}
+					}
+					#行追加
+					$is_add = false;
+					$add = [];
+					$nl = 'new,';
+					foreach ($c as $i){
+						if ($i!=='id' && isset($_POST[$nl.$i]) && not_empty($_POST[$nl.$i])){
+							$is_add = true;
+							$add[$i] = $_POST[$nl.$i];
+						}
+					}
+					if($is_add) $g->append_row($current_table,$add);
+					header('Location:./?Dir='.$uri_dir.'&File='.basename($dbname).'&Menu='.$submit.'&table='.$current_table);
+					exit;
+				}
 			} elseif ($submit === 'user_list'){
 				#入力が可変長なので、ログインデータで毎回チェックする
 				foreach (get_rows($user->user_list_file, 2) as $row){
@@ -305,10 +401,11 @@ function main(string $from):int{
 				$current_file = $d;
 				if (!isset($_GET['download'])){
 					$is_edit_mode = true;
+					$editable = is_editable($current_file);
 					if ($current_file===$user->user_list_file){
 						#ユーザー管理
 						$menu = 'user';
-					} elseif ($menu==='edit' || is_editable($current_file)){
+					} elseif ($menu!=='edit_db' && ($menu==='edit'||$editable)){
 						#編集
 						$replace['TITLE'] = lreplace($current_file, $c_root.'/');
 						$replace['EXIT'] = '?Dir='.$uri_dir;
@@ -317,20 +414,23 @@ function main(string $from):int{
 						$replace['SUBMIT_TYPE'] = 'edit_file';
 						$m = mime_content_type($current_file);
 						$f = '';
-						if (is_editable($current_file)){
+						if (str_ends_with($current_file,'.db')){
+							$f = '<p><a href="?Dir='.$uri_dir.'&File='.$bname.'&Menu=edit_db">データベースを編集する</a></p>';
+						}
+						if ($editable){
 							$c = str_replace("\t",'&#9;',str_replace("\n",'&#10;',u8lf(h(file_get_contents($current_file)))));
-							$f = '<p><label><textarea rows="25" name="content" id="text">'.$c.'</textarea></label></p>';
+							$f .= '<p><label><textarea rows="25" name="content" id="text">'.$c.'</textarea></label></p>';
 						} elseif (str_starts_with($m,'image/')){
-							$f = '<p><img style="max-width:100%;height:auto;" src="'.$d.'"></p>';
+							$f .= '<p><img style="max-width:100%;height:auto;" src="'.$d.'"></p>';
 						} elseif (str_starts_with($m,'audio/')){
-							$f = '<p><audio controls src="'.$d.'"></audio></p>';
+							$f .= '<p><audio controls src="'.$d.'"></audio></p>';
 						} elseif (str_starts_with($m,'video/')){
-							$f = '<p><video controls src="'.$d.'"></video></p>';
+							$f .= '<p><video controls src="'.$d.'"></video></p>';
 						}
 						$replace['FORM_AFTER'] = $is_async?'':$f;
 						$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__edit_file');
 						$replace['DOWNLOAD'] = '<p><a href="'.$d.'">ダウンロードする</a></p><p><br></p>';
-					} else {
+					} elseif ($menu !== 'edit_db'){
 						$is_edit_mode = false;
 					}
 				}
@@ -392,12 +492,82 @@ function main(string $from):int{
 				if (is_dir($file)){
 					$p .= sprintf($fmt, $u_dir.$f,' class="dir"',$u_dir.$f,count(scandir($file))-2 .'item');
 				} else {
-					$p .= sprintf($fmt, $uri_dir.'&File='.$f.(is_editable($file)?'&Menu=edit':''),'',$uri_dir.'&File='.$f,filesize($file)/1000 .'kB '.mime_content_type($file));
+					$e = (is_editable($file)?'&Menu=edit':'');
+					if(str_ends_with($f,'.db')) $e='&Menu=edit_db';
+					$p .= sprintf($fmt, $uri_dir.'&File='.$f.$e,'',$uri_dir.'&File='.$f,filesize($file)/1000 .'kB '.mime_content_type($file));
 				}
 			}
 			$replace['FILE_LIST'] = $p;
 		}
-		if ($menu === 'user'){
+		if ($menu==='edit_db' && isset($current_file)){
+			#データベース編集
+			$html = 'admin_edit_table';
+			$replace['EXIT'] = '?Dir='.$uri_dir;
+			$replace['TITLE'] = lreplace($current_file, $c_root.'/');
+			$replace['SUBMIT_TYPE'] = 'edit_db';
+			$enter_btn = '<label><button type="submit" name="submit_type" value="'.$replace['SUBMIT_TYPE'].'">実行</button></label>';
+			$replace['FORM_ITEMS'] = '<input type="hidden" name="dbtype" value="sqlite"><input type="hidden" name="dbname" value="'.basename($current_file).'">';
+			$replace['COLS'] = '';
+			$replace['ROWS'] = '';
+			$replace['TTITLE'] = '';
+			$g = new GakuUraSQL('sqlite', $current_file);
+			$replace['FORM_ITEMS'] .= ' <a href="'.$replace['EXIT'].'&File='.basename($current_file).'&Menu=edit">ファイルとして編集</a> ';
+			if ($g->is_connect){
+				$tl = $g->get_tables();
+				$t = $_GET['table']??'';
+				if($t==='') $t=$tl[0]??'';
+				if ($tl!==[] && $g->table_exists($t)){
+					$replace['TTITLE'] = '<b><input type="text" name="table_name" value="'.h($t).'"></b>';
+					$c = $g->get_cols($t);
+					$replace['COLS'] = '<th style="width:3em;"></th>';
+					foreach ($c as $i){
+						if ($i === 'id'){
+							$replace['COLS'] .= '<th style="width:3em;">'.h($i).'</th>';
+						} else {
+							$replace['COLS'] .= '<th><input type="text" name="col,'.h($i).'" value="'.h($i).'" style="width:95%;border:0;outline:0;"></th>';
+						}
+					}
+					foreach ($g->get_rows($t) as $r){
+						$i = array_values($r)[0];
+						$replace['ROWS'] .= '<tr><td><label><input type="checkbox" name="remove_row,'.h($i).'" value="true">削除</label></td>';
+						foreach ($r as $k=>$v){
+							if ($k === 'id'){
+								$replace['ROWS'] .= '<td>'.h($v).'</td>';
+							} elseif (in_array($k,$c,true)){
+								$replace['ROWS'] .= '<td><input type="text" name="'.h($i).','.h($k).'" value="'.h($v??'').'" placeholder="NULL"></td>';
+							}
+						}
+						$replace['ROWS'] .= '</tr>';
+						++$i;
+					}
+					$replace['ROWS'] .= '<tr><td>追加</td>';
+					foreach ($c as $r){
+						if ($r === 'id'){
+							$replace['ROWS'] .= '<td></td>';
+						} else {
+							$replace['ROWS'] .= '<td><input type="text" name="new,'.h($r).'"></td>';
+						}
+					}
+					$replace['ROWS'] .= '</tr>';
+				} else {
+					$t = '';
+				}
+				if ($t==='' || $tl===[]){
+					$replace['TTITLE'] .= 'テーブルがありません';
+				} else {
+					$replace['TTITLE'] .= ' <label><input type="checkbox" name="remove_table" value="true">このtableを削除</label>';
+				}
+				$replace['FORM_ITEMS'] .= '<input type="hidden" name="table" value="'.h($t).'">';
+				$replace['TTITLE'] .= ' table切替<select name="ctable"><option value="">───</option>';
+				foreach($tl as $i) $replace['TTITLE'].='<option value="'.$i.'">'.$i.'</option>';
+				$replace['TTITLE'] .= '</select> '.$enter_btn.'<p style="color:#ff0;">Issue:値以外の項目は、バインド出来ないためSQL文を含めないでください</p>';
+				$replace['DOWNLOAD'] = '';
+				$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__edit_db');
+				$replace['FORM_AFTER'] = '<p><label><input type="checkbox" name="export" value="true">export CSV</label></p><p><label>SQL実行<br><textarea name="query" rows="5"></textarea></label>'.$enter_btn.'</p>';
+			} else {
+				$conf->not_found(false, 'DBの接続に失敗しました。<a href="'.$replace['EXIT'].'">戻る</a>');
+			}
+		} elseif ($menu === 'user'){
 			#ユーザー管理
 			$html = 'admin_edit_table';
 			$replace['TITLE'] = '他のユーザーを管理';
