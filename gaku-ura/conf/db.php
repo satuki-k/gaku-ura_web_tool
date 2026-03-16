@@ -3,7 +3,6 @@
 /*
  * このファイルはスタンドアロンで動作します。conf.phpに依存しません。
  * データベースの操作
- * SQLite以外は動作確認していません
  * 例外処理やデータベースの種類による差異を自動で切り替え
  * sqlite,mysql,mariadbを想定
 */
@@ -79,14 +78,13 @@ class GakuUraSQL{
 	/*
 	テーブル作成 (テーブル名, 列[列=>型やオプション]連想配列指定)	連番idは行番号の代わりとして自動指定
 	例: (table_name, ['name'=>'TEXT NOT NULL', 'email'=>'VARCHAR(100)', 'old'=>'INTEGER DEFAULT 0'])
-	ID INTEGER PRIMARY KEY AUTOINCREMENT, ...
 	*/
 	public function make_table(string $table, array $cols):bool{
 		if(!$this->is_connect||$table==='') return false;
 		try{
-			$q = 'id INT NOT NULL AUTO_INCREMENT';
+			$q = 'id INT PRIMARY KEY AUTO_INCREMENT';
 			if($this->dbtype==='sqlite') $q='id INTEGER PRIMARY KEY AUTOINCREMENT';
-			foreach($cols as $k=>$v) $q.=",'".$k."' '".$v."'";
+			foreach($cols as $k=>$v) $q.=",{$k} {$v}";
 			$this->h->exec("CREATE TABLE IF NOT EXISTS {$table} ({$q});");
 			return true;
 		}catch(Exception $e){
@@ -141,7 +139,7 @@ class GakuUraSQL{
 					$bl[] = $v;
 				}
 			}
-			$p = $this->h->prepare("INSERT INTO {$table} (".implode(',',$k).") VALUES (".implode(',',$b).");");
+			$p = $this->h->prepare("INSERT INTO {$table}(".implode(',',$k).") VALUES (".implode(',',$b).");");
 			$p->execute($bl);
 			return true;
 		}catch(Exception $e){
@@ -244,6 +242,28 @@ class GakuUraSQL{
 			if($where!=='') $where=' WHERE '.$where;
 			$p = $this->h->prepare("DELETE FROM {$table}{$where};");
 			$p->execute($where_fmt);
+			return true;
+		}catch(Exception $e){
+			$this->error_msg = $e->getMessage();
+		}
+		return false;
+	}
+	#列を追加
+	public function append_col(string $table, string $name, string $type):bool{
+		if(!$this->table_exists($table)) return false;
+		try{
+			$this->exec("ALTER TABLE {$table} ADD COLUMN {$name} {$type};");
+			return true;
+		}catch(Exception $e){
+			$this->error_msg = $e->getMessage();
+		}
+		return false;
+	}
+	#列を削除
+	public function remove_col(string $table, string $name):bool{
+		if(!$this->table_exists($table)) return false;
+		try{
+			$this->exec("ALTER TABLE {$table} DROP COLUMN {$name};");
 			return true;
 		}catch(Exception $e){
 			$this->error_msg = $e->getMessage();
