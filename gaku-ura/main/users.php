@@ -15,10 +15,10 @@ function is_editable(string $fname):bool{
 	fclose($f);
 	return true;
 }
-function file_sort(array &$files, string $c_dir):void{
+function file_sort(array &$files, string $dir):void{
 	$d = [];
 	$f = [];
-	foreach($files as $i) is_dir($c_dir.'/'.$i)?$d[]=$i:$f[]=$i;
+	foreach($files as $i) is_dir($dir.'/'.$i)?$d[]=$i:$f[]=$i;
 	natsort($d);
 	natsort($f);
 	$files = array_merge($d, $f);
@@ -26,9 +26,10 @@ function file_sort(array &$files, string $c_dir):void{
 function file_perm(string $f):string{
 	return substr(sprintf('%o',fileperms($f)),-3);
 }
-function perm_opt(array $perm_list, string $now_p):string{
+function perm_opt(array $perms, string $perm):string{
 	$r = '<label>ﾊﾟｰﾐｯｼｮﾝ<select name="perm">';
-	foreach($perm_list as $k=>$v) $r.='<option value="'.$k.'">'.($k==='no'?$now_p.' 変更しない':$v.' '.$k).'</option>';
+	#%o消すな
+	foreach($perms as $k=>$v) $r.='<option value="'.$k.'">'.($k==='no'?$perm.' 変更しない':sprintf('%o',$v).' '.$k).'</option>';
 	return $r.'</select></label>';
 }
 function main(string $from):int{
