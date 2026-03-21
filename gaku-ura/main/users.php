@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.6.16
+#gaku-ura9.6.17
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
 require __DIR__ .'/../conf/db.php';
@@ -262,13 +262,24 @@ function main(string $from):int{
 				}
 				header('Location:./?Dir='.$uri_dir);
 				exit;
-			} elseif ($submit==='edit_db'&&list_isset($_POST,['dbtype','dbname','query','table'])){
+			} elseif ($submit==='edit_db'&&list_isset($_POST,['dbtype','dbname','query','table','import_name'])){
 				#SQLite
 				if ($_POST['dbtype']==='sqlite' && strpos($_POST['dbname'],'..')===false && strpos($_POST['dbname'], '/')===false && is_file($current_dir.'/'.$_POST['dbname'])){
 					$current_table = h(($_POST['table']??''));
 					$dbname = h($_POST['dbname']);
 					$table = h($_POST['ctable']);
 					$g = new GakuUraSQL($_POST['dbtype'], $current_dir.'/'.$_POST['dbname']);
+					#インポート
+					if (($tn=$_FILES['file']['tmp_name']??'')!=='' && is_file($tn)){
+						$fp = fopen($tn,'r');
+						$n = $_FILES['file']['name'];
+						$a = [];
+						$sep = str_ends_with($n,'.tsv')?"\t":',';
+						while(($l=fgetcsv($fp,9999999,$sep,'"',''))!==false) $a[]=$l;
+						if(not_empty($_POST['import_name'])) $n=$_POST['import_name'];
+						$g->import(str_replace('.','',str_replace('-','',h($n))), $a, $_POST['first_is_col']??''==='true', true);
+						fclose($fp);
+					}
 					#削除とtable切替を同時に行うと切替の優先で意図しない削除を防止
 					if ($g->table_exists($table)){
 						header('Location:./?Dir='.$uri_dir.'&File='.$dbname.'&Menu='.$submit.'&table='.$table);
@@ -284,32 +295,27 @@ function main(string $from):int{
 						header('Location:./?Dir='.$uri_dir.'&File='.$dbname.'&Menu='.$_GET['Menu']);
 						exit;
 					}
-					$c = $g->get_cols($current_table);
-					$l = $g->count_rows($current_table);
 					#SQL文実行
-					$is_export = ($_POST['export']??'')==='true';
 					$sql = $_POST['query'];
-					if(not_empty($current_table)&&$is_export&&!not_empty($sql)) $sql='SELECT * FROM '.$current_table.';';
+					if (!not_empty($sql) && ($_POST['export']??'')==='true'){
+						$conf->content_type('text/plain');
+						header('Content-Description:File Transfer');
+						header('Content-Disposition:attachment;filename="'.$current_table.'.csv"');
+						echo $g->export($current_table);
+						exit;
+					}
 					if (not_empty($sql)){
+						$conf->content_type('text/plain');
 						$r = $g->exec($sql);
-						if ($is_export){
-							$conf->content_type('text/plain');
-							if (!$r){
-								echo $g->error_msg;
-								exit;
+						if ($r && (str_starts_with(strtoupper($sql),'SELECT ')||str_starts_with(strtoupper($sql),'SHOW '))){
+							foreach ($r as $l){
+								foreach($l as $k=>$v) echo "$k:$v\n";
+								echo "\n";
 							}
-							header('Content-Description:File Transfer');
-							header('Content-Disposition:attachment;filename="'.$current_table.'.csv"');
-							$y = [];
-							foreach ($r as $i){
-								if (!$y){
-									foreach(array_keys($i)as$j)if(in_array($j,$c)) $y[]=($j===null||h($j)===(string)$j)?$j:'"'.$j.'"';
-									echo implode(',' ,$y)."\n";
-								}
-								$k = [];
-								foreach($i as $y=>$j)if(in_array($y,$c)) $k[]=($j===null||h($j)===(string)$j)?$j:'"'.$j.'"';
-								echo implode(',', $k)."\n";
-							}
+							exit;
+						}
+						if ($r === false){
+							echo $g->error_msg;
 							exit;
 						}
 					}
@@ -318,28 +324,29 @@ function main(string $from):int{
 						if($g->change_table($current_table, $_POST['table_name'])) $current_table=$_POST['table_name'];
 					}
 					#列変更
+					$c = $g->get_cols($current_table);
 					foreach ($c as $i=>$j){
-						if ($j!=='id' && ($_POST['col,'.$j]??'')!=='' && $_POST['col,'.$j]!==$j){
+						if ($j!==$g->id_col && ($_POST['col,'.$j]??'')!=='' && $_POST['col,'.$j]!==$j){
 							if($g->change_col($current_table, $j, $_POST['col,'.$j])) $c[$i]=$_POST['col,'.$j];
 						}
 					}
 					#id列が無いデータベースは未対応
-					if (in_array('id',$c,true)){
+					if (in_array($g->id_col,$c,true)){
 						foreach ($g->get_rows($current_table) as $r){
-							if (isset($r['id']) && ($_POST['remove_row,'.$r['id']]??'') === 'true'){
+							if (isset($r[$g->id_col]) && ($_POST['remove_row,'.$r[$g->id_col]]??'') === 'true'){
 								#行削除
-								$g->remove_row($current_table, 'id=?', [$r['id']]);
+								$g->remove_row($current_table, $g->id_col.'=?', [$r[$g->id_col]]);
 							} else {
 								#行編集
 								$is_change = false;
 								$change_row = [];
 								foreach ($c as $k){
-									if (isset($_POST[$r['id'].','.$k]) && $_POST[$r['id'].','.$k]!=strval($r[$k]??'')){
-										$change_row[$k] = $_POST[$r['id'].','.$k];
+									if (isset($_POST[$r[$g->id_col].','.$k]) && $_POST[$r[$g->id_col].','.$k]!=strval($r[$k]??'')){
+										$change_row[$k] = $_POST[$r[$g->id_col].','.$k];
 										$is_change = true;
 									}
 								}
-								if($is_change) $g->change_row($current_table, $change_row, 'id=?', [$r['id']]);
+								if($is_change) $g->change_row($current_table, $change_row, $g->id_col.'=?', [$r[$g->id_col]]);
 							}
 						}
 					}
@@ -348,7 +355,7 @@ function main(string $from):int{
 					$add = [];
 					$nl = 'new,';
 					foreach ($c as $i){
-						if ($i!=='id' && isset($_POST[$nl.$i]) && not_empty($_POST[$nl.$i])){
+						if ($i!==$g->id_col && isset($_POST[$nl.$i]) && not_empty($_POST[$nl.$i])){
 							$is_add = true;
 							$add[$i] = $_POST[$nl.$i];
 						}
@@ -416,7 +423,7 @@ function main(string $from):int{
 						$m = mime_content_type($current_file);
 						$f = '';
 						if (str_ends_with($current_file,'.db')){
-							$f = '<p><a href="?Dir='.$uri_dir.'&File='.$bname.'&Menu=edit_db">データベースを編集する</a></p>';
+							$f = '<p><a href="?Dir='.$uri_dir.'&File='.$bname.'&Menu=edit_db">tableを編集</a></p>';
 						}
 						if ($editable){
 							$c = str_replace("\t",'&#9;',str_replace("\n",'&#10;',u8lf(h(file_get_contents($current_file)))));
@@ -503,16 +510,17 @@ function main(string $from):int{
 		if ($menu==='edit_db' && isset($current_file)){
 			#データベース編集
 			$html = 'admin_edit_table';
+			$bname = basename($current_file);
 			$replace['EXIT'] = '?Dir='.$uri_dir;
 			$replace['TITLE'] = lreplace($current_file, $c_root.'/');
 			$replace['SUBMIT_TYPE'] = 'edit_db';
 			$enter_btn = '<label><button type="submit" name="submit_type" value="'.$replace['SUBMIT_TYPE'].'">実行</button></label>';
-			$replace['FORM_ITEMS'] = '<input type="hidden" name="dbtype" value="sqlite"><input type="hidden" name="dbname" value="'.basename($current_file).'">';
+			$replace['FORM_ITEMS'] = '<input type="hidden" name="dbtype" value="sqlite"><input type="hidden" name="dbname" value="'.$bname.'">';
 			$replace['COLS'] = '';
 			$replace['ROWS'] = '';
 			$replace['TTITLE'] = '';
 			$g = new GakuUraSQL('sqlite', $current_file);
-			$replace['FORM_ITEMS'] .= ' <a href="'.$replace['EXIT'].'&File='.basename($current_file).'&Menu=edit">ファイルとして編集</a> ';
+			$replace['FORM_ITEMS'] .= ' <a href="'.$replace['EXIT'].'&File='.$bname.'&Menu=edit">詳細</a> <label><input type="file" name="file" accept=".csv,.tsv"></label><label>as<input type="text" name="import_name" placeholder="same to file name"></label> <label><input type="checkbox" name="first_is_col" value="true">一行目をタイトルにする</label>';
 			if ($g->is_connect){
 				$tl = $g->get_tables();
 				$t = $_GET['table']??'';
@@ -520,22 +528,23 @@ function main(string $from):int{
 				if ($tl!==[] && $g->table_exists($t)){
 					$replace['TTITLE'] = '<b><input type="text" name="table_name" value="'.h($t).'"></b>';
 					$c = $g->get_cols($t);
+					$ci = $g->get_cols_type($t);
 					$replace['COLS'] = '<th style="width:3em;"></th>';
 					foreach ($c as $i){
-						if ($i === 'id'){
+						if ($i === $g->id_col){
 							$replace['COLS'] .= '<th style="width:3em;">'.h($i).'</th>';
 						} else {
-							$replace['COLS'] .= '<th><input type="text" name="col,'.h($i).'" value="'.h($i).'" style="width:95%;border:0;outline:0;"></th>';
+							$replace['COLS'] .= '<th><input type="text" name="col,'.h($i).'" value="'.h($i).'" style="width:95%;border:0;outline:0;"><i style="font:.8em/1 sans-serif;display:block;text-align:left;">'.$ci[$i].'</i></th>';
 						}
 					}
 					foreach ($g->get_rows($t) as $r){
 						$i = array_values($r)[0];
 						$replace['ROWS'] .= '<tr><td><label><input type="checkbox" name="remove_row,'.h($i).'" value="true">削除</label></td>';
 						foreach ($r as $k=>$v){
-							if ($k === 'id'){
+							if ($k === $g->id_col){
 								$replace['ROWS'] .= '<td>'.h($v).'</td>';
 							} elseif (in_array($k,$c,true)){
-								$replace['ROWS'] .= '<td><input type="text" name="'.h($i).','.h($k).'" value="'.h($v??'').'" placeholder="NULL"></td>';
+								$replace['ROWS'] .= '<td><input type="text" name="'.h($i).','.h($k).'" value="'.h($v??'').'"></td>';
 							}
 						}
 						$replace['ROWS'] .= '</tr>';
@@ -543,7 +552,7 @@ function main(string $from):int{
 					}
 					$replace['ROWS'] .= '<tr><td>追加</td>';
 					foreach ($c as $r){
-						if ($r === 'id'){
+						if ($r === $g->id_col){
 							$replace['ROWS'] .= '<td></td>';
 						} else {
 							$replace['ROWS'] .= '<td><input type="text" name="new,'.h($r).'"></td>';
@@ -553,15 +562,11 @@ function main(string $from):int{
 				} else {
 					$t = '';
 				}
-				if ($t==='' || $tl===[]){
-					$replace['TTITLE'] .= 'テーブルがありません';
-				} else {
-					$replace['TTITLE'] .= ' <label><input type="checkbox" name="remove_table" value="true">このtableを削除</label>';
-				}
+				$replace['TTITLE'] .= ($t===''||$tl===[])?'tableがありません':' <label><input type="checkbox" name="remove_table" value="true">このtableを削除</label>';
 				$replace['FORM_ITEMS'] .= '<input type="hidden" name="table" value="'.h($t).'">';
 				$replace['TTITLE'] .= ' table切替<select name="ctable"><option value="">───</option>';
 				foreach($tl as $i) $replace['TTITLE'].='<option value="'.$i.'">'.$i.'</option>';
-				$replace['TTITLE'] .= '</select> '.$enter_btn.'<p style="color:#ff0;">Issue:値以外の項目は、バインド出来ないためSQL文を含めないでください</p>';
+				$replace['TTITLE'] .= '</select> '.$enter_btn.'<p style="color:#ff0;">Issue:値以外の項目は各自でエスケープが必要です。UTF-8ではないファイルはインポートできません。</p>';
 				$replace['DOWNLOAD'] = '';
 				$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__edit_db');
 				$replace['FORM_AFTER'] = '<p><label><input type="checkbox" name="export" value="true">export CSV</label></p><p><label>SQL実行<br><textarea name="query" rows="5"></textarea></label>'.$enter_btn.'</p>';
