@@ -6,8 +6,9 @@
 const q = (new URL(document.location)).searchParams;
 //submitメソッドを使えるようにする
 $ID("form").innerHTML += '<input type="hidden" name="submit_type" value="'+$QS('#form [type="submit"]').value+'">';
+const dbtype = $QS('input[name="dbtype"]').value;
 //sql
-function mktable(e){
+function mkt(e){
 	e.preventDefault();
 	const mem_s = document.body.style.overflowY;
 	document.body.style.overflowY = "hidden";
@@ -114,8 +115,7 @@ function mktable(e){
 	d.addEventListener("click", ()=>{
 		if (tn.value === ""){
 			msg("tableの名前が入力されていません。");
-			tn.focus();
-			return;
+			return tn.focus();
 		}
 		const tname = tn.value;
 		const c = tbody.children;
@@ -128,8 +128,7 @@ function mktable(e){
 				const v = c[i].querySelector((j==="select"?j:"input")+'[name="'+k+'"]');
 				//最初の項目は必須
 				if (disable || !v || (k===col_list[0]&&v.value==="")){
-					disable = 1;
-					return;
+					return disable = 1;
 				} else {
 					const d = j==="checkbox"?v.checked:v.value;
 					col.push(d);
@@ -139,10 +138,10 @@ function mktable(e){
 		}
 		let sql = "CREATE TABLE IF NOT EXISTS "+tn.value+" (";
 		if (isid.checked){
-			if ($QS('input[name="dbtype"]').value === "sqlite"){
+			if (dbtype === "sqlite"){
 				sql += "id INTEGER PRIMARY KEY AUTOINCREMENT,";
 			} else {
-				sql += "id INT NOT NULL AUTO_INCREMENT,";
+				sql += "id INT PRIMARY KEY AUTO_INCREMENT,";
 			}
 		}
 		const d = [];
@@ -168,28 +167,37 @@ if (q.get("Menu")==="edit_db" && $QS('[name="query"]')){
 	const tn = $QS('input[name="table"]').value;
 	const fn = {
 		"SQL文>":"",
-		"エクスポート(export)":"SELECT*FROM "+tn+";",
+		"エクスポート(export)":"",
+		"インポート(import)":"",
 		"列を削除":"ALTER TABLE "+tn+" DROP COLUMN 列;",
-		"列を追加":"ALTER TABLE "+tn+" ADD COLUMN 列 型;"};
+		"列を追加":"ALTER TABLE "+tn+" ADD COLUMN 列 型;",
+		"カウント":"SELECT COUNT(列)FROM "+tn+";",
+		"合計":"SELECT SUM(列)FROM "+tn+";"};
 	mf.name = "sql_fn";
 	for (const [k,v] of Object.entries(fn)){
 		const o = document.createElement("option");
 		o.value = o.textContent = k;
 		mf.append(o);
 	}
-	mt.textContent = "+テーブル作成";
+	mt.textContent = "+table作成";
 	mt.style = "background:#0e0;color:#fff;";
 	p.append(mf);
 	p.append(mt);
 	$ID("form").before(p);
-	mt.addEventListener("click", mktable);
+	mt.addEventListener("click", mkt);
 	mf.addEventListener("change", ()=>{
-		if(!tn) return;
+		const v = mf.value;
+		mf.selectedIndex = 0;
 		const i = $QS('[name="query"]');
-		i.value = fn[mf.value];
-		$QS('input[name="export"]').checked = subrpos("(",")",mf.value)==="export";
-		i.focus();
+		const s = subrpos("(",")", v);
+		if(tn&&($QS('input[name="export"]').checked=(s==="export"))) return $QS('[type="submit"]').click();
+		if(s==="import") return fa.click();
+		if (tn){
+			i.value = fn[v];
+			i.focus();
+		}
 	});
+	$QS('select[name="ctable"]').addEventListener("change", ()=>{$QS('[type="submit"]').click();});
 }
 $ID("form").addEventListener("submit", async (e)=>{
 	e.preventDefault();
