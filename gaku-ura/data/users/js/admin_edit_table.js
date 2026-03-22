@@ -191,7 +191,7 @@ if (q.get("Menu")==="edit_db" && $QS('[name="query"]')){
 		const i = $QS('[name="query"]');
 		const s = subrpos("(",")", v);
 		if(tn&&($QS('input[name="export"]').checked=(s==="export"))) return $QS('[type="submit"]').click();
-		if(s==="import") return fa.click();
+		if(s==="import") return $QS('input[type="file"]').click();
 		if (tn){
 			i.value = fn[v];
 			i.focus();
