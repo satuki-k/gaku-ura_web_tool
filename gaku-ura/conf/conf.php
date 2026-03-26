@@ -572,7 +572,7 @@ class GakuUra{
 				if($reduced!==null) $reduced[]=$f;
 				continue;
 			}
-			foreach($u as $j)if(not_empty($j)&&str_starts_with($s,trim($j))) continue 2;
+			foreach($u as $j)if(not_empty($j)&&str_starts_with($f,trim($j))) continue 2;
 			$o = $this->d_root.'/'.$f;
 			is_dir($s)?copy_path($s,$o):copy($s,$o);
 		}
