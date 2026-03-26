@@ -94,15 +94,17 @@ function path_list(string $dir):array{
 	}
 	return $l;
 }
-#ディレクトリごとコピー
-function copy_path(string $dir, string $to):void{
+#ディレクトリごとコピー (from, to, [残すfrom基準パス])
+function copy_path(string $dir, string $to, array $skip=[]):void{
+	if(is_file($dir)&&!in_array($to,$skip,true)) copy($dir,$to);
 	if(!is_dir($to)) mkdir($to, 0777, true);
 	if(!is_dir($dir)) return;
 	foreach (scandir($dir) as $i){
 		if ($i!=='.' && $i!=='..'){
 			$f = $dir.'/'.$i;
 			$t = $to.'/'.$i;
-			is_dir($f)?copy_path($f,$t):copy($f,$t);
+			foreach($skip as $s)if(str_starts_with($t,$s)) continue 2;
+			is_dir($f)?copy_path($f,$t,$skip):copy($f,$t);
 		}
 	}
 }
@@ -543,7 +545,8 @@ class GakuUra{
 		if(!is_file($tar_gz)) return 1;
 		$l = 'gaku-ura_upgrade';
 		$this->file_lock($l);
-		$u = array_merge(self::UPGRADE_IGNORE, explode(',', $this->config['upgrade.ignore']??''));
+		$u = [];
+		foreach(array_merge(self::UPGRADE_IGNORE,explode(',',$this->config['upgrade.ignore']??''))as$i) $u[]=$this->d_root.'/'.$i;
 		$m = $this->system_dir.'/tmp';
 		$t = $m.'/g/';
 		if(is_dir($m)) rmdir_all($m);
@@ -565,16 +568,14 @@ class GakuUra{
 		$a = 0;
 		foreach (self::GAKU_URA_FILES as $f){
 			$s = $t.$f;
+			$o = $this->d_root.'/'.$f;
 			if (!file_exists($s)){
 				$a = 3;
-				$d = $this->d_root.'/'.$f;
-				is_file($d)?unlink($d):rmdir_all($d);
+				is_file($o)?unlink($o):rmdir_all($o);
 				if($reduced!==null) $reduced[]=$f;
 				continue;
 			}
-			foreach($u as $j)if(not_empty($j)&&str_starts_with($f,trim($j))) continue 2;
-			$o = $this->d_root.'/'.$f;
-			is_dir($s)?copy_path($s,$o):copy($s,$o);
+			copy_path($s, $o, $u);
 		}
 		rmdir_all($m);
 		$this->file_unlock($l);
