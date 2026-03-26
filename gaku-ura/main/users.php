@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.6.17
+#gaku-ura9.7.0
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
 require __DIR__ .'/../conf/db.php';
@@ -214,7 +214,7 @@ function main(string $from):int{
 					exit;
 				} elseif (not_empty($name) && !file_exists($current_dir.'/'.$name)){
 					if ($_POST['new'] === 'folder'){
-						foreach(explode('\\',$name)as$n) if(!file_exists($current_dir.'/'.$n))mkdir($current_dir.'/'.$n);
+						foreach(explode('\\',$name)as$n) if(!file_exists($current_dir.'/'.$n))mkdir($current_dir.'/'.$n,0777,true);
 					} elseif ($_POST['new'] === 'file'){
 						foreach(explode('\\',$name)as$n) if(!file_exists($current_dir.'/'.$n))touch($current_dir.'/'.$n);
 					} else {
@@ -292,7 +292,7 @@ function main(string $from):int{
 					#table削除
 					if (($_POST['remove_table']??'')==='true' && not_empty($current_table)){
 						$g->remove_table($current_table);
-						header('Location:./?Dir='.$uri_dir.'&File='.$dbname.'&Menu='.$_GET['Menu']);
+						header('Location:./?Dir='.$uri_dir.'&File='.$dbname.'&Menu='.$menu);
 						exit;
 					}
 					#SQL文実行
@@ -364,6 +364,47 @@ function main(string $from):int{
 					header('Location:./?Dir='.$uri_dir.'&File='.basename($dbname).'&Menu='.$submit.'&table='.$current_table);
 					exit;
 				}
+			} elseif ($submit === 'upgrade'){
+				#upgrade
+				if ((int)$user_data['admin']>=4 && str_starts_with($conf->d_root,$c_root) && isset($_POST['reupgrade'])){
+					$replace['SESSION_TOKEN'] = '';
+					$replace['GAKU_URA_FILES'] = implode('&#10;', GakuUra::GAKU_URA_FILES);
+					$replace['UPGRADE_IGNORE'] = implode('&#10;',GakuUra::UPGRADE_IGNORE).'&#10;'.($conf->config['upgrade.ignore']??'');
+					if (isset($_POST['file']) && $_POST['reupgrade']==='true' && is_file($conf->data_dir.'/'.$_POST['file'])){
+						$r = $conf->upgrade($conf->data_dir.'/'.$_POST['file']);
+						unlink($conf->data_dir.'/'.$_POST['file']);
+						$m = '完了(success)';
+						if ($r !== 0){
+							$m = '失敗 <b>更新が不安定な状態で停止しました。FTP等を用いてバックアップで全てのファイルを上書きアップロードしてください。</b>';
+						}
+						$m .= ' status:'.$r;
+						$replace['ERROR_MSG'] = $m;
+					} elseif (($f=$_FILES['file']['tmp_name']??'')!==''){
+						$d = [];
+						$r = $conf->upgrade($_FILES['file']['tmp_name'], $d);
+						$m = '成功(success)';
+						if ($r === 1){
+							$m = '失敗(invalid file)';
+						} elseif ($r === 2){
+							$m = '失敗(cannot extract)';
+						} elseif ($r === 3){
+							$m = '警告(ファイル:'.implode(',',$d).' は廃止されました)';
+						}
+						$m .= ' status:'.$r;
+						if ($r===0 || $r===3){
+							copy($f, $conf->data_dir.'/'.$_FILES['file']['name']);
+							$m .= '<b>操作はまだ完了していません。</b>アップグレード対象のファイル一覧が更新されたので、以下のボタンを押して完了してください。';
+							if($m===3) $m.=implode(',',$d).' は廃止されました。';
+							$m .= '<form action="" method="POST"><label><button type="submit" name="submit" value="'.$submit.'">完了</button></label><input type="hidden" name="session_token" value="'.$conf->set_csrf_token('admin__upgrade').'"><input type="hidden" name="file" value="'.$_FILES['file']['name'].'"><input type="hidden" name="reupgrade" value="true"></form>';
+						} else {
+							$m .= '<b>失敗しました。</b>';
+						}
+						$replace['ERROR_MSG'] = $m;
+					} else {
+						$conf->form_die();
+					}
+					return $conf->htmlf('users', 'upgrade', $replace);
+				}
 			} elseif ($submit === 'user_list'){
 				#入力が可変長なので、ログインデータで毎回チェックする
 				foreach (get_rows($user->user_list_file, 2) as $row){
@@ -400,8 +441,23 @@ function main(string $from):int{
 			header('Location:'.$conf->here);
 			exit;
 		}
-		#ファイルがある
-		if (($_GET['File']??'')!=='' && strpos($_GET['File'],'..')===false && strpos($_GET['File'], '/')===false){
+		#upgrade menu
+		if ($menu === 'upgrade'){
+			$html = 'upgrade';
+			$replace['ERROR_MSG'] = '';
+			$replace['SESSION_TOKEN'] = '';
+			$replace['GKU_URA_FILES'] = '';
+			$replace['UPGRADE_IGNORE'] = '';
+			$replace['START_VIEW'] = 'block';
+			if ((int)$user_data['admin']>=4 && str_starts_with($conf->d_root,$c_root)){
+				$replace['GAKU_URA_FILES'] = implode('&#10;', GakuUra::GAKU_URA_FILES);
+				$replace['UPGRADE_IGNORE'] = implode('&#10;',GakuUra::UPGRADE_IGNORE).'&#10;'.($conf->config['upgrade.ignore']??'');
+				$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__upgrade');
+			} else {
+				$replace['ERROR_MSG'] = 'フルコントロール権限がありません。サイト管理人にお問い合わせください。';
+			}
+		} elseif (($_GET['File']??'')!=='' && strpos($_GET['File'],'..')===false && strpos($_GET['File'], '/')===false){
+			#ファイルがある
 			$b = h($_GET['File']);
 			$d = $current_dir.'/'.$b;
 			if (is_file($d)){

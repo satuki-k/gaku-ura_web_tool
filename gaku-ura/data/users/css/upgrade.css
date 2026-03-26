@@ -1,0 +1,75 @@
+/* ugradeウィザード */
+body,input,textarea{
+	background:#034;
+	color:#eee;
+}
+.wizard a, .wizard a:visited{
+	color:#b55;
+}
+b{
+	font-weight:bold;
+	color:#ff0;
+}
+table{
+	border-collapse:collapse;
+}
+th,td{
+	border:solid 1px #0ff;
+}
+.wizard{
+	border:double 3px #b60;
+	padding:1em;
+}
+.warning{
+	background:#ca6;
+	color:#000;
+}
+#error{
+	background:#ff0;
+	color:#000;
+}
+#error b{
+	color:#00f;
+}
+
+#form{
+	display:flex;
+	box-shadow:3px 1px 5px 3px #0ff;
+	margin:1em;
+	padding:1em;
+	transition:1s;
+}
+.file{
+	background:#fff;
+	color:#111;
+	width:15em;
+}
+.file:hover{
+	background:#ccc;
+}
+.file, button{
+	display:block;
+	font-size:1em;
+	padding:.2em;
+}
+#form:hover{
+	box-shadow:5px 2px 10px #ff0;
+}
+form button{
+	border-radius:.2em;
+	background:#F73;
+	width:8em;
+	color:#fff;
+}
+form button:before{
+	content:"➤";
+}
+form button:hover{
+	color:#0f0;
+}
+form label:hover button:before{
+	content:"➢";
+}
+form label:active button:before{
+	content:"➳";
+}

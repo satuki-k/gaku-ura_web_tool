@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.6.17';
+const GAKU_URA_VERSION = '9.7.0';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
@@ -93,6 +93,18 @@ function path_list(string $dir):array{
 		}
 	}
 	return $l;
+}
+#ディレクトリごとコピー
+function copy_path(string $dir, string $to):void{
+	if(!is_dir($to)) mkdir($to, 0777, true);
+	if(!is_dir($dir)) return;
+	foreach (scandir($dir) as $i){
+		if ($i!=='.' && $i!=='..'){
+			$f = $dir.'/'.$i;
+			$t = $to.'/'.$i;
+			is_dir($f)?copy_path($f,$t):copy($f,$t);
+		}
+	}
 }
 #空じゃないフォルダも削除可
 function rmdir_all(string $dir):void{
@@ -293,6 +305,24 @@ class GakuUra{
 	public string $canonical;#正規URL(URLにセッションIDがあるときに取り除いたURL)
 	public array $ld_json;#構造化データ辞書
 	private string $system_dir;
+	public const GAKU_URA_FILES = [
+		'index.php','404.php','css','js','users',
+		'gaku-ura/description.txt',
+		'gaku-ura/.htaccess',
+		'gaku-ura/conf/conf.php',
+		'gaku-ura/conf/db.php',
+		'gaku-ura/conf/users.php',
+		'gaku-ura/conf/alt-mbstring.php',
+		'gaku-ura/main',
+		'gaku-ura/data/404',
+		'gaku-ura/data/default/file',
+		'gaku-ura/data/default/lib',
+		'gaku-ura/data/default/description.txt',
+		'gaku-ura/data/users/css',
+		'gaku-ura/data/users/js',
+		'gaku-ura/data/users/html',
+		'gaku-ura/data/users/description.txt'];
+	public const UPGRADE_IGNORE = ['gaku-ura/data/users/html/custom'];
 	function __construct(?bool $third=null){
 		header('Referrer-Policy:same-origin');
 		if(!isset($_SESSION)) session_start(['cookie_lifetime'=>time()+3600*2400]);
@@ -506,6 +536,49 @@ class GakuUra{
 	public function form_die():void{
 		$this->html('フォーム損傷-', '', '<h1>フォーム損傷</h1><p>フォームに損傷があります。停止しました。</p>');#WEB改ざん等で処理出来ない時に使う
 		exit;
+	}
+	#引数:gaku-ura配布tar.gz,[廃止ファイル一覧格納変数] 成功で0
+	#注意:無慈悲に上書きされます
+	public function upgrade(string $tar_gz, ?array &$reduced=null):int{
+		if(!is_file($tar_gz)) return 1;
+		$l = 'gaku-ura_upgrade';
+		$this->file_lock($l);
+		$u = array_merge(self::UPGRADE_IGNORE, explode(',', $this->config['upgrade.ignore']??''));
+		$m = $this->system_dir.'/tmp';
+		$t = $m.'/g/';
+		if(is_dir($m)) rmdir_all($m);
+		mkdir($t, 0777, true);
+		$a = $m.'/upgrade.tar.gz';
+		copy($tar_gz, $a);
+		try{
+			$p = new PharData($a);
+			$p->decompress();
+			$p = new PharData(rreplace($a,'.gz'));
+			if (!$p->extractTo($t)){
+				$this->file_unlock($l);
+				return 2;
+			}
+		}catch(Exception $e){
+			$this->file_unlock($l);
+			return 2;
+		}
+		$a = 0;
+		foreach (self::GAKU_URA_FILES as $f){
+			$s = $t.$f;
+			if (!file_exists($s)){
+				$a = 3;
+				$d = $this->d_root.'/'.$f;
+				is_file($d)?unlink($d):rmdir_all($d);
+				if($reduced!==null) $reduced[]=$f;
+				continue;
+			}
+			foreach($u as $j)if(not_empty($j)&&str_starts_with($s,trim($j))) continue 2;
+			$o = $this->d_root.'/'.$f;
+			is_dir($s)?copy_path($s,$o):copy($s,$o);
+		}
+		rmdir_all($m);
+		$this->file_unlock($l);
+		return $a;
 	}
 }
 

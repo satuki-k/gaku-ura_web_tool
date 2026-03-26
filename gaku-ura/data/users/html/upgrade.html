@@ -1,0 +1,38 @@
+<!opion robos 0>
+<!include upgrade.css>
+<!include upgrade.js>
+<div class="wizard">
+	<h1>学裏アップグレード</h1>
+	<p id="error">{ERROR_MSG}</p>
+	<p><b>現在のバージョンは、gaku-ura{GAKU_URA_VERSION}です。</b></p>
+	<p><a href="../">❌キャンセルする</a> | <a href="./">ファイル管理</a></p>
+	<h2>手順</h2>
+	<ol>
+		<li>FTPなどを用いてドキュメントルート以下全てのファイルのバックアップをとる</li>
+		<li><a href="http://bq.f5.si/?Page=code" target="_blank">gaku-ura lib配布サイト</a>でアップグレードしたいバージョンの圧縮ファイルを入手する</li>
+		<li>アップグレードによって上書きされるファイルは、<pre>{GAKU_URA_FILES}</pre></li>
+		<li>その内、<pre>{UPGRADE_IGNORE}</pre>は無視されます</li>
+		<li>無視するファイルを変更する場合はファイル「{CONFIG}」で「<b>upgrade.ignore</b>」を変更します(なければ追加「upgrade.ignore = "[ドキュメントルートから始まる先頭にスラッシュ無しのパスをカンマ区切り]"」)</li>
+		<li>上書き対象に無い既存のファイルは<b>維持</b>されます</li>
+		<li>新機能などで新たに追加されるファイルは<b>再アップグレード</b>で追加できます</li>
+		<li>詳しい差分は<a href="https://github.com/satuki-k/gaku-ura_web_tool" target="_blank">github</a>をご確認ください</li>
+	</ol>
+	<h2>アップグレード操作</h2>
+	<p>以上を確認できたら、gaku-ura libで入手したファイルを追加してください。</p>
+	<p class="warning">注意:途中でアップグレードが失敗したとしても変更前に戻る保証はありません。必ずバックアップをとってください。また、バージョン間でファイルの新規追加や廃止がある場合は<b>手動で</b>削除やアップロードが必要です。</p>
+	<form action="" method="POST" id="form" enctype="multipart/form-data">
+		<input type="hidden" name="session_token" value="{SESSION_TOKEN}">
+		<input type="hidden" name="reupgrade" value="false">
+		<label id="file"><input type="file" name="file" accept=".tar.gz" required></label>
+		<label><button type="submit" name="submit" value="upgrade">upgrade</button></label>
+	</form>
+	<h2>ステータスコード変換表</h2>
+	<table>
+		<tr><th>コード</th><th>意味</th></tr>
+		<tr><td>0</td><td>成功。新規追加されたファイルは更新対象に未登録なので無視。再度実行で追加されます。</td></tr>
+		<tr><td>1</td><td>失敗。送信したファイルが存在しないなど不備があります。</td></tr>
+		<tr><td>2</td><td>失敗。送信したファイルを展開できませんでした。</td></tr>
+		<tr><td>3</td><td>成功。ただし廃止されたファイルがあります。</td></tr>
+		<tr><td>何も無い</td><td>フォームが受け入れられませんでした。</td></tr>
+	</table>
+</div>

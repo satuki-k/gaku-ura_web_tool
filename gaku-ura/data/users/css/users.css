@@ -1,0 +1,47 @@
+/* マイページ,ログイン・登録,プロフィール */
+body,input,textarea{
+	background:#ffc;
+	color:#111;
+}
+form{
+	padding:1em;
+}
+select,option{
+	font-size:1em;
+	background:#fff;
+	color:#000;
+}
+input[type="text"], input[type="password"]{
+	border:solid 1px #555;
+	font-size:1em;
+	width:10em;
+}
+textarea{
+	width:99%;
+	max-height:400px;
+	tab-size:4;
+}
+button{
+	font-size:1em;
+	border:ridge .1em #111;
+	padding:.2em;
+	background:#eef;
+}
+button:hover{
+	background:transparent;
+}
+.profile h1{
+	text-align:left;
+}
+
+.panel{
+	display:flex;
+}
+.panel .user_info{
+	width:50%;
+}
+.panel .side{
+	width:50%;
+}
+
+
