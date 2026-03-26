@@ -1,7 +1,24 @@
 /* マイページ,ログイン・登録,プロフィール */
+html{
+	background:#000;
+	color:#fff;
+}
 body,input,textarea{
 	background:#ffc;
 	color:#111;
+}
+h1{
+	color:#938;
+}
+a, a:visited{
+	text-decoration:underline;
+}
+a,a:visited{
+	color:#15d;
+}
+a:hover{
+	text-decoration:none;
+	font-weight:bold;
 }
 form{
 	padding:1em;
