@@ -10,30 +10,117 @@ WEB開発ツールです。
 
 
 ## 設置・アップデート方法
-公開ディレクトリに全て配置します。ドキュメントルート直下である必要はありません。(サブディレクトリで公開するときは、設定ファイルの「u_root」項目を確認してください)
+```
+html
+├── css
+│   └── index.php
+├── js
+│   └── index.php
+├── 404.php
+├── index.php
+├── LICENSE
+├── README.md
+├── favicon.ico
+├── favicon.png
+├── gaku-ura
+│   ├── conf
+│   │   ├── alt-mbstring.php (mbstringが使えない環境向けライブラリ)
+│   │   ├── conf.php (中核ライブラリ)
+│   │   ├── db.php (db操作ライブラリ)
+│   │   ├── gaku-ura.conf (設定ファイル)
+│   │   └── users.php (ユーザー情報操作ライブラリ)
+│   ├── data (静的ファイルとデータ格納ディレクトリ)
+│   │   ├── 404
+│   │   │   ├── css
+│   │   │   │   └── index.css
+│   │   │   └── html
+│   │   │       └── index.html
+│   │   ├── default
+│   │   │   ├── default.css (共通css)
+│   │   │   ├── default.html (テンプレート)
+│   │   │   ├── description.txt
+│   │   │   ├── file (新規作成テンプレート)
+│   │   │   │   ├── description.txt
+│   │   │   │   ├── index.css
+│   │   │   │   ├── index.html
+│   │   │   │   ├── index.js
+│   │   │   │   ├── index.php
+│   │   │   │   ├── index.pl
+│   │   │   │   ├── index.py
+│   │   │   │   ├── main.php
+│   │   │   │   ├── robots.txt
+│   │   │   │   └── sitemap.xml
+│   │   │   └── lib (include命令で使えるライブラリ)
+│   │   │       ├── css
+│   │   │       │   └── animation.css
+│   │   │       ├── description.txt
+│   │   │       └── js
+│   │   │           ├── element.js
+│   │   │           ├── keyboard.js
+│   │   │           ├── popup.js
+│   │   │           ├── reload_csrf.js
+│   │   │           └── string.js
+│   │   ├── description.txt
+│   │   ├── home (/index.php で使うデータ)
+│   │   │   ├── css
+│   │   │   │   ├── document.css
+│   │   │   │   └── index.css
+│   │   │   └── html
+│   │   │       ├── about.html
+│   │   │       └── index.md
+│   │   └── users
+│   │       ├── css
+│   │       │   ├── index.css
+│   │       │   └── upgrade.css
+│   │       ├── description.txt
+│   │       ├── html
+│   │       │   ├── custom (アップグレード対象外 カスタム用ファイル)
+│   │       │   │   ├── admin_shortcut.html
+│   │       │   │   └── custom.html
+│   │       │   ├── admin.html
+│   │       │   ├── admin_edit.html
+│   │       │   ├── admin_edit_table.html
+│   │       │   ├── home.html
+│   │       │   ├── home_admin.html
+│   │       │   ├── login.html
+│   │       │   ├── regist.html
+│   │       │   ├── upgrade.html
+│   │       │   └── user_page.html
+│   │       ├── js
+│   │       │   ├── admin.js
+│   │       │   ├── admin_edit.js
+│   │       │   ├── admin_edit_table.js
+│   │       │   └── upgrade.js
+│   │       └── user_list.tsv (ユーザーデータベース)
+│   ├── description.txt
+│   ├── flock (ファイル読み取りから書き込みまでの間を処理待ちさせるフラグ管理する場所)
+│   └── main
+│       ├── 404.php (一般エラーページ)
+│       ├── description.txt
+│       ├── index.php (トップページ)
+│       ├── src_link.php (cssやjsを配信)
+│       └── users.php (ユーザーページや管理機能)
+└── users
+    ├── admin
+    │   └── index.php
+    ├── index.php
+    └── login
+        ├── index.php
+        └── regist
+            └── index.php
+```
+公開ディレクトリに全て配置します。ドキュメントルート直下である必要はありません。(サブディレクトリで公開するときは、設定ファイルの「u_root」項目を確認・編集してください)
 
-アップデートは、変更点を読み、それぞれのファイルを上書きアップロードまたは修正してください。
-あるいは、以下のファイルをまとめて上書きしてください。(ダウンロードして展開したファイルの中から、以下のファイルをあなたのサイトへ上書きアップロードしてください)
-```
-/gaku-ura/conf 以下の「gaku-ura.conf」以外のファイル
-/gaku-ura/data css、html、jsファイル(home/html/* などの編集を加えたファイルはアップデート差分をよく見て修正)
-/gaku-ura/main 以下全て
-/README.md
-/LICENSE
-/.gitignore
-/index.php
-/404.php
-/css 以下全て
-/js 以下全て
-/users 以下全て
-```
-その他、統廃合されたファイルを適宜削除します。
+gaku-ura9.7.0以降は、http://bq.f5.si/?Page=code で配布されているtar.gzファイルを送信することでアップグレードできます。
+ただし、更新対象ファイルに登録されていないファイル(readmeやlicense、一部のhtmlやcssなど編集が前提のファイルなど)は、手動で上書きしない限り更新されません。
+
 
 
 ## 設定ファイル
 gaku-ura/conf/gaku-ura.conf を編集して下さい。管理ページの「設定」リンクからも行けます。
 
 /gaku-ura 以下全てのパーミッションは777にするか、所有権をphp実行者にしてください。
+ただし、**/gaku-uraをwebアクセスされないように**「.htaccess」を削除しないでください。
 
 
 ## 会員制サイト機能
