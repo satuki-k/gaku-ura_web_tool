@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.7.0';
+const GAKU_URA_VERSION = '9.7.1';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
@@ -96,7 +96,8 @@ function path_list(string $dir):array{
 }
 #ディレクトリごとコピー (from, to, [残すfrom基準パス])
 function copy_path(string $dir, string $to, array $skip=[]):void{
-	if(is_file($dir)&&!in_array($to,$skip,true)) copy($dir,$to);
+	foreach($skip as $s)if(str_starts_with($to,$s)) return;
+	if(is_file($dir)) copy($dir,$to);
 	if(!is_dir($to)) mkdir($to, 0777, true);
 	if(!is_dir($dir)) return;
 	foreach (scandir($dir) as $i){
@@ -131,12 +132,12 @@ function read_conf(string $file):array{
 		if($e===false||in_array($f,[';','#','['],true)) continue;
 		$k = trim(substr($r, 0, $e));
 		$v = trim(substr($r, $e +1));
-		if (is_numeric($v)){
+		if ($v === (string)(int)$v){
 			$v = (int)$v;
 		} else {
 			$a = subrpos("'", "'", $v);
 			$b = subrpos('"', '"', $v);
-			$v = ((strlen($a)>strlen($b))?$a:$b);
+			$v = (strlen($a)>strlen($b))?$a:$b;
 		}
 		if($k!=='') $c[$k]=$v;
 	}
@@ -309,22 +310,14 @@ class GakuUra{
 	private string $system_dir;
 	public const GAKU_URA_FILES = [
 		'index.php','404.php','css','js','users',
-		'gaku-ura/description.txt',
-		'gaku-ura/.htaccess',
-		'gaku-ura/conf/conf.php',
-		'gaku-ura/conf/db.php',
-		'gaku-ura/conf/users.php',
-		'gaku-ura/conf/alt-mbstring.php',
-		'gaku-ura/main',
-		'gaku-ura/data/404',
-		'gaku-ura/data/default/file',
-		'gaku-ura/data/default/lib',
-		'gaku-ura/data/default/description.txt',
-		'gaku-ura/data/users/css',
-		'gaku-ura/data/users/js',
-		'gaku-ura/data/users/html',
-		'gaku-ura/data/users/description.txt'];
-	public const UPGRADE_IGNORE = ['gaku-ura/data/users/html/custom'];
+		'gaku-ura/description.txt','gaku-ura/.htaccess',
+		'gaku-ura/conf','gaku-ura/main','gaku-ura/data/404',
+		'gaku-ura/data/default','gaku-ura/data/users'];
+	public const UPGRADE_IGNORE = [
+		'gaku-ura/conf/gaku-ura.conf',
+		'gaku-ura/data/default/default.html',
+		'gaku-ura/data/default/default.css',
+		'gaku-ura/data/users/html/custom'];
 	function __construct(?bool $third=null){
 		header('Referrer-Policy:same-origin');
 		if(!isset($_SESSION)) session_start(['cookie_lifetime'=>time()+3600*2400]);
@@ -452,11 +445,7 @@ class GakuUra{
 		$pr = $this->data_dir.'/'.$project_name;
 		$fn = basename($file_name);
 		if (strpos($fn,'.') === false){
-			if (is_file('html/'.$fn.'.md')){
-				$fn .= '.md';
-			} else {
-				$fn .= '.html';
-			}
+			$fn .= is_file('html/'.$fn.'.md')?'.md':'.html';
 		}
 		$h = 'html/'.$fn;
 		if(!is_file($pr.'/'.$h)) return -1;
