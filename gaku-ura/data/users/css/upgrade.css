@@ -6,6 +6,9 @@ body,input,textarea{
 .wizard a, .wizard a:visited{
 	color:#b55;
 }
+h1{
+	color:#fff;
+}
 b{
 	font-weight:bold;
 	color:#ff0;

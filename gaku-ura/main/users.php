@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.0
+#gaku-ura9.7.1
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
 require __DIR__ .'/../conf/db.php';
@@ -128,7 +128,6 @@ function main(string $from):int{
 				return 1;
 			}
 		}
-
 		#投稿
 		if (isset($submit,$_POST['session_token']) && $conf->check_csrf_token('admin__'.$_POST['submit'],$_POST['session_token'],true)){
 			if ($submit==='edit_file' && list_isset($_POST,['name','new_name','perm']) && strpos($_POST['name'],'..')===false && strpos($_POST['name'], '/')===false && is_file($current_dir.'/'.h($_POST['name'])) && isset($perm_list[$_POST['perm']])){
@@ -364,47 +363,45 @@ function main(string $from):int{
 					header('Location:./?Dir='.$uri_dir.'&File='.basename($dbname).'&Menu='.$submit.'&table='.$current_table);
 					exit;
 				}
-			} elseif ($submit === 'upgrade'){
+			} elseif ($submit==='upgrade' && (int)$user_data['admin']>=4 && str_starts_with($conf->d_root,$c_root) && isset($_POST['reupgrade'])){
 				#upgrade
-				if ((int)$user_data['admin']>=4 && str_starts_with($conf->d_root,$c_root) && isset($_POST['reupgrade'])){
-					$replace['SESSION_TOKEN'] = '';
-					$replace['GAKU_URA_FILES'] = implode('&#10;', GakuUra::GAKU_URA_FILES);
-					$replace['UPGRADE_IGNORE'] = implode('&#10;',GakuUra::UPGRADE_IGNORE).'&#10;'.($conf->config['upgrade.ignore']??'');
-					if (isset($_POST['file']) && $_POST['reupgrade']==='true' && is_file($conf->data_dir.'/'.$_POST['file'])){
-						$r = $conf->upgrade($conf->data_dir.'/'.$_POST['file']);
-						unlink($conf->data_dir.'/'.$_POST['file']);
-						$m = '完了(success)';
-						if ($r !== 0){
-							$m = '失敗 <b>更新が不安定な状態で停止しました。FTP等を用いてバックアップで全てのファイルを上書きアップロードしてください。</b>';
-						}
-						$m .= ' status:'.$r;
-						$replace['ERROR_MSG'] = $m;
-					} elseif (($f=$_FILES['file']['tmp_name']??'')!==''){
-						$d = [];
-						$r = $conf->upgrade($_FILES['file']['tmp_name'], $d);
-						$m = '成功(success)';
-						if ($r === 1){
-							$m = '失敗(invalid file)';
-						} elseif ($r === 2){
-							$m = '失敗(cannot extract)';
-						} elseif ($r === 3){
-							$m = '警告(ファイル:'.implode(',',$d).' は廃止されました)';
-						}
-						$m .= ' status:'.$r;
-						if ($r===0 || $r===3){
-							copy($f, $conf->data_dir.'/'.$_FILES['file']['name']);
-							$m .= '<b>操作はまだ完了していません。</b>アップグレード対象のファイル一覧が更新されたので、以下のボタンを押して完了してください。';
-							if($m===3) $m.=implode(',',$d).' は廃止されました。';
-							$m .= '<form action="" method="POST"><label><button type="submit" name="submit" value="'.$submit.'">完了</button></label><input type="hidden" name="session_token" value="'.$conf->set_csrf_token('admin__upgrade').'"><input type="hidden" name="file" value="'.$_FILES['file']['name'].'"><input type="hidden" name="reupgrade" value="true"></form>';
-						} else {
-							$m .= '<b>失敗しました。</b>';
-						}
-						$replace['ERROR_MSG'] = $m;
-					} else {
-						$conf->form_die();
+				$replace['SESSION_TOKEN'] = '';
+				$replace['GAKU_URA_FILES'] = implode('&#10;', GakuUra::GAKU_URA_FILES);
+				$replace['UPGRADE_IGNORE'] = implode('&#10;',GakuUra::UPGRADE_IGNORE).'&#10;'.($conf->config['upgrade.ignore']??'');
+				if (isset($_POST['file']) && $_POST['reupgrade']==='true' && is_file($conf->data_dir.'/'.$_POST['file'])){
+					$r = $conf->upgrade($conf->data_dir.'/'.$_POST['file']);
+					unlink($conf->data_dir.'/'.$_POST['file']);
+					$m = '完了(success)';
+					if ($r !== 0){
+						$m = '失敗 <b>更新が不安定な状態で停止しました。FTP等を用いてバックアップで全てのファイルを上書きアップロードしてください。</b>';
 					}
-					return $conf->htmlf('users', 'upgrade', $replace);
+					$m .= ' status:'.$r;
+					$replace['ERROR_MSG'] = $m;
+				} elseif (($f=$_FILES['file']['tmp_name']??'')!==''){
+					$d = [];
+					$r = $conf->upgrade($_FILES['file']['tmp_name'], $d);
+					$m = '成功(success)';
+					if ($r === 1){
+						$m = '失敗(invalid file)';
+					} elseif ($r === 2){
+						$m = '失敗(cannot extract)';
+					} elseif ($r === 3){
+						$m = '警告(ファイル:'.implode(',',$d).' は廃止されました)';
+					}
+					$m .= ' status:'.$r;
+					if ($r===0 || $r===3){
+						copy($f, $conf->data_dir.'/'.$_FILES['file']['name']);
+						$m .= '<b>操作はまだ完了していません。</b>アップグレード対象のファイル一覧が更新されたので、以下のボタンを押して完了してください。';
+						if($m===3) $m.=implode(',',$d).' は廃止されました。';
+						$m .= '<form action="" method="POST"><label><button type="submit" name="submit" value="'.$submit.'">完了</button></label><input type="hidden" name="session_token" value="'.$conf->set_csrf_token('admin__upgrade').'"><input type="hidden" name="file" value="'.$_FILES['file']['name'].'"><input type="hidden" name="reupgrade" value="true"></form>';
+					} else {
+						$m .= '<b>失敗しました。</b>';
+					}
+					$replace['ERROR_MSG'] = $m;
+				} else {
+					$conf->form_die();
 				}
+				return $conf->htmlf('users', 'upgrade', $replace);
 			} elseif ($submit === 'user_list'){
 				#入力が可変長なので、ログインデータで毎回チェックする
 				foreach (get_rows($user->user_list_file, 2) as $row){
@@ -446,7 +443,7 @@ function main(string $from):int{
 			$html = 'upgrade';
 			$replace['ERROR_MSG'] = '';
 			$replace['SESSION_TOKEN'] = '';
-			$replace['GKU_URA_FILES'] = '';
+			$replace['GAKU_URA_FILES'] = '';
 			$replace['UPGRADE_IGNORE'] = '';
 			$replace['START_VIEW'] = 'block';
 			if ((int)$user_data['admin']>=4 && str_starts_with($conf->d_root,$c_root)){
@@ -454,7 +451,7 @@ function main(string $from):int{
 				$replace['UPGRADE_IGNORE'] = implode('&#10;',GakuUra::UPGRADE_IGNORE).'&#10;'.($conf->config['upgrade.ignore']??'');
 				$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__upgrade');
 			} else {
-				$replace['ERROR_MSG'] = 'フルコントロール権限がありません。サイト管理人にお問い合わせください。';
+				$replace['ERROR_MSG'] = 'このサイト全てを変更できる権限がありません。';
 			}
 		} elseif (($_GET['File']??'')!=='' && strpos($_GET['File'],'..')===false && strpos($_GET['File'], '/')===false){
 			#ファイルがある

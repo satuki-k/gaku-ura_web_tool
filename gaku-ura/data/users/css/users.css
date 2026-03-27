@@ -10,16 +10,6 @@ body,input,textarea{
 h1{
 	color:#938;
 }
-a, a:visited{
-	text-decoration:underline;
-}
-a,a:visited{
-	color:#15d;
-}
-a:hover{
-	text-decoration:none;
-	font-weight:bold;
-}
 form{
 	padding:1em;
 }
@@ -60,5 +50,12 @@ button:hover{
 .panel .side{
 	width:50%;
 }
-
+.panel a, .panel a:visited{
+	text-decoration:underline;
+	color:#15d;
+}
+.panel a:hover{
+	text-decoration:none;
+	font-weight:bold;
+}
 
