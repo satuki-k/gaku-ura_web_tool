@@ -96,15 +96,14 @@ function path_list(string $dir):array{
 }
 #ディレクトリごとコピー (from, to, [残すfrom基準パス])
 function copy_path(string $dir, string $to, array $skip=[]):void{
-	foreach($skip as $s)if(str_starts_with($to,$s)) return;
-	if(is_file($dir)) copy($dir,$to);
+	if(is_file($dir)&&!in_array($to,$skip,true)) copy($dir,$to);
 	if(!is_dir($to)) mkdir($to, 0777, true);
 	if(!is_dir($dir)) return;
 	foreach (scandir($dir) as $i){
 		if ($i!=='.' && $i!=='..'){
 			$f = $dir.'/'.$i;
 			$t = $to.'/'.$i;
-			foreach($skip as $s)if(str_starts_with($t,$s)) continue 2;
+			foreach($skip as $s)if($t===$s) continue 2;
 			is_dir($f)?copy_path($f,$t,$skip):copy($f,$t);
 		}
 	}
