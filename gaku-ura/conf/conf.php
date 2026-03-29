@@ -173,7 +173,7 @@ function js_out(string $file, bool $minify=true):string{
 	if (is_dir($file)){
 		foreach(scandir($file)as$f)if(str_ends_with(strtolower($f),'.js')) $l[]=$file.'/'.$f;
 	} elseif (is_file($file)){
-		$l = [$js_file];
+		$l = [$file];
 	}
 	foreach ($l as $f){
 		$j = file_get_contents($f);
