@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.7.1';
+const GAKU_URA_VERSION = '9.7.2';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
@@ -20,17 +20,17 @@ function expelliarmus(string $s):string{
 	}
 	return $s;
 }
-#replace回数指定
-function nreplace(string $subject, string $search, string $replace, int $n):string{
-	$l = strlen($search);
-	for ($p=0,$i=0;$i<$n&&($p=strpos($subject,$search,$p))!==false;++$i){
-		$b = substr($subject, 0, $p);
-		$a = substr($subject, $p+$l);
-		$subject = $b.$replace.$a;
+#replace回数指定(第一引数が全体の文字列)
+function nreplace(string $s, string $find, string $to, int $n):string{
+	$l = strlen($find);
+	for ($p=0,$i=0;$i<$n&&($p=strpos($s,$find,$p))!==false;++$i){
+		$b = substr($s, 0, $p);
+		$a = substr($s, $p+$l);
+		$s = $b.$to.$a;
 	}
-	return $subject;
+	return $s;
 }
-#先頭で見つかったときのみ置換(第一引数が全体の文字列)
+#先頭で見つかったときのみ置換
 function lreplace(string $s, string $left, string $replace=''):string{
 	if(str_starts_with($s,$left)) return $replace.substr($s,strlen($left));
 	return $s;
@@ -68,9 +68,9 @@ function get(string $file, int $l):string|false{
 	return false;
 }
 #任意の行以降全部
-function get_rows(string $file, int $start):array|false{
+function get_rows(string $file, int $l):array|false{
 	$r = file($file, FILE_IGNORE_NEW_LINES);
-	return ($r===false)?$r:array_slice($r,$start-1);
+	return ($r===false)?$r:array_slice($r,$l-1);
 }
 #任意時間以上更新ないファイル削除
 function unlink_by_date(string $dir, int $ds):void{
@@ -94,7 +94,7 @@ function path_list(string $dir):array{
 	}
 	return $l;
 }
-#ディレクトリごとコピー (from, to, [残すfrom基準パス])
+#ディレクトリ再帰コピー (from,to,[上書きしないパス]) 引数は絶対パスで正規化すること
 function copy_path(string $dir, string $to, array $skip=[]):void{
 	if(is_file($dir)&&!in_array($to,$skip,true)) copy($dir,$to);
 	if(!is_dir($to)) mkdir($to, 0777, true);
@@ -108,7 +108,7 @@ function copy_path(string $dir, string $to, array $skip=[]):void{
 		}
 	}
 }
-#空じゃないフォルダも削除可
+#ディレクトリ再帰削除
 function rmdir_all(string $dir):void{
 	if(!is_dir($dir)) return;
 	foreach (scandir($dir) as $d){
@@ -145,22 +145,20 @@ function read_conf(string $file):array{
 }
 #簡易的なパスキー認証以外は非推奨
 function pass(string $pw):string{return ($pw===''?'':hash('sha256',$pw));}
-#開始と終了で囲まれた文字列ごと削除(参照渡し)
+#複数行コメントアウト破壊削除
 function remove_comment_rows(string &$t, string $s='/*', string $g='*/'):string{
 	while(($p=subrpos($s,$g,$t))!=='') $t=str_replace($s.$p.$g,'',$t);
 	return $t;
 }
 #css軽量化
-function css_out(string $css_file):string{
-	if($css_file==='') return '';
+function css_out(string $file):string{
+	if($file==='') return '';
 	$r = '';
 	$l = [];
-	if (is_dir($css_file)){
-		foreach (scandir($css_file) as $f){
-			if(str_ends_with(strtolower($f),'.css')) $l[]=$css_file.'/'.$f;
-		}
-	} elseif (is_file($css_file)){
-		$l = [$css_file];
+	if (is_dir($file)){
+		foreach(scandir($file)as$f)if(str_ends_with(strtolower($f),'.css')) $l[]=$file.'/'.$f;
+	} elseif (is_file($file)){
+		$l = [$file];
 	}
 	foreach($l as $c) $r.=file_get_contents($c);
 	remove_comment_rows($r);
@@ -168,15 +166,13 @@ function css_out(string $css_file):string{
 	return preg_replace('/( |)(,|:|;|{|})( |)/', '$2', $r);
 }
 #js軽量化
-function js_out(string $js_file, bool $minify=true):string{
-	if($js_file==='') return '';
+function js_out(string $file, bool $minify=true):string{
+	if($file==='') return '';
 	$r = '';
 	$l = [];
-	if (is_dir($js_file)){
-		foreach (scandir($js_file) as $f){
-			if(str_ends_with(strtolower($f),'.js')) $l[]=$js_file.'/'.$f;
-		}
-	} elseif (is_file($js_file)){
+	if (is_dir($file)){
+		foreach(scandir($file)as$f)if(str_ends_with(strtolower($f),'.js')) $l[]=$file.'/'.$f;
+	} elseif (is_file($file)){
 		$l = [$js_file];
 	}
 	foreach ($l as $f){
@@ -186,9 +182,7 @@ function js_out(string $js_file, bool $minify=true):string{
 		if ($minify){
 			remove_comment_rows($j);
 			$t = '';
-			foreach (explode("\n",$j) as $i){
-				$t .= preg_replace('/\/\/.*/', '', trim($i));
-			}
+			foreach(explode("\n",$j)as$i) $t.=preg_replace('/\/\/.*/','',trim($i));
 			$r .= preg_replace('/( |)(,|=|{|}|\(|\)|[|]|\?|!|\&|-|\+|<|>|:|;|\*|\/)( |)/', '$2', $t);
 		} else {
 			$r .= $j;
@@ -199,7 +193,7 @@ function js_out(string $js_file, bool $minify=true):string{
 #全ての不可視文字はfalse
 function not_empty(string $s):bool{
 	foreach(["\t","\v",' ','　']as$i) $s=str_replace($i,'',$s);
-	return (row($s)!=='');
+	return row($s)!=='';
 }
 #連想配列の一括キー存在確認
 function list_isset(array $dict, array $keys):bool{
@@ -210,9 +204,9 @@ function list_isset(array $dict, array $keys):bool{
 function to_html(string $text):string{
 	remove_comment_rows($text,'<!--','-->');
 	foreach(['|'=>124,'《'=>12298,'》'=>12299,'*'=>42,'#'=>35,'"'=>34,"'"=>39,'`'=>96,'~'=>126,'\\'=>92]as$k=>$v) $text=str_replace('\\'.$k,'&#'.$v.';',$text);
-	$rows = explode("\n", u8lf($text));
+	$rows = explode("\n", str_replace("\\\n",'',u8lf($text)));
 	$r = '';
-	for ($ol=0,$ul=0,$len=count($rows),$j=0; $j < $len; ++$j){
+	for ($ol=0,$ul=0,$len=count($rows),$j=0;$j < $len;++$j){
 		$l = trim($rows[$j]);
 		if (str_starts_with($l,'*') && substr_count($l,'*')%2){
 			if ($ol){
@@ -241,7 +235,7 @@ function to_html(string $text):string{
 			$r .= '</ol>';
 			$ol = 0;
 		} elseif (str_starts_with($l,'#')){
-			for ($i=6; $i > 0; --$i){
+			for ($i=6;$i > 0;--$i){
 				$p = str_repeat('#', $i);
 				if (substr($l,0,$i) === $p){
 					$r .= '<h'.$i.'>'.trim(substr($l,$i)).'</h'.$i.'>';
@@ -282,7 +276,7 @@ function to_html(string $text):string{
 			$r = str_replace('|'.$c.'》', '<ruby><rb>'.$l[0].'</rb><rt>'.$l[1].'</rt></ruby>', $r);
 		}
 	}
-	return str_replace('\\', '', $r);
+	return $r;
 }
 #真のIP入手
 function get_ip():string{
@@ -308,15 +302,12 @@ class GakuUra{
 	public array $ld_json;#構造化データ辞書
 	private string $system_dir;
 	public const GAKU_URA_FILES = [
-		'index.php','404.php','css','js','users',
-		'gaku-ura/description.txt','gaku-ura/.htaccess',
-		'gaku-ura/conf','gaku-ura/main','gaku-ura/data/404',
-		'gaku-ura/data/default','gaku-ura/data/users'];
+		'index.php','404.php','css','js','users','gaku-ura/conf','gaku-ura/main',
+		'gaku-ura/description.txt','gaku-ura/.htaccess','gaku-ura/data/description.txt',
+		'gaku-ura/data/404','gaku-ura/data/default','gaku-ura/data/users'];
 	public const UPGRADE_IGNORE = [
-		'gaku-ura/conf/gaku-ura.conf',
-		'gaku-ura/data/default/default.html',
-		'gaku-ura/data/default/default.css',
-		'gaku-ura/data/users/html/custom'];
+		'gaku-ura/conf/gaku-ura.conf','gaku-ura/data/default/default.html',
+		'gaku-ura/data/default/default.css','gaku-ura/data/users/html/custom'];
 	function __construct(?bool $third=null){
 		header('Referrer-Policy:same-origin');
 		if(!isset($_SESSION)) session_start(['cookie_lifetime'=>time()+3600*2400]);
@@ -360,7 +351,7 @@ class GakuUra{
 	}
 	#ヘッダー content-type
 	public function content_type(string $type, string $c='UTF-8'):void{
-		$a = (strpos($type,'text/')===0)?'charset='.$c:'';
+		$a = strpos($type,'text/')===0?'charset='.$c:'';
 		header('Content-Type:'.$type.';'.$a);
 	}
 	public static function h(string $s):string{
@@ -440,9 +431,9 @@ class GakuUra{
 		return 0;
 	}
 	#dataプロジェクトパス, htmlまたはmdファイル名前だけ, 「{}」展開変数の連想配列, クロール可否
-	public function htmlf(string $project_name,string $file_name,array $replace,bool $robots=false):int{
+	public function htmlf(string $project_name,?string $file_name,array $replace,bool $robots=false):int{
 		$pr = $this->data_dir.'/'.$project_name;
-		$fn = basename($file_name);
+		$fn = basename($file_name??'index');
 		if (strpos($fn,'.') === false){
 			$fn .= is_file('html/'.$fn.'.md')?'.md':'.html';
 		}
@@ -484,10 +475,11 @@ class GakuUra{
 	}
 	#エラーページ
 	public function not_found(bool $is404=false, string $reason=''):void{
+		if($reason==='') $reason='アクセス拒否または無効なURLです。';
 		$h = $this->u_root;
 		if (http_response_code()===500 && isset($_SERVER['REQUEST_URI'])){
 			$f = $this->d_root.$_SERVER['REQUEST_URI'];
-			if(is_file($f) && str_starts_with(get($f,'#!/',1))) chmod($f, 0745);
+			if(is_file($f)&&str_starts_with(get($f,'#!/',1))) chmod($f, 0745);
 		}
 		if ($is404){
 			$l = $this->config['error.moved_list']??'';
@@ -501,7 +493,7 @@ class GakuUra{
 				}
 			}
 		}
-		$this->htmlf('404', 'index', ['PERHAPS'=>$h,'REASON'=>$reason]);
+		$this->htmlf('404', null, ['HERE'=>$this->here,'GAKU_URA_VERSION'=>GAKU_URA_VERSION,'PERHAPS'=>$h,'REASON'=>$reason]);
 		exit;
 	}
 	/*

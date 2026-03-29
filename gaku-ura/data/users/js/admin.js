@@ -7,6 +7,13 @@
 const q = (new URL(window.location)).searchParams;
 const popup = new POPUP();
 let move_file = 0;
+const prs_msg = document.createElement("p");
+prs_msg.style = "background:#ff0;color:#111;display:block;";
+$ID("form").before(prs_msg);
+function prs(m){
+	prs_msg.innerHTML = m;
+	prs_msg.style.display = m?"block":"none";
+}
 //ini_get
 const arg = $ID("gaku-ura_args");
 const maxfc = parseInt(arg.getAttribute("max_file_uploads")??20);
@@ -22,6 +29,7 @@ async function dg(e){
 		return;
 	}
 	const l = e.dataTransfer.files;
+	if(l.length) prs("uploading files...");
 	for (let c=0,i=0;i < l.length;++i,++c){
 		move_file = 1;
 		const f = l[i];
@@ -51,7 +59,6 @@ async function dg(e){
 		$ID("files").appendChild(p);
 	}
 	if((await reload_csrf("session_token"))&&l.length>0) $QS('[type="submit"]').click();
-	move_file = 0;
 }
 ["dragover","dragleave","drop"].forEach((i)=>{d.addEventListener(i,dg);});
 /* 操作メニュー */
@@ -150,6 +157,7 @@ function mopen(e, c){
 			move_file = 0;
 			return;
 		}
+		prs("removing files...");
 		for (let i = 0; i < s.length; ++i){
 			try{
 				const l = s[i].querySelectorAll("a")[1].href+"&async";
@@ -176,6 +184,7 @@ function mopen(e, c){
 		}
 		move_file = 0;
 		await reload_csrf("session_token");
+		prs(0);
 	});
 	g.append(o);
 	g.style.display = "block";
