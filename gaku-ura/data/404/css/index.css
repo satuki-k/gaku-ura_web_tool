@@ -1,1 +1,42 @@
+/* 標準エラーページ */
+.msg{
+	padding:.2em;
+}
+.reason{
+	background:#ffe;
+	color:000;
+}
+.g{
+	position: absolute;
+	width:10em;
+	height:2em;
+	background-image:repeating-linear-gradient(45deg,#8bf6,#8bf6 22px,#0000 0,#0000 44px), repeating-linear-gradient(-45deg,#8bf5,#8bf5 22px,#0000 0,#0000 44px);
+	background-color:#fff;
+	color:#000;
+	text-align:center;
+	animation:x 13s linear infinite, y 11s linear infinite;
+}
 
+@keyframes x{
+	0%{
+		left:0%;
+	}
+	50%{
+		left:calc(100% - 10em);
+	}
+	100%{
+		left:0%;
+	}
+}
+
+@keyframes y{
+	0%{
+		top:0%;
+	}
+	50% {
+		top:calc(100% - 2em);
+	}
+	100%{
+		top:0%;
+	}
+}
