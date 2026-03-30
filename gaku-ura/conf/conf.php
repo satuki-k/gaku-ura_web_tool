@@ -96,9 +96,12 @@ function path_list(string $dir):array{
 }
 #ディレクトリ再帰コピー (from,to,[上書きしないパス]) 引数は絶対パスで正規化すること
 function copy_path(string $dir, string $to, array $skip=[]):void{
-	if(is_file($dir)&&!in_array($to,$skip,true)) copy($dir,$to);
-	if(!is_dir($to)) mkdir($to, 0777, true);
-	if(!is_dir($dir)) return;
+	if(!file_exists($dir)||(is_dir($dir)&&is_file($to))||(is_file($dir)&&is_dir($to))) return;
+	if (is_file($dir)){
+		if(!in_array($to,$skip,true)) copy($dir,$to);
+		return;
+	}
+	if(!is_dir($to)) mkdir($to,0777,true);
 	foreach (scandir($dir) as $i){
 		if ($i!=='.' && $i!=='..'){
 			$f = $dir.'/'.$i;
