@@ -6,6 +6,8 @@ function main():int{
 	$u = $_SERVER['REQUEST_URI']??'';
 	$d = $conf->d_root.$u;
 	$reason = '';
+	$q = strpos($u,'?')===false?'':substr($u, strpos($u,'?'));
+	$u = rreplace($u, $q);
 	if ($u==='' || $u==='/'){
 		$reason = 'トップページがありません。';
 	} elseif (is_dir($d) || str_ends_with($u,'/')){
@@ -14,7 +16,11 @@ function main():int{
 		$reason = 'このURLは無効です。';
 	} elseif (strpos($u,'.') === false){
 		$reason = 'もしかして:';
-		foreach(['html','php','cgi']as$p) $reason.='<a href="'.$u.'.'.$p.'">'.$u.'.'.$p.'</a>、';
+		foreach(['html','php','cgi']as$p) $reason.='<a href="'.$u.'.'.$p.$q.'">'.$u.'.'.$p.$q.'</a>、';
+	} else {
+		$e = strrpos($u,'.')===false?'':substr($u, strrpos($u,'.'));
+		$u = rreplace($u, $e, '/');
+		$reason = 'もしかして:<a href="'.$u.$q.'">'.$u.$q.'</a>';
 	}
 	$conf->content_type('text/html');
 	$conf->not_found(true, $reason);

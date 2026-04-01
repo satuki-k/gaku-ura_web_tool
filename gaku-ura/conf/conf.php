@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.7.2';
+const GAKU_URA_VERSION = '9.7.3';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
@@ -32,12 +32,12 @@ function nreplace(string $s, string $find, string $to, int $n):string{
 }
 #先頭で見つかったときのみ置換
 function lreplace(string $s, string $left, string $replace=''):string{
-	if(str_starts_with($s,$left)) return $replace.substr($s,strlen($left));
+	if($left!==''&&str_starts_with($s,$left)) return $replace.substr($s,strlen($left));
 	return $s;
 }
 #末尾で
 function rreplace(string $s, string $right, string $replace=''):string{
-	if(str_ends_with($s,$right)) return substr($s,0,strpos($s,$right)).$replace;
+	if($right!==''&&str_ends_with($s,$right)) return substr($s,0,strpos($s,$right)).$replace;
 	return $s;
 }
 #改行除去
