@@ -8,7 +8,6 @@
 ■gaku-uraライブラリ梱包一覧
 description.txt これ
 404 エラーページ(404以外も含む)
-admin 管理ページ
 default テンプレートhtmlや共通css
 home トップページ(ブログ記事も)
-
+users ログイン、登録、サイト管理機能、gaku-uraアップグレード機能

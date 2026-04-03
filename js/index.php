@@ -1,7 +1,7 @@
 <?php
-# gaku-ura9 javascript
+#gaku-ura js
 $f = __DIR__ .'/../gaku-ura/main/src_link.php';
-if (file_exists($f)){
+if (is_file($f)){
 	require $f;
 	main('js');
 }

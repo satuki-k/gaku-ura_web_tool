@@ -1,7 +1,7 @@
 <?php
-//gaku-ura login
+#gaku-ura login
 $f = __DIR__ .'/../../gaku-ura/main/users.php';
-if (file_exists($f)){
+if (is_file($f)){
 	require $f;
 	main('login');
 }

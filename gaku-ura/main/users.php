@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.1
+#gaku-ura9.7.4
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
 require __DIR__ .'/../conf/db.php';
@@ -108,15 +108,27 @@ function main(string $from):int{
 		$replace['TOP'] = '';
 		$replace['CONFIG'] = '';
 		foreach(['max_file_uploads']as$i) $api_args[$i]=ini_get($i);
+		#要点ファイルショートカット
+		$scut = [];
+		if (str_starts_with($conf->d_root,$c_root)){
+			$api_args['d_root'] = $c_root===$conf->d_root?'':lreplace($conf->d_root,$c_root.'/');
+			$api_args['u_root'] = substr($conf->u_root,0,-1);
+			$replace['TOP'] = '<a href="?Dir='.$api_args['d_root'].'">ドキュメントルート</a>';
+			$scut[] = $replace['TOP'];
+		}
+		foreach ([$conf->data_dir=>'project_dirs',__DIR__=>'main_files',$conf->data_dir.'/home'=>'homeages'] as $k=>$v){
+			if(str_starts_with($k,$c_root)) $scut[]='<a href="?Dir='.($c_root===$k?'':lreplace($k,$c_root.'/')).'">'.$v.'</a>';
+		}
 		if ((int)$user_data['admin']>=4 && str_starts_with($conf->config_file,$c_root)){
 			$b = basename($conf->config_file);
 			$replace['CONFIG'] = '<a href="?Dir='.lreplace(rreplace($conf->config_file,'/'.$b),$c_root.'/').'&File='.$b.'&Menu=edit">設定</a>';
+			$scut[] = $replace['CONFIG'];
 		}
-		if (str_starts_with($conf->d_root,$c_root)){
-			$api_args['d_root'] = ($c_root===$conf->d_root?'':lreplace($conf->d_root,$c_root.'/'));
-			$api_args['u_root'] = substr($conf->u_root,0,-1);
-			$replace['TOP'] = '<a href="?Dir='.$api_args['d_root'].'">ドキュメントルート</a>';
+		if (str_starts_with($user->user_list_file, $c_root) && (int)$user_data['admin']>=4){
+			$b = basename($user->user_list_file);
+			$scut[] = '<a href="?Dir='.lreplace(rreplace($user->user_list_file,'/'.$b),$c_root.'/').'&File='.$b.'">ユーザー管理</a>';
 		}
+		$replace['SHORTCUT'] = implode('|', $scut);
 		#現在位置を特定
 		if (($_GET['Dir']??'')!=='' && strpos($_GET['Dir'],'..')===false){
 			$u = h($_GET['Dir']);
