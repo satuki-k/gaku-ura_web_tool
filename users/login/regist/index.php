@@ -1,7 +1,7 @@
 <?php
-//gaku-ura 新規
+#gaku-ura9 regist
 $f = __DIR__ .'/../../../gaku-ura/main/users.php';
-if (file_exists($f)){
+if (is_file($f)){
 	require $f;
 	main('regist');
 }
