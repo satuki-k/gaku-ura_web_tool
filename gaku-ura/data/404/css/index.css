@@ -14,29 +14,29 @@
 	background-color:#fff;
 	color:#000;
 	text-align:center;
-	animation:x 13s linear infinite, y 11s linear infinite;
+	animation:x 11s linear infinite, y 9s linear infinite;
 }
 
 @keyframes x{
 	0%{
-		left:0%;
+		left:0;
 	}
 	50%{
 		left:calc(100% - 10em);
 	}
 	100%{
-		left:0%;
+		left:0;
 	}
 }
 
 @keyframes y{
 	0%{
-		top:0%;
+		top:0;
 	}
 	50% {
 		top:calc(100% - 2em);
 	}
 	100%{
-		top:0%;
+		top:0;
 	}
 }

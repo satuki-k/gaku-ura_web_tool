@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.6.17
+#gaku-ura9.7.5
 /*
  * このファイルはスタンドアロンで動作します。conf.phpに依存しません
  * データベースの操作
@@ -362,7 +362,7 @@ class GakuUraSQL{
 		$rows[] = implode($sep, $f);
 		foreach ($row as $r){
 			$d = [];
-			foreach($r as $k=>$v) if(in_array($k,$col,true))$d[]=str_replace($sep,$es[$sep],$v);
+			foreach($r as $k=>$v) if(in_array($k,$col,true))$d[]=str_replace($sep,$es[$sep],$v??'');
 			$rows[] = implode($sep, $d);
 		}
 		return implode("\n",$rows)."\n";

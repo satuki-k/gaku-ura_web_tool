@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.7.4';
+const GAKU_URA_VERSION = '9.7.5';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
@@ -499,11 +499,6 @@ class GakuUra{
 		$this->htmlf('404', null, ['HERE'=>$this->here,'GAKU_URA_VERSION'=>GAKU_URA_VERSION,'PERHAPS'=>$h,'REASON'=>$reason]);
 		exit;
 	}
-	/*
-	 * php.iniに以下を書くとクッキーが無効でもcheck_csrf_tokenを通過できます。
-	 * session.use_trans_sid = 1
-	 * session.trans_sid_tags = "form="
-	*/
 	#csrfトークンが返り値
 	public function set_csrf_token(string $name, int $l=32, int $r=64):string{
 		$t = one_time_pass($l, $r);

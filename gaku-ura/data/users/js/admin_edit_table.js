@@ -7,7 +7,6 @@ const q = (new URL(document.location)).searchParams;
 //submitメソッドを使えるようにする
 $ID("form").innerHTML += '<input type="hidden" name="submit_type" value="'+$QS('#form [type="submit"]').value+'">';
 const dbtype = $QS('input[name="dbtype"]').value;
-//sql
 function mkt(e){
 	e.preventDefault();
 	const mem_s = document.body.style.overflowY;
@@ -160,45 +159,43 @@ function mkt(e){
 	mkcol();
 	tn.focus();
 }
-if (q.get("Menu")==="edit_db" && $QS('[name="query"]')){
-	const p = document.createElement("p");
-	const mt = document.createElement("button");
-	const mf = document.createElement("select");
-	const tn = $QS('input[name="table"]').value;
-	const fn = {
-		"SQL文>":"",
-		"エクスポート(export)":"",
-		"インポート(import)":"",
-		"列を削除":"ALTER TABLE "+tn+" DROP COLUMN 列;",
-		"列を追加":"ALTER TABLE "+tn+" ADD COLUMN 列 型;",
-		"カウント":"SELECT COUNT(列)FROM "+tn+";",
-		"合計":"SELECT SUM(列)FROM "+tn+";"};
-	mf.name = "sql_fn";
-	for (const [k,v] of Object.entries(fn)){
-		const o = document.createElement("option");
-		o.value = o.textContent = k;
-		mf.append(o);
-	}
-	mt.textContent = "+table作成";
-	mt.style = "background:#0e0;color:#fff;";
-	p.append(mf);
-	p.append(mt);
-	$ID("form").before(p);
-	mt.addEventListener("click", mkt);
-	mf.addEventListener("change", ()=>{
-		const v = mf.value;
-		mf.selectedIndex = 0;
-		const i = $QS('[name="query"]');
-		const s = subrpos("(",")", v);
-		if(tn&&($QS('input[name="export"]').checked=(s==="export"))) return $QS('[type="submit"]').click();
-		if(s==="import") return $QS('input[type="file"]').click();
-		if (tn){
-			i.value = fn[v];
-			i.focus();
-		}
-	});
-	$QS('select[name="ctable"]').addEventListener("change", ()=>{$QS('[type="submit"]').click();});
+const p = document.createElement("p");
+const mt = document.createElement("button");
+const mf = document.createElement("select");
+const tn = $QS('input[name="table"]').value;
+const fn = {
+	"SQL文>":"",
+	"エクスポート(export)":"",
+	"インポート(import)":"",
+	"列を削除":"ALTER TABLE "+tn+" DROP COLUMN 列;",
+	"列を追加":"ALTER TABLE "+tn+" ADD COLUMN 列 型;",
+	"カウント":"SELECT COUNT(列)FROM "+tn+";",
+	"合計":"SELECT SUM(列)FROM "+tn+";"};
+mf.name = "sql_fn";
+for (const [k,v] of Object.entries(fn)){
+	const o = document.createElement("option");
+	o.value = o.textContent = k;
+	mf.append(o);
 }
+mt.textContent = "+table作成";
+mt.style = "background:#0e0;color:#fff;";
+p.append(mf);
+p.append(mt);
+$ID("form").before(p);
+mt.addEventListener("click", mkt);
+mf.addEventListener("change", ()=>{
+	const v = mf.value;
+	mf.selectedIndex = 0;
+	const i = $QS('[name="query"]');
+	const s = subrpos("(",")", v);
+	if(tn&&($QS('input[name="export"]').checked=(s==="export"))) return $QS('[type="submit"]').click();
+	if(s==="import") return $QS('input[type="file"]').click();
+	if (tn){
+		i.value = fn[v];
+		i.focus();
+	}
+});
+$QS('select[name="ctable"]').addEventListener("change", ()=>{$QS('[type="submit"]').click();});
 $ID("form").addEventListener("submit", async (e)=>{
 	e.preventDefault();
 	if(await reload_csrf("session_token")) $ID("form").submit();
