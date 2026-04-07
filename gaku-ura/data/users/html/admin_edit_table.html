@@ -3,8 +3,18 @@
 <h1>{TITLE}</h1>
 <form method="POST" action="" enctype="multipart/form-data" id="form">
 	<input type="hidden" name="session_token" value="{SESSION_TOKEN}">
-	<p><a href="{EXIT}" id="exit">戻る</a>{FORM_ITEMS} <button type="submit" name="submit_type" value="{SUBMIT_TYPE}">保存</button></p>
-	<p>{TTITLE}</p>
+	<input type="hidden" name="dbtype" value="{DBTYPE}">
+	<input type="hidden" name="dbname" value="{DBNAME}">
+	<input type="hidden" name="table" value="{TABLE}">
+	<p>
+		<a href="{EXIT}" id="exit">戻る</a> <a href="{EXIT}&File={DBNAME}&Menu=edit">詳細</a>
+		<label><input type="file" name="file" accept=".csv,.tsv"></label>
+		<label>as<input type="text" name="import_name" placeholder="same to file name"></label>
+		<label><input type="checkbox" name="first_is_col" value="true">一行目をタイトルにする</label>
+		<button type="submit" name="submit_type" value="{SUBMIT_TYPE}">保存</button>
+	</p>
+	<p>{TTITLE}  table切替<select name="ctable"><option value="">───</option>{TABLE_LIST}</select> <button type="submit" name="submit_type" value="{SUBMIT_TYPE}">変更</button></p>
+	<p style="color:#ff0;">Issue:値以外の項目は各自でエスケープが必要です。UTF-8ではないファイルはインポートできません。</p>
 	<table>
 		<thead>
 			<tr>{COLS}</tr>
@@ -13,15 +23,16 @@
 			{ROWS}
 		</tbody>
 	</table>
-	{FORM_AFTER}
+	<p><label><input type="checkbox" name="export" value="true">export CSV</label></p>
+	<p>
+		<label>SQL実行<br><textarea name="query" rows="5"></textarea></label>
+		<button type="submit" name="submit_type" value="{SUBMIT_TYPE}">実行</button>
+	</p>
 </form>
-
-<p>{DOWNLOAD}</p>
 
 <p><br></p>
 <p><a href="../">ユーザーページへ</a></p>
 
 <p><br></p>
 <p id="version">gaku-ura{GAKU_URA_VERSION}</p>
-<p style="display:none;" {API_ARGS}id="gaku-ura_args"></p>
 
