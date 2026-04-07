@@ -429,59 +429,58 @@ function main(string $from):int{
 			}
 		} elseif (($_GET['File']??'')!=='' && strpos($_GET['File'],'..')===false && strpos($_GET['File'], '/')===false){
 			#ファイルがある
-			$b = h($_GET['File']);
-			$d = $current_dir.'/'.$b;
-			if (is_file($d)){
-				$bname = $b;
-				$current_file = $d;
-				if (str_starts_with($current_file,$user->user_dir.'/'.GakuUraUser::TABLE_NAME) && $user_data['admin']<4){
-					$conf->not_found(false, '権限がありません。');
-				}
-				if (!isset($_GET['download'])){
-					$is_edit_mode = true;
-					$editable = is_editable($current_file);
-					if ($menu!=='edit_db' && ($menu==='edit'||$editable)){
-						#編集
-						$replace['TITLE'] = lreplace($current_file, $c_root.'/');
-						$replace['EXIT'] = '?Dir='.$uri_dir;
-						$d = '?Dir='.$uri_dir.'&File='.$bname.'&download';
-						$replace['FORM_ITEMS'] = '<input type="hidden" name="name" value="'.$bname.'"><label>名前<input type="text" name="new_name" value="'.$bname.'" placeholder="変更なし"></label> '.perm_opt($perm_list,file_perm($current_file)).$rm_option;
-						$replace['SUBMIT_TYPE'] = 'edit_file';
-						$m = mime_content_type($current_file);
-						$f = '';
-						if (str_ends_with($current_file,'.db')){
-							$f = '<p><a href="?Dir='.$uri_dir.'&File='.$bname.'&Menu=edit_db">tableを編集</a></p>';
-						}
-						if ($editable){
-							$c = str_replace("\t",'&#9;',str_replace("\n",'&#10;',u8lf(h(file_get_contents($current_file)))));
-							$f .= '<p><label><textarea rows="25" name="content" id="text">'.$c.'</textarea></label></p>';
-						} elseif (str_starts_with($m,'image/')){
-							$f .= '<p><img style="max-width:100%;height:auto;" src="'.$d.'"></p>';
-						} elseif (str_starts_with($m,'audio/')){
-							$f .= '<p><audio controls src="'.$d.'"></audio></p>';
-						} elseif (str_starts_with($m,'video/')){
-							$f .= '<p><video controls src="'.$d.'"></video></p>';
-						}
-						$replace['FORM_AFTER'] = $is_async?'':$f;
-						$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__edit_file');
-						$replace['DOWNLOAD'] = '<p><a href="'.$d.'">ダウンロードする</a></p><p><br></p>';
-					} elseif ($menu !== 'edit_db'){
-						$is_edit_mode = false;
+			$bname = h($_GET['File']);
+			$current_file = $current_dir.'/'.$bname;
+			if (!is_file($current_file)){
+				if($is_async) return 2;
+				header('Location:?Dir='.$uri_dir);
+				exit;
+			}
+			if (str_starts_with($current_file,$user->user_dir.'/'.GakuUraUser::TABLE_NAME) && $user_data['admin']<4){
+				$conf->not_found(false, '権限がありません。');
+			}
+			if (!isset($_GET['download'])){
+				$is_edit_mode = true;
+				$editable = is_editable($current_file);
+				if ($menu!=='edit_db' && ($menu==='edit'||$editable)){
+					#編集
+					$replace['TITLE'] = lreplace($current_file, $c_root.'/');
+					$replace['EXIT'] = '?Dir='.$uri_dir;
+					$d = '?Dir='.$uri_dir.'&File='.$bname.'&download';
+					$replace['FORM_ITEMS'] = '<input type="hidden" name="name" value="'.$bname.'"><label>名前<input type="text" name="new_name" value="'.$bname.'" placeholder="変更なし"></label> '.perm_opt($perm_list,file_perm($current_file)).$rm_option;
+					$replace['SUBMIT_TYPE'] = 'edit_file';
+					$m = mime_content_type($current_file);
+					$f = '';
+					if (str_ends_with($current_file,'.db')){
+						$f = '<p><a href="?Dir='.$uri_dir.'&File='.$bname.'&Menu=edit_db">tableを編集</a></p>';
 					}
+					if ($editable){
+						$c = str_replace("\t",'&#9;',str_replace("\n",'&#10;',u8lf(h(file_get_contents($current_file)))));
+						$f .= '<p><label><textarea rows="25" name="content" id="text">'.$c.'</textarea></label></p>';
+					} elseif (str_starts_with($m,'image/')){
+						$f .= '<p><img style="max-width:100%;height:auto;" src="'.$d.'"></p>';
+					} elseif (str_starts_with($m,'audio/')){
+						$f .= '<p><audio controls src="'.$d.'"></audio></p>';
+					} elseif (str_starts_with($m,'video/')){
+						$f .= '<p><video controls src="'.$d.'"></video></p>';
+					}
+					$replace['FORM_AFTER'] = $is_async?'':$f;
+					$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__edit_file');
+					$replace['DOWNLOAD'] = '<p><a href="'.$d.'">ダウンロードする</a></p><p><br></p>';
+				} elseif ($menu !== 'edit_db'){
+					$is_edit_mode = false;
 				}
-				if (!$is_edit_mode){
-					header('Content-Description:File Transfer');
-					$conf->content_type(mime_content_type($current_file));
-					header('Content-Disposition:attachment;filename="'.$bname.'"');
-					header('Expires:0');
-					header('Cache-Control:must-revalidate');
-					header('Pragma:public');
-					header('Content-Length:'.filesize($current_file));
-					readfile($current_file);
-					exit;
-				}
-			} elseif ($is_async){
-				return 2;
+			}
+			if (!$is_edit_mode){
+				header('Content-Description:File Transfer');
+				$conf->content_type(mime_content_type($current_file));
+				header('Content-Disposition:attachment;filename="'.$bname.'"');
+				header('Expires:0');
+				header('Cache-Control:must-revalidate');
+				header('Pragma:public');
+				header('Content-Length:'.filesize($current_file));
+				readfile($current_file);
+				exit;
 			}
 		} elseif (not_empty($uri_dir) && $menu==='edit'){
 			#ディレクトリの編集
