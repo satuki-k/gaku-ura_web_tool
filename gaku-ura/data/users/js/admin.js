@@ -58,7 +58,7 @@ async function dg(e){
 		p.files = d.files;
 		$ID("files").appendChild(p);
 	}
-	if((await reload_csrf("session_token"))&&l.length>0) $QS('[type="submit"]').click();
+	if((await reload_csrf("csrf_token"))&&l.length>0) $QS('[type="submit"]').click();
 }
 ["dragover","dragleave","drop"].forEach((i)=>{d.addEventListener(i,dg);});
 /* 操作メニュー */
@@ -183,7 +183,7 @@ function mopen(e, c){
 			}catch{}
 		}
 		move_file = 0;
-		await reload_csrf("session_token");
+		await reload_csrf("csrf_token");
 		prs(0);
 	});
 	g.append(o);
