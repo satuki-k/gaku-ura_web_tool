@@ -54,7 +54,7 @@ function main(string $from):int{
 				unset($_SESSION[GakuUraUser::SKEY_PASSWD]);
 				header('Location:./');
 				exit;
-			} elseif ($csrf_token && list_isset($_POST,['name','mail','passwd','new_passwd','profile']) && $conf->check_csrf_token('user_home',$csrf_token,true)){
+			} elseif ($csrf_token && list_isset($_POST,['name','mail','new_passwd','profile']) && $conf->check_csrf_token('user_home',$csrf_token,true)){
 				$_POST['profile'] = str_replace("\n", '&#10;', $_POST['profile']);
 				$p = [];
 				foreach(['name','mail','new_passwd','profile']as$k) $p[$k]=row(h(GakuUraUser::h($_POST[$k])));
