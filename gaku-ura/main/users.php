@@ -4,7 +4,6 @@ require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
 function is_editable(string $fname):bool{
-	if(stripos(mime_content_type($fname),'text/')===0) return true;
 	$f = fopen($fname, 'r');
 	while (($l=fgets($f)) !== false){
 		if (strpos($l,"\0") !== false){
@@ -23,9 +22,7 @@ function file_sort(array &$files, string $dir):void{
 	natsort($f);
 	$files = array_merge($d, $f);
 }
-function file_perm(string $f):string{
-	return substr(sprintf('%o',fileperms($f)),-3);
-}
+function file_perm(string $f):string{return substr(sprintf('%o',fileperms($f)),-3);}
 function perm_opt(array $perms, string $perm):string{
 	$r = '<label>ﾊﾟｰﾐｯｼｮﾝ<select name="perm">';
 	#%o消すな
@@ -37,13 +34,13 @@ function main(string $from):int{
 	$user = new GakuUraUser($conf);
 	$html = $from;
 	$api_args = [];
-	if(isset($_POST['submit_type'])) $_POST['submit']=$_POST['submit_type'];
-	if(isset($_POST['submit'])) $submit=$_POST['submit'];
+	$submit = $_POST['submit']??$_POST['submit_type']??'';
+	$csrf_token = $_POST['csrf_token']??'';
 	$is_async = isset($_GET['async']);
-	$login = $user->login_check();
-	$is_login = $login['result'];
-	$user_data = $login['user_data']??[];
-	$replace = ['GAKU_URA_VERSION'=>GAKU_URA_VERSION,'WARNING'=>'','FOR_ADMIN'=>'','API_ARGS'=>''];
+	$l = $user->login_check();
+	$is_login = $l['result'];
+	$user_data = $l['user_data']??[];
+	$replace = ['GAKU_URA_VERSION'=>GAKU_URA_VERSION,'CONFIG'=>'','WARNING'=>'','FOR_ADMIN'=>'','API_ARGS'=>''];
 	if ($from === 'home'){
 		/* ユーザーホーム */
 		if (!$is_login){
@@ -51,13 +48,13 @@ function main(string $from):int{
 			exit;
 		}
 		if ($conf->url_param === ''){
-			if (list_isset($_POST,['submit','session_token']) && $_POST['submit']==='logout' && $conf->check_csrf_token('user_home',$_POST['session_token'],true)){
+			if ($submit && $csrf_token && $submit==='logout' && $conf->check_csrf_token('user_home',$csrf_token,true)){
 				unset($_SESSION[GakuUraUser::SKEY_ID]);
 				unset($_SESSION[GakuUraUser::SKEY_NAME]);
 				unset($_SESSION[GakuUraUser::SKEY_PASSWD]);
 				header('Location:./');
 				exit;
-			} elseif (list_isset($_POST,['session_token','name','mail','passwd','new_passwd','profile']) && $conf->check_csrf_token('user_home',$_POST['session_token'],true)){
+			} elseif ($csrf_token && list_isset($_POST,['name','mail','new_passwd','profile']) && $conf->check_csrf_token('user_home',$csrf_token,true)){
 				$_POST['profile'] = str_replace("\n", '&#10;', $_POST['profile']);
 				$p = [];
 				foreach(['name','mail','new_passwd','profile']as$k) $p[$k]=row(h(GakuUraUser::h($_POST[$k])));
@@ -71,7 +68,7 @@ function main(string $from):int{
 				header('Location:./');
 				exit;
 			} else {
-				$replace['SESSION_TOKEN'] = $conf->set_csrf_token('user_home');
+				$replace['CSRF_TOKEN'] = $conf->set_csrf_token('user_home');
 				foreach(['name','mail','profile','admin']as$k) $replace[strtoupper($k)]=$user_data[$k];
 				$a = $conf->data_dir.'/users/html/home_admin.html';
 				if ($user_data['admin']>=$user->admin_revel && is_file($a)){
@@ -113,13 +110,16 @@ function main(string $from):int{
 		}
 		#shortcut dir
 		foreach ([$conf->data_dir=>'project dirs',__DIR__=>'main files',$conf->data_dir.'/home'=>'homeages'] as $k=>$v){
-			if(str_starts_with($k,$c_root)) $scut[]='<a href="?Dir='.lreplace($c_root===$k?'':lreplace($k,$c_root),'/').'">'.$v.'</a>';
+			if(str_starts_with($k,$c_root)) $scut[$v]='<a href="?Dir='.lreplace($c_root===$k?'':lreplace($k,$c_root),'/').'">'.$v.'</a>';
 		}
 		#shortcut file admin
 		if ($user_data['admin'] >= 4){
 			foreach ([$conf->config_file=>'config',$user->user_list_file=>'users'] as $k=>$v){
 				$b = basename($k);
-				if(str_starts_with($k,$c_root)) $scut[]='<a href="?Dir='.lreplace(lreplace(rreplace($k,'/'.$b),$c_root),'/').'&File='.$b.'">'.$v.'</a>';
+				if (str_starts_with($k, $c_root)){
+					$scut[$v] = '<a href="?Dir='.lreplace(lreplace(rreplace($k,'/'.$b),$c_root),'/').'&File='.$b.'">'.$v.'</a>';
+					$replace[strtoupper($v)] = $scut[$v];
+				}
 			}
 		}
 		$replace['SHORTCUT'] = implode('|', $scut);
@@ -135,7 +135,7 @@ function main(string $from):int{
 			}
 		}
 		#投稿
-		if (isset($submit,$_POST['session_token']) && $conf->check_csrf_token('admin__'.$_POST['submit'],$_POST['session_token'],true)){
+		if ($submit && $csrf_token && $conf->check_csrf_token('admin__'.$submit,$csrf_token,true)){
 			if ($submit==='edit_file' && list_isset($_POST,['name','new_name','perm']) && strpos($_POST['name'],'..')===false && strpos($_POST['name'], '/')===false && is_file($current_dir.'/'.h($_POST['name'])) && isset($perm_list[$_POST['perm']])){
 				$path = $current_dir.'/'.h($_POST['name']);
 				#削除
@@ -369,7 +369,7 @@ function main(string $from):int{
 				}
 			} elseif ($submit==='upgrade' && $user_data['admin']>=4 && str_starts_with($conf->d_root,$c_root) && isset($_POST['reupgrade'])){
 				#upgrade
-				$replace['SESSION_TOKEN'] = '';
+				$replace['CSRF_TOKEN'] = '';
 				$replace['GAKU_URA_FILES'] = implode('&#10;', GakuUra::GAKU_URA_FILES);
 				$replace['UPGRADE_IGNORE'] = implode('&#10;',GakuUra::UPGRADE_IGNORE).'&#10;'.($conf->config['upgrade.ignore']??'');
 				if (isset($_POST['file']) && $_POST['reupgrade']==='true' && is_file($conf->data_dir.'/'.$_POST['file'])){
@@ -397,7 +397,7 @@ function main(string $from):int{
 						copy($f, $conf->data_dir.'/'.$_FILES['file']['name']);
 						$m .= '<b>操作はまだ完了していません。</b>アップグレード対象のファイル一覧が更新されたので、以下のボタンを押して完了してください。';
 						if($m===3) $m.=implode(',',$d).' は廃止されました。';
-						$m .= '<form action="" method="POST"><label><button type="submit" name="submit" value="'.$submit.'">完了</button></label><input type="hidden" name="session_token" value="'.$conf->set_csrf_token('admin__upgrade').'"><input type="hidden" name="file" value="'.$_FILES['file']['name'].'"><input type="hidden" name="reupgrade" value="true"></form>';
+						$m .= '<form action="" method="POST"><label><button type="submit" name="submit" value="'.$submit.'">完了</button></label><input type="hidden" name="csrf_token" value="'.$conf->set_csrf_token('admin__upgrade').'"><input type="hidden" name="file" value="'.$_FILES['file']['name'].'"><input type="hidden" name="reupgrade" value="true"></form>';
 					} else {
 						$m .= '<b>失敗しました。</b>';
 					}
@@ -416,14 +416,14 @@ function main(string $from):int{
 		if ($menu === 'upgrade'){
 			$html = 'upgrade';
 			$replace['ERROR_MSG'] = '';
-			$replace['SESSION_TOKEN'] = '';
+			$replace['CSRF_TOKEN'] = '';
 			$replace['GAKU_URA_FILES'] = '';
 			$replace['UPGRADE_IGNORE'] = '';
 			$replace['START_VIEW'] = 'block';
 			if ($user_data['admin']>=4 && str_starts_with($conf->d_root,$c_root)){
 				$replace['GAKU_URA_FILES'] = implode('&#10;', GakuUra::GAKU_URA_FILES);
 				$replace['UPGRADE_IGNORE'] = implode('&#10;',GakuUra::UPGRADE_IGNORE).'&#10;'.($conf->config['upgrade.ignore']??'');
-				$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__upgrade');
+				$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__upgrade');
 			} else {
 				$replace['ERROR_MSG'] = 'このサイト全てを変更できる権限がありません。';
 			}
@@ -465,7 +465,7 @@ function main(string $from):int{
 						$f .= '<p><video controls src="'.$d.'"></video></p>';
 					}
 					$replace['FORM_AFTER'] = $is_async?'':$f;
-					$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__edit_file');
+					$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__edit_file');
 					$replace['DOWNLOAD'] = '<p><a href="'.$d.'">ダウンロードする</a></p><p><br></p>';
 				} elseif ($menu !== 'edit_db'){
 					$is_edit_mode = false;
@@ -497,9 +497,9 @@ function main(string $from):int{
 			$replace['EXIT'] = '?Dir='.$up_to;
 			$replace['FORM_ITEMS'] = '<input type="hidden" name="name" value="'.$bname.'"><label>名前<input type="text" name="new_name" value="'.$bname.'" placeholder="変更なし"></label>'.perm_opt($perm_list,file_perm($current_dir)).$rm_option;
 			$replace['SUBMIT_TYPE'] = 'edit_dir';
-			$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__edit_dir');
+			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__edit_dir');
 		} elseif (!$is_edit_mode){
-			$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__new');
+			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__new');
 			$p = '<tr><td colspan="5">';
 			if ($uri_dir === ''){
 				$p .= '(TOP)';
@@ -587,7 +587,7 @@ function main(string $from):int{
 				$replace['TTITLE'] .= ($t===''||$tl===[])?'tableがありません':' <label><input type="checkbox" name="remove_table" value="true">このtableを削除</label>';
 				$replace['TABLE'] = h($t);
 				foreach($tl as $i) $replace['TABLE_LIST'].='<option value="'.$i.'">'.$i.'</option>';
-				$replace['SESSION_TOKEN'] = $conf->set_csrf_token('admin__edit_db');
+				$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__edit_db');
 			} else {
 				$conf->not_found(false, 'DBの接続に失敗しました。<a href="'.$replace['EXIT'].'">戻る</a>');
 			}
@@ -605,7 +605,7 @@ function main(string $from):int{
 			header('Location:../');
 			exit;
 		}
-		if (list_isset($_POST,['name','passwd','session_token']) && $conf->check_csrf_token('login',$_POST['session_token'],true)){
+		if ($csrf_token && list_isset($_POST,['name','passwd']) && $conf->check_csrf_token('login',$csrf_token,true)){
 			$name = h($_POST['name']);
 			$passwd = h($_POST['passwd']);
 			$m = ($_POST['mail']??'')==='true';
@@ -630,11 +630,11 @@ function main(string $from):int{
 			}
 			$replace['WARNING'] = 'ユーザー名またはパスワードが不正です。';
 		}
-		$replace['SESSION_TOKEN'] = $conf->set_csrf_token('login');
+		$replace['CSRF_TOKEN'] = $conf->set_csrf_token('login');
 	} elseif ($from === 'regist'){
 		/* 新規登録 */
 		if((int)($conf->config['login.regist']??0)===0) $conf->not_found(false,'このサイトでは、新規登録は受け付けていません。');
-		if (list_isset($_POST,['name','mail','passwd','session_token']) && $conf->check_csrf_token('regist',$_POST['session_token'],true)){
+		if ($csrf_token && list_isset($_POST,['name','mail','passwd']) && $conf->check_csrf_token('regist',$csrf_token,true)){
 			$p = ['admin'=>0,'enable'=>1];
 			foreach(['name','passwd','mail']as$k) $p[$k]=row(h(GakuUraUser::h($_POST[$k])));
 			if (not_empty($p['name']) && not_empty($p['passwd'])){
@@ -658,7 +658,7 @@ function main(string $from):int{
 				$replace['WARNING'] = '名前またはパスワードが未入力です。';
 			}
 		}
-		$replace['SESSION_TOKEN'] = $conf->set_csrf_token('regist');
+		$replace['CSRF_TOKEN'] = $conf->set_csrf_token('regist');
 	}
 	$conf->content_type('text/html');
 	foreach($api_args as $k=>$v) $replace['API_ARGS'].=$k.'="'.$v.'" ';

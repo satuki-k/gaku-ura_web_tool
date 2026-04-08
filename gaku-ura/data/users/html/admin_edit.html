@@ -2,7 +2,7 @@
 <!include admin_edit.js>
 <h1>{TITLE}</h1>
 <form method="POST" action="" id="form">
-	<input type="hidden" name="session_token" value="{SESSION_TOKEN}">
+	<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
 	<p><a href="{EXIT}" id="exit">戻る</a>{FORM_ITEMS}<button type="submit" name="submit_type" value="{SUBMIT_TYPE}">保存</button></p>
 	{FORM_AFTER}
 </form>

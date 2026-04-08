@@ -10,14 +10,14 @@
 			<p><label>メールアドレス<input type="text" name="mail" value="{MAIL}"></label></p>
 			<p><label>自己紹介<br><textarea name="profile" rows="5" placeholder="こんにちは">{PROFILE}</textarea></label></p>
 			<p>権限レベル: {ADMIN}</p>
-			<p><label><button type="submit" name="session_token" value="{SESSION_TOKEN}">変更</button></label></p>
+			<p><label><button type="submit" name="csrf_token" value="{CSRF_TOKEN}">変更</button></label></p>
 		</form>
 	</div>
 	<div class="side">
 		<h2>その他の情報</h2>
 		<p><a href="?{NAME}">自分のユーザーページ</a></p>
 		<form action="" method="POST">
-			<input type="hidden" name="session_token" value="{SESSION_TOKEN}">
+			<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
 			<label><button type="submit" name="submit" value="logout">ログアウト</button></label>
 		</form>
 		{FOR_ADMIN}

@@ -198,6 +198,6 @@ mf.addEventListener("change", ()=>{
 $QS('select[name="ctable"]').addEventListener("change", ()=>{$QS('[type="submit"]').click();});
 $ID("form").addEventListener("submit", async (e)=>{
 	e.preventDefault();
-	if(await reload_csrf("session_token")) $ID("form").submit();
+	if(await reload_csrf("csrf_token")) $ID("form").submit();
 });
 

@@ -200,6 +200,6 @@ if($ID("text")){
 //削除の警告
 $ID("form").addEventListener("submit", async (e)=>{
 	e.preventDefault();
-	if((await reload_csrf("session_token"))&&($QS('[name="remove"]:checked').value!=='yes'||(await popup.confirm("一度削除すると復元出来ません。<br>本当に削除しますか?")))) $ID("form").submit();
+	if((await reload_csrf("csrf_token"))&&($QS('[name="remove"]:checked').value!=='yes'||(await popup.confirm("一度削除すると復元出来ません。<br>本当に削除しますか?")))) $ID("form").submit();
 });
 
