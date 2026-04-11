@@ -12,6 +12,98 @@ const q = (new URL(document.location)).searchParams;
 const popup = new POPUP();
 //submitメソッドを使えるようにする
 $ID("form").innerHTML += '<input type="hidden" name="submit_type" value="'+$QS('#form [type="submit"]').value+'">';
+function table_editor(f){
+	const tprefix = "gaku-ura_table_";
+	const table = document.createElement("table");
+	const tbody = document.createElement("tbody");
+	const add_row = document.createElement("button");
+	const add_col = document.createElement("button");
+	const d = f.endsWith(".csv")?",":"\t";
+	$ID("text").style.display = "none";
+	add_row.innerHTML = "+行を追加";
+	add_col.innerHTML = "+列を追加";
+	add_row.type = "button";
+	add_row.id = "add_row";
+	add_col.type = "button";
+	add_col.id = "add_col";
+	let col = ($ID("text").value.split("\n")[0]??"").split(d).length;
+	let c = 0;
+	$ID("text").value.split("\n").forEach((row)=>{
+		const tr = document.createElement("tr");
+		const l = row.split(d);
+		tr.id = tprefix+c;
+		for (let i = 0;i < col;++i){
+			const td = document.createElement("td");
+			const ip = document.createElement("input");
+			ip.value = l[i]??"";
+			ip.type = "text";
+			ip.id = tprefix+c+","+i;
+			td.append(ip);
+			tr.append(td);
+		}
+		tbody.append(tr);
+		++c;
+	});
+	table.append(tbody);
+	$ID("form").append(table);
+	table.before(add_row);
+	table.before(add_col);
+	add_row.addEventListener("click", (e)=>{
+		const tr = document.createElement("tr");
+		tr.id = tprefix+c;
+		for (let i = 0;i < col;++i){
+			const td = document.createElement("td");
+			const ip = document.createElement("input");
+			ip.type = "text";
+			ip.id = tprefix+c+","+i;
+			td.append(ip);
+			tr.append(td);
+		}
+		tbody.append(tr);
+		++c;
+	});
+	add_col.addEventListener("click", (e)=>{
+		for (let i = 0;i < c;++i){
+			const td = document.createElement("td");
+			const ip = document.createElement("input");
+			ip.type = "text";
+			ip.id = tprefix+i+","+col;
+			td.append(ip);
+			$ID(tprefix+i).append(td);
+		}
+		++col;
+	});
+	const table2text = ()=>{
+		$ID("text").value = "";
+		for (let i = 0;i < c;++i){
+			let l = [];
+			let m = 0;
+			for (let j = 0;j < col;++j){
+				const k = tprefix+i+","+j;
+				const v = $ID(k)?$ID(k).value:"";
+				l.push(v);
+				if(v.length) m=1;
+			}
+			if(m)$ID("text").value += l.join(d).trimEnd()+"\n";
+		}
+		if(!$ID("text").value.endsWith("\n")) $ID("text").value+="\n";
+	};
+	$ID("form").addEventListener("submit", table2text);
+	const r = document.createElement("a");
+	r.href = "#";
+	r.innerHTML = "テキストエディターに戻す";
+	$ID("form").prepend(r);
+	r.addEventListener("click", (e)=>{
+		e.preventDefault();
+		r.remove();
+		$ID("form").removeEventListener("submit", table2text);
+		table2text();
+		table.remove();
+		add_col.remove();
+		add_row.remove();
+		new TextEditor();
+	});
+}
 class TextEditor{
 	#m;
 	#mf;
@@ -21,6 +113,7 @@ class TextEditor{
 	#f;
 	#ae;
 	#h;
+	#p;
 	constructor(){
 		this.#ae = document.createElement("pre");
 		this.#m1 = document.createElement("select");
@@ -28,7 +121,7 @@ class TextEditor{
 		this.#w = document.createElement("input");
 		this.#f = document.createElement("input");
 		this.#h = null;
-		const p = document.createElement("p");
+		this.#p = document.createElement("p");
 		this.#mt = ["normal","ace","exit"];
 		let m=[];this.#mt.forEach((i)=>{m.push(i);});
 		const v = localStorage.getItem(key_m);
@@ -51,10 +144,10 @@ class TextEditor{
 		this.#w.type = "checkbox";
 		w.innerHTML = "行の折返し";
 		w.prepend(this.#w);
-		p.append(this.#m1);
-		p.append(this.#f);
-		p.append(w);
-		$ID("form").before(p);
+		this.#p.append(this.#m1);
+		this.#p.append(this.#f);
+		this.#p.append(w);
+		$ID("form").before(this.#p);
 		$ID("form").after(this.#ae);
 		$ID("text").value===""?this.reload():this.setup();
 	}
@@ -114,7 +207,15 @@ class TextEditor{
 			}
 			break;
 			case "exit":
-			$ID("exit").click();
+			const f = $QS('input[name="new_name"]').value;
+			if(f.endsWith(".csv") || f.endsWith(".tsv")){
+				this.#p.remove();
+				this.#ae.remove();
+				if(this.#mf==="ace") $ID("text").value=this.#h.getValue();
+				table_editor(f);
+			} else {
+				$ID("exit").click();
+			}
 			return;
 			break;
 		}
@@ -171,14 +272,21 @@ class TextEditor{
 		}
 	}
 }
+
 //エディター
 if($ID("text")){
-	new TextEditor();
+	const f = $QS('input[name="new_name"]').value;
+	if (f.endsWith(".csv") || f.endsWith(".tsv")){
+		table_editor(f);
+	} else {
+		new TextEditor();
+	}
 } else if (q.get("File")&&$QS('input[name="name"]')){
 	const p = document.createElement("div");
 	const r = document.createElement("a");
 	p.style.margin = "1em";
 	r.style = "color:#fff;background:#00c;padding:.2em;border:solid 1px #fff;";
+	r.href = "#";
 	r.innerHTML = "無理やり編集する";
 	p.append(r);
 	$ID("form").after(p);

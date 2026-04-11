@@ -5,9 +5,9 @@
 	<div class="user_info">
 		<h2>登録情報</h2>
 		<form action="" method="POST" id="form">
-			<p><label>名前<input type="text" name="name" value="{NAME}" placeholder="変更なし"></label></p>
+			<p><label>名前<input type="text" name="user_name" value="{NAME}" placeholder="変更なし"></label></p>
 			<p><label>新しいパスワード<input type="password" name="new_passwd" placeholder="変更なし"></label></p>
-			<p><label>メールアドレス<input type="text" name="mail" value="{MAIL}"></label></p>
+			<p><label>メールアドレス<input type="email" name="mail" value="{MAIL}"></label></p>
 			<p><label>自己紹介<br><textarea name="profile" rows="5" placeholder="こんにちは">{PROFILE}</textarea></label></p>
 			<p>権限レベル: {ADMIN}</p>
 			<p><label><button type="submit" name="csrf_token" value="{CSRF_TOKEN}">変更</button></label></p>

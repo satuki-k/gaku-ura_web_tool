@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.5
+#gaku-ura9.7.6
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -54,15 +54,15 @@ function main(string $from):int{
 				unset($_SESSION[GakuUraUser::SKEY_PASSWD]);
 				header('Location:./');
 				exit;
-			} elseif ($csrf_token && list_isset($_POST,['name','mail','new_passwd','profile']) && $conf->check_csrf_token('user_home',$csrf_token,true)){
+			} elseif ($csrf_token && list_isset($_POST,['user_name','mail','new_passwd','profile']) && $conf->check_csrf_token('user_home',$csrf_token,true)){
 				$_POST['profile'] = str_replace("\n", '&#10;', $_POST['profile']);
 				$p = [];
-				foreach(['name','mail','new_passwd','profile']as$k) $p[$k]=row(h(GakuUraUser::h($_POST[$k])));
-				if(not_empty($p['name'])&&strlen($p['name'])<32&&$user->user_exists($p['name'])===0) $user_data['name']=$p['name'];
+				foreach(['user_name','mail','new_passwd','profile']as$k) $p[$k]=row(h(GakuUraUser::h($_POST[$k])));
+				if(not_empty($p['user_name'])&&strlen($p['user_name'])<32&&$user->user_exists($p['user_name'])===0) $user_data['name']=$p['user_name'];
 				if(not_empty($p['new_passwd'])) $user_data['passwd']=password_hash($p['new_passwd'],PASSWORD_BCRYPT);
 				if(filter_var($p['mail'],FILTER_VALIDATE_EMAIL)&&$user->user_exists('',$p['mail'])===0) $user_data['mail']=$p['mail'];
 				$user_data['profile'] = $p['profile'];
-				$_SESSION[GakuUraUser::SKEY_NAME] = $p['name'];
+				$_SESSION[GakuUraUser::SKEY_NAME] = $user_data['name'];
 				$_SESSION[GakuUraUser::SKEY_PASSWD] = $user_data['passwd'];
 				$user->change_user_data($user_data);
 				header('Location:./');
@@ -605,8 +605,8 @@ function main(string $from):int{
 			header('Location:../');
 			exit;
 		}
-		if ($csrf_token && list_isset($_POST,['name','passwd']) && $conf->check_csrf_token('login',$csrf_token,true)){
-			$name = h($_POST['name']);
+		if ($csrf_token && list_isset($_POST,['user_name','passwd']) && $conf->check_csrf_token('login',$csrf_token,true)){
+			$name = h($_POST['user_name']);
 			$passwd = h($_POST['passwd']);
 			$m = ($_POST['mail']??'')==='true';
 			$i = $user->user_exists(($m?'':$name), ($m?$name:''));
@@ -634,9 +634,9 @@ function main(string $from):int{
 	} elseif ($from === 'regist'){
 		/* 新規登録 */
 		if((int)($conf->config['login.regist']??0)===0) $conf->not_found(false,'このサイトでは、新規登録は受け付けていません。');
-		if ($csrf_token && list_isset($_POST,['name','mail','passwd']) && $conf->check_csrf_token('regist',$csrf_token,true)){
+		if ($csrf_token && list_isset($_POST,['user_name','mail','passwd']) && $conf->check_csrf_token('regist',$csrf_token,true)){
 			$p = ['admin'=>0,'enable'=>1];
-			foreach(['name','passwd','mail']as$k) $p[$k]=row(h(GakuUraUser::h($_POST[$k])));
+			foreach([['user_name','name'],['passwd'],['mail']]as$i) $p[$i[1]??$i[0]]=row(h(GakuUraUser::h($_POST[$i[0]])));
 			if (not_empty($p['name']) && not_empty($p['passwd'])){
 				if (strlen($p['name']) < 32){
 					if ($p['mail']==='' || filter_var($p['mail'],FILTER_VALIDATE_EMAIL)){

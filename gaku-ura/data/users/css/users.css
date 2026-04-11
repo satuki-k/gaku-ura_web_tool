@@ -18,7 +18,7 @@ select,option{
 	background:#fff;
 	color:#000;
 }
-input[type="text"], input[type="password"]{
+input[type="text"], input[type="email"], input[type="password"]{
 	border:solid 1px #555;
 	font-size:1em;
 	width:10em;
