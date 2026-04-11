@@ -21,7 +21,7 @@
 	<p>以上を確認できたら、gaku-ura libで入手したファイルを追加してください。</p>
 	<p class="warning">注意:途中でアップグレードが失敗したとしても変更前に戻る保証はありません。必ずバックアップをとってください。また、バージョン間でファイルの新規追加や廃止がある場合は<b>手動で</b>削除やアップロードが必要です。</p>
 	<form action="" method="POST" id="form" enctype="multipart/form-data">
-		<input type="hidden" name="session_token" value="{SESSION_TOKEN}">
+		<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
 		<input type="hidden" name="reupgrade" value="false">
 		<label id="file"><input type="file" name="file" accept=".tar.gz" required></label>
 		<label><button type="submit" name="submit" value="upgrade">upgrade</button></label>
