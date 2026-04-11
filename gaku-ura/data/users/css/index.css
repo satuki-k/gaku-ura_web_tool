@@ -20,8 +20,8 @@ input[type="text"], input[type="password"]{
 }
 tbody input[type="text"]{
 	width:95%;
-	border:none;
-	outline:none;
+	border:0;
+	outline:0;
 }
 a,a:visited{
 	color:#0a0;
