@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.6
+#gaku-ura9.7.7
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -421,9 +421,19 @@ function main(string $from):int{
 			$replace['UPGRADE_IGNORE'] = '';
 			$replace['START_VIEW'] = 'block';
 			if ($user_data['admin']>=4 && str_starts_with($conf->d_root,$c_root)){
-				$replace['GAKU_URA_FILES'] = implode('&#10;', GakuUra::GAKU_URA_FILES);
-				$replace['UPGRADE_IGNORE'] = implode('&#10;',GakuUra::UPGRADE_IGNORE).'&#10;'.($conf->config['upgrade.ignore']??'');
-				$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__upgrade');
+				#TODO: 次のバージョンまで警告続ける
+				$u = [];
+				foreach (get_rows($user->user_list_file,2) as $row){
+					$d = $user->user_data_convert(explode("\t", $row));
+					if(!subrpos('$','$',$d['passwd'])) $u[]=$d['name'];
+				}
+				if($u){
+					$replace['ERROR_MSG'] = '【続行不可】従来のsha256でハッシュ化されたパスワードが未更新のユーザーがいます。('.implode(',',$u).')<br>次のバージョンで互換性を廃止するため、該当ユーザーに再ログインを依頼するか、削除してください。';
+				} else {
+					$replace['GAKU_URA_FILES'] = implode('&#10;', GakuUra::GAKU_URA_FILES);
+					$replace['UPGRADE_IGNORE'] = implode('&#10;',GakuUra::UPGRADE_IGNORE).'&#10;'.($conf->config['upgrade.ignore']??'');
+					$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__upgrade');
+				}
 			} else {
 				$replace['ERROR_MSG'] = 'このサイト全てを変更できる権限がありません。';
 			}
@@ -609,13 +619,14 @@ function main(string $from):int{
 			$name = h($_POST['user_name']);
 			$passwd = h($_POST['passwd']);
 			$m = ($_POST['mail']??'')==='true';
-			$i = $user->user_exists(($m?'':$name), ($m?$name:''));
+			$i = $user->user_exists($m?'':$name, $m?$name:'');
 			if (not_empty($name) && not_empty($passwd) && $i){
 				$d = $user->user_data_convert(explode("\t", get($user->user_list_file,$i+1)));
 				$p = 0;
-				if (substr($d['passwd'],0,1)==='$' && subrpos('$','$',$d['passwd'])!==''){
+				if (subrpos('$','$',$d['passwd'])){
 					if(password_verify($passwd,$d['passwd'])) $p=1;
 				} elseif (pass($passwd) === $d['passwd']){
+					#TODO: この互換性は廃止予定
 					$d['passwd'] = password_hash($passwd, PASSWORD_BCRYPT);
 					$user->change_user_data($d);
 					$p = 1;
