@@ -35,7 +35,7 @@ function lreplace(string $s, string $left, string $to=''):string{
 }
 #末尾で
 function rreplace(string $s, string $right, string $to=''):string{
-	if($right!==''&&str_ends_with($s,$right)) return substr($s,0,strpos($s,$to)).$to;
+	if($right!==''&&str_ends_with($s,$right)) return substr($s,0,strpos($s,$right)).$to;
 	return $s;
 }
 #改行除去
