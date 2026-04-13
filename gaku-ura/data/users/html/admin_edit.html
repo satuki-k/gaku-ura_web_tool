@@ -3,7 +3,25 @@
 <h1>{TITLE}</h1>
 <form method="POST" action="" id="form">
 	<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
-	<p><a href="{EXIT}" id="exit">戻る</a>{FORM_ITEMS}<button type="submit" name="submit_type" value="{SUBMIT_TYPE}">保存</button></p>
+	<input type="hidden" name="name" value="{NAME}">
+	<p>
+		<a href="{EXIT}" id="exit">戻る</a>
+		<label>名前<input type="text" name="new_name" value="{NAME}" placeholder="変更なし"></label>
+		<label>ﾊﾟｰﾐｯｼｮﾝ
+			<select name="perm">
+				<option value="no">{PERM} (変更しない)</option>
+				<option value="DIR">755 ディレクトリ</option>
+				<option value="CGI">745 cgi</option>
+				<option value="CGI2">755 cgi</option>
+				<option value="STATIC">644 静的ファイル</option>
+				<option value="STATIC2">666 静的ファイル</option>
+				<option value="MPRIVATE">604 隠しファイル</option>
+				<option value="PRIVATE">600 隠しファイル</option>
+			</select>
+		</label>
+		<label><input type="checkbox" name="remove" value="yes">削除する</label>
+		<button type="submit" name="submit_type" value="{SUBMIT_TYPE}">保存</button>
+	</p>
 	{FORM_AFTER}
 </form>
 
