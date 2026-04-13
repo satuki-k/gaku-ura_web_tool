@@ -2,6 +2,7 @@
 *{
 	margin:0 auto;
 	word-break:break-all;
+	box-sizing:border-box;
 }
 body, input, textarea, form div, select{
 	background:#ffc;
