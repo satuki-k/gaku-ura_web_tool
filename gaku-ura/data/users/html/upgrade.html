@@ -9,17 +9,16 @@
 	<h2>手順</h2>
 	<ol>
 		<li>FTPなどを用いてドキュメントルート以下全てのファイルのバックアップをとる</li>
-		<li><a href="http://bq.f5.si/?Page=code" target="_blank">gaku-ura lib配布サイト</a>でアップグレードしたいバージョンの圧縮ファイルを入手する</li>
+		<li><a href="http://bq.f5.si/?Page=code" target="_blank">gaku-ura lib配布サイト</a>で希望するバージョンをダウンロードする</li>
 		<li>アップグレードによって上書きされるファイルは、<pre>{GAKU_URA_FILES}</pre></li>
 		<li>その内、<pre>{UPGRADE_IGNORE}</pre>は無視されます</li>
-		<li>無視するファイルを変更する場合はファイル「{CONFIG}」で「<b>upgrade.ignore</b>」を変更します(なければ追加「upgrade.ignore = "[ドキュメントルートから始まる先頭にスラッシュ無しのパスをカンマ区切り]"」)</li>
+		<li>無視するファイルを変更する場合はファイル{CONFIG}で「<b>upgrade.ignore</b>」を変更します(なければ追加「upgrade.ignore = "[ドキュメントルートから始まる先頭にスラッシュ無しのパスをカンマ区切り]"」)</li>
 		<li>上書き対象に無い既存のファイルは<b>維持</b>されます</li>
-		<li>新機能などで新たに追加されるファイルは<b>再アップグレード</b>で追加できます</li>
 		<li>詳しい差分は<a href="https://github.com/satuki-k/gaku-ura_web_tool" target="_blank">github</a>をご確認ください</li>
 	</ol>
 	<h2>アップグレード操作</h2>
 	<p>以上を確認できたら、gaku-ura libで入手したファイルを追加してください。</p>
-	<p class="warning">注意:途中でアップグレードが失敗したとしても変更前に戻る保証はありません。必ずバックアップをとってください。また、バージョン間でファイルの新規追加や廃止がある場合は<b>手動で</b>削除やアップロードが必要です。</p>
+	<p class="warning">注意: 途中で失敗しても変更を差し戻すような機能はありません。</p>
 	<form action="" method="POST" id="form" enctype="multipart/form-data">
 		<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
 		<input type="hidden" name="reupgrade" value="false">

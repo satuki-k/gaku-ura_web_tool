@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.7.7';
+const GAKU_URA_VERSION = '9.7.8';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
@@ -14,9 +14,7 @@ function u8lf(string $t):string{
 function expelliarmus(string $s):string{
 	foreach (['script','iframe','frame','embed','object'] as $t){
 		$s = str_ireplace('</'.$t.'>', '', $s);
-		while (($a=stripos($s,'<'.$t))!==false&&($b=stripos($s,'>',$a))!==false){
-			$s = str_replace(substr($s,$a,$b-$a+1),'',$s);
-		}
+		while(($a=stripos($s,'<'.$t))!==false&&($b=stripos($s,'>',$a))!==false) $s=str_replace(substr($s,$a,$b-$a+1),'',$s);
 	}
 	return $s;
 }
@@ -31,13 +29,13 @@ function nreplace(string $s, string $find, string $to, int $n):string{
 	return $s;
 }
 #先頭で見つかったときのみ置換
-function lreplace(string $s, string $left, string $replace=''):string{
-	if($left!==''&&str_starts_with($s,$left)) return $replace.substr($s,strlen($left));
+function lreplace(string $s, string $left, string $to=''):string{
+	if($left!==''&&str_starts_with($s,$left)) return $to.substr($s,strlen($left));
 	return $s;
 }
 #末尾で
-function rreplace(string $s, string $right, string $replace=''):string{
-	if($right!==''&&str_ends_with($s,$right)) return substr($s,0,strpos($s,$right)).$replace;
+function rreplace(string $s, string $right, string $to=''):string{
+	if($right!==''&&str_ends_with($s,$right)) return substr($s,0,strpos($s,$to)).$to;
 	return $s;
 }
 #改行除去
@@ -51,9 +49,7 @@ function one_time_pass(int $l,int $r):string{return encode_a(random_bytes(random
 #開始と終了の文字列で囲まれた中身の文字列
 function subrpos(string $l, string $r, string $t):string{
 	$n = strlen($l);
-	if (($s=strpos($t,$l))!==false && ($e=strpos($t,$r,$s+$n))!==false){
-		return substr($t, $s+$n, $e-$s-$n);
-	}
+	if(($s=strpos($t,$l))!==false&&($e=strpos($t,$r,$s+$n))!==false) return substr($t,$s+$n,$e-$s-$n);
 	return '';
 }
 function innerHTML(string $t,string $h):string{return subrpos('<'.$t.'>','</'.$t.'>',$h);}
@@ -70,7 +66,7 @@ function get(string $file, int $l):string|false{
 #任意の行以降全部
 function get_rows(string $file, int $l):array|false{
 	$r = file($file, FILE_IGNORE_NEW_LINES);
-	return ($r===false)?$r:array_slice($r,$l-1);
+	return $r?array_slice($r,$l-1):$r;
 }
 #任意時間以上更新ないファイル削除
 function unlink_by_date(string $dir, int $ds):void{
@@ -130,8 +126,7 @@ function read_conf(string $file):array{
 	while (($i=fgets($fp)) !== false){
 		$r = trim($i);
 		$e = strpos($r, '=');
-		$f = substr($r, 0, 1);
-		if($e===false||in_array($f,[';','#','['],true)) continue;
+		if(!$e||in_array(substr($r,0,1),[';','#','['],true)) continue;
 		$k = trim(substr($r, 0, $e));
 		$v = trim(substr($r, $e +1));
 		if ($v === (string)(int)$v){
@@ -147,7 +142,7 @@ function read_conf(string $file):array{
 	return $c;
 }
 #簡易的なパスキー認証以外は非推奨
-function pass(string $pw):string{return ($pw===''?'':hash('sha256',$pw));}
+function pass(string $pw):string{return $pw===''?'':hash('sha256',$pw);}
 #複数行コメントアウト破壊削除
 function remove_comment_rows(string &$t, string $s='/*', string $g='*/'):string{
 	while(($p=subrpos($s,$g,$t))!=='') $t=str_replace($s.$p.$g,'',$t);
@@ -281,7 +276,7 @@ function to_html(string $text):string{
 	}
 	return $r;
 }
-#真のIP入手
+#真IP
 function get_ip():string{
 	if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])){
 		$i = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
@@ -343,7 +338,7 @@ class GakuUra{
 		if ((int)($this->config['header_scrict']??0)===1){
 			header('X-Frame-Options:SAMEORIGIN');
 		}
-		if($third===null) $third=(int)($this->config['use_nonce']??1)===0;
+		$third = $third??((int)($this->config['use_nonce']??1)===0);
 		$this->nonce = '';
 		if (!$third){
 			$this->nonce = one_time_pass(20, 30);
@@ -398,9 +393,9 @@ class GakuUra{
 		}
 		return $l.$code;
 	}
-	#タイトル 説明 本文(bodyタグの中身) cssファイル jsファイル 検索に表示させたいか 共通cssを含むか jsの軽量化をするか 雛形のhtmlファイル(data_dir基準)
+	#タイトル,説明,bodyタグの中身,[cssファイル,jsファイル,クロール可否,共通css使うか,jsの軽量化,雛形のhtml]
 	public function html(string $title,string $description,string $content,string $css='',string $js='',bool $robots=false,bool $css_default=true,bool $minify=true,?string $htm=null):int{
-		if($htm===null) $htm='default/default.html';
+		$htm = $htm??'default/default.html';
 		$f = $this->data_dir.'/'.$htm;
 		if(!is_file($f)) return 1;
 		$h = row(file_get_contents($f))."\n";
@@ -420,7 +415,6 @@ class GakuUra{
 		if(strpos($h,'{CSS}')!==false) $r['CSS']=$this->include_lib(($css_default?css_out($this->data_dir.'/default/default.css'):'').css_out($css),'css');
 		if(strpos($h,'{JS}')!==false) $r['JS']=$this->include_lib(js_out($js,$minify),'js');
 		foreach($r as $k=>$v) $h=str_replace('{'.$k.'}',$v,$h);
-		$h = str_replace(' nonce=""', '', $h);
 		if ($robots && (int)($this->config['seo.enable_ld_json']??0)===1){
 			if ($this->ld_json['@type'] !== 'Person'){
 				$this->ld_json['name'] = $r['SITE_TITLE'];
@@ -433,13 +427,11 @@ class GakuUra{
 		echo $h;
 		return 0;
 	}
-	#dataプロジェクトパス, htmlまたはmdファイル名前だけ, 「{}」展開変数の連想配列, クロール可否
+	#data_dir以下フォルダ名,html・mdファイル名,ファイル中の「{変数}」対応表,クロール可否
 	public function htmlf(string $project_name,?string $file_name,array $replace,bool $robots=false):int{
 		$pr = $this->data_dir.'/'.$project_name;
 		$fn = basename($file_name??'index');
-		if (strpos($fn,'.') === false){
-			$fn .= is_file('html/'.$fn.'.md')?'.md':'.html';
-		}
+		if(strpos($fn,'.')===false) $fn.=is_file('html/'.$fn.'.md')?'.md':'.html';
 		$h = 'html/'.$fn;
 		if(!is_file($pr.'/'.$h)) return -1;
 		$c = file_get_contents($pr.'/'.$h);
@@ -496,29 +488,21 @@ class GakuUra{
 				}
 			}
 		}
-		$this->htmlf('404', null, ['HERE'=>$this->here,'GAKU_URA_VERSION'=>GAKU_URA_VERSION,'PERHAPS'=>$h,'REASON'=>$reason]);
-		exit;
+		exit($this->htmlf('404',null,['HERE'=>$this->here,'GAKU_URA_VERSION'=>GAKU_URA_VERSION,'PERHAPS'=>$h,'REASON'=>$reason]));
 	}
-	#csrfトークンが返り値
+	#csrfトークン発行
 	public function set_csrf_token(string $name, int $l=32, int $r=64):string{
 		$t = one_time_pass($l, $r);
 		$_SESSION['csrf_token__'.$name] = implode("'",[$t,$this->here]);
 		return $t;
 	}
-	#labelはsetとcheckで同じ文字列にする。strictをtrueにするとリファラチェックする
-	public function check_csrf_token(string $name, string $t, bool $strict):bool{
-		if (isset($_SESSION['csrf_token__'.$name])){
-			$d = explode("'", $_SESSION['csrf_token__'.$name]);
-			if($d[0]===$t&&($d[1]===$this->referer||!$strict)) return true;
-		}
-		return false;
+	#nameはsetとcheckで同じ文字列にする
+	public function check_csrf_token(string $name, string $t, bool $chkref):bool{
+		$d = explode("'", $_SESSION['csrf_token__'.$name]??'');
+		return $t&&count($d)>1&&$d[0]===$t&&($d[1]===$this->referer||!$chkref);
 	}
-	public function form_die():void{
-		$this->html('フォーム損傷-', '', '<h1>フォーム損傷</h1><p>フォームに損傷があります。停止しました。</p>');#WEB改ざん等で処理出来ない時に使う
-		exit;
-	}
-	#引数:gaku-ura配布tar.gz,[廃止ファイル一覧格納変数] 成功で0
-	#注意:無慈悲に上書きされます
+	public function form_die():void{exit($this->html('error-','',to_html("#フォーム損傷\n予期しない送信内容により停止しました。")));}
+	#学裏ライブラリの上書き展開
 	public function upgrade(string $tar_gz, ?array &$reduced=null):int{
 		if(!is_file($tar_gz)) return 1;
 		$l = 'gaku-ura_upgrade';
