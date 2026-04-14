@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.7.8';
+const GAKU_URA_VERSION = '9.7.9';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
