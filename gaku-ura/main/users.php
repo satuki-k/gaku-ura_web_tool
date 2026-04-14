@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.8
+#gaku-ura9.7.9
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -436,40 +436,8 @@ function main(string $from):int{
 			if (str_starts_with($current_file,$user->user_dir.'/'.GakuUraUser::TABLE_NAME) && $user_data['admin']<4){
 				$conf->not_found(false, '権限がありません。');
 			}
-			if (!isset($_GET['download'])){
-				$is_edit_mode = 1;
-				$editable = is_editable($current_file);
-				if ($menu!=='edit_db' && ($menu==='edit'||$editable)){
-					#編集
-					$replace['TITLE'] = lreplace($current_file, $c_root.'/');
-					$replace['EXIT'] = '?Dir='.$uri_dir;
-					$d = '?Dir='.$uri_dir.'&File='.$bname.'&download';
-					$replace['NAME'] = $bname;
-					$replace['PERM'] = file_perm($current_file);
-					$replace['SUBMIT_TYPE'] = 'edit_file';
-					$m = mime_content_type($current_file);
-					$f = '';
-					if (str_ends_with($current_file,'.db')){
-						$f = '<p><a href="?Dir='.$uri_dir.'&File='.$bname.'&Menu=edit_db">tableを編集</a></p>';
-					}
-					if ($editable){
-						$c = str_replace("\t",'&#9;',str_replace("\n",'&#10;',u8lf(h(file_get_contents($current_file)))));
-						$f .= '<p><label><textarea rows="25" name="content" id="text">'.$c.'</textarea></label></p>';
-					} elseif (str_starts_with($m,'image/')){
-						$f .= '<p><img style="max-width:100%;height:auto;" src="'.$d.'"></p>';
-					} elseif (str_starts_with($m,'audio/')){
-						$f .= '<p><audio controls src="'.$d.'"></audio></p>';
-					} elseif (str_starts_with($m,'video/')){
-						$f .= '<p><video controls src="'.$d.'"></video></p>';
-					}
-					$replace['FORM_AFTER'] = $is_async?'':$f;
-					$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__edit_file');
-					$replace['DOWNLOAD'] = '<p><a href="'.$d.'">ダウンロードする</a></p><p><br></p>';
-				} elseif ($menu !== 'edit_db'){
-					$is_edit_mode = 1;
-				}
-			}
-			if (!$is_edit_mode){
+			$editable = is_editable($current_file);
+			if (isset($_GET['download']) || (!$editable&&!str_starts_with($menu,'edit'))){
 				header('Content-Description:File Transfer');
 				$conf->content_type(mime_content_type($current_file));
 				header('Content-Disposition:attachment;filename="'.$bname.'"');
@@ -478,71 +446,21 @@ function main(string $from):int{
 				header('Pragma:public');
 				header('Content-Length:'.filesize($current_file));
 				readfile($current_file);
-				exit;
+				return 0;
 			}
-		} elseif (not_empty($uri_dir) && $menu==='edit'){
-			#ディレクトリの編集
-			foreach(['DOWNLOAD','FORM_AFTER']as$i) $replace[$i]='';
-			$is_edit_mode = 1;
-			$bname = basename($current_dir);
-			$replace['TITLE'] = lreplace($current_dir, $c_root.'/');
-			$up_to = '';
-			if ($uri_dir !== ''){
-				$up_to = explode('/', $uri_dir);
-				array_pop($up_to);
-				$up_to = implode('/', $up_to);
-			}
-			$replace['EXIT'] = '?Dir='.$up_to;
-			$replace['NAME'] = $bname;
-			$replace['PERM'] = file_perm($current_dir);
-			$replace['SUBMIT_TYPE'] = 'edit_dir';
-			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__edit_dir');
-		} elseif (!$is_edit_mode){
-			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__new');
-			$p = '<tr><td colspan="5">';
-			if ($uri_dir === ''){
-				$p .= '(TOP)';
-			} else {
-				$fl = explode('/', $uri_dir);
-				$l = count($fl)-1;
-				$p .= '<a href="./">(TOP)</a>';
-				if($l>0)for($f=$fl[0],$i=0;$i<$l;++$i,$f.='/'.$fl[$i]) $p.='/<a href="?Dir='.$f.'">'.$fl[$i].'</a>';
-				$p .= '/'.$fl[$l];
-			}
-			$p .= '</td></tr>';
-			#先頭の/禁止
-			$u_dir = $uri_dir;
-			if($u_dir!=='') $u_dir.='/';
-			$files = scandir($current_dir,SCANDIR_SORT_NONE);
-			file_sort($files, $current_dir);
-			foreach ($files as $f){
-				if($f==='.'||$f==='..') continue;
-				$file = $current_dir.'/'.$f;
-				$fmt = '<tr><td><a href="?Dir=%s"%s>'.$f.'</a></td><td><a href="?Dir=%s&Menu=edit">編　集</a></td><td>%s '.file_perm($file).'</td><td>'.date('Y-m/d H:i',filemtime($file)).'</td></tr>';
-				if (is_dir($file)){
-					$p .= sprintf($fmt, $u_dir.$f,' class="dir"',$u_dir.$f,count(scandir($file))-2 .'item');
-				} else {
-					$e = str_ends_with($f,'.db')?'&Menu=edit_db':'';
-					$p .= sprintf($fmt, $uri_dir.'&File='.$f.$e,'',$uri_dir.'&File='.$f,filesize($file)/1000 .'kB '.mime_content_type($file));
-				}
-			}
-			$replace['FILE_LIST'] = $p;
-		}
-		if ($menu==='edit_db' && isset($current_file)){
-			#データベース編集
-			$html = 'admin_edit_table';
-			$bname = basename($current_file);
-			$replace['EXIT'] = '?Dir='.$uri_dir;
 			$replace['TITLE'] = lreplace($current_file, $c_root.'/');
-			$replace['SUBMIT_TYPE'] = 'edit_db';
-			$replace['DBTYPE'] = 'sqlite';
-			$replace['DBNAME'] = $bname;
-			$replace['COLS'] = '';
-			$replace['ROWS'] = '';
-			$replace['TTITLE'] = '';
-			$replace['TABLE_LIST'] = '';
-			$g = new GakuUraSQL('sqlite', $current_file);
-			if ($g->is_connect){
+			$replace['EXIT'] = '?Dir='.$uri_dir;
+			if ($menu === 'edit_db'){
+				#データベース編集
+				$html = 'admin_edit_table';
+				$replace['SUBMIT_TYPE'] = 'edit_db';
+				$replace['DBTYPE'] = 'sqlite';
+				$replace['DBNAME'] = $bname;
+				$replace['COLS'] = '';
+				$replace['ROWS'] = '';
+				$replace['TTITLE'] = '';
+				$replace['TABLE_LIST'] = '';
+				$g = new GakuUraSQL('sqlite', $current_file);
 				$tl = $g->get_tables();
 				$t = $_GET['table']??'';
 				if($t==='') $t=$tl[0]??'';
@@ -586,17 +504,84 @@ function main(string $from):int{
 				$replace['TTITLE'] .= ($t===''||$tl===[])?'tableがありません':' <label><input type="checkbox" name="remove_table" value="true">このtableを削除</label>';
 				$replace['TABLE'] = h($t);
 				foreach($tl as $i) $replace['TABLE_LIST'].='<option value="'.$i.'">'.$i.'</option>';
-				$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__edit_db');
 			} else {
-				$conf->not_found(false, 'DBの接続に失敗しました。<a href="'.$replace['EXIT'].'">戻る</a>');
+				#編集
+				$is_edit_mode = 1;
+				$d = '?Dir='.$uri_dir.'&File='.$bname.'&download';
+				$replace['NAME'] = $bname;
+				$replace['PERM'] = file_perm($current_file);
+				$replace['SUBMIT_TYPE'] = 'edit_file';
+				$m = mime_content_type($current_file);
+				$f = '';
+				if (str_ends_with($current_file,'.db')){
+					$f = '<p><a href="?Dir='.$uri_dir.'&File='.$bname.'&Menu=edit_db">tableを編集</a></p>';
+				}
+				if ($editable){
+					$c = str_replace("\t",'&#9;',str_replace("\n",'&#10;',u8lf(h(file_get_contents($current_file)))));
+					$f .= '<p><label><textarea rows="25" name="content" id="text">'.$c.'</textarea></label></p>';
+				} elseif (str_starts_with($m,'image/')){
+					$f .= '<p><img style="max-width:100%;height:auto;" src="'.$d.'"></p>';
+				} elseif (str_starts_with($m,'audio/')){
+					$f .= '<p><audio controls src="'.$d.'"></audio></p>';
+				} elseif (str_starts_with($m,'video/')){
+					$f .= '<p><video controls src="'.$d.'"></video></p>';
+				}
+				$replace['FORM_AFTER'] = $is_async?'':$f;
+				$replace['DOWNLOAD'] = '<p><a href="'.$d.'">ダウンロードする</a></p><p><br></p>';
 			}
+			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__'.$replace['SUBMIT_TYPE']);
+		} elseif (not_empty($uri_dir) && $menu==='edit'){
+			#ディレクトリの編集
+			foreach(['DOWNLOAD','FORM_AFTER']as$i) $replace[$i]='';
+			$is_edit_mode = 1;
+			$bname = basename($current_dir);
+			$replace['TITLE'] = lreplace($current_dir, $c_root.'/');
+			$up_to = '';
+			if ($uri_dir !== ''){
+				$up_to = explode('/', $uri_dir);
+				array_pop($up_to);
+				$up_to = implode('/', $up_to);
+			}
+			$replace['EXIT'] = '?Dir='.$up_to;
+			$replace['NAME'] = $bname;
+			$replace['PERM'] = file_perm($current_dir);
+			$replace['SUBMIT_TYPE'] = 'edit_dir';
+			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__edit_dir');
+		} else {
+			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__new');
+			$p = '<tr><td colspan="5">';
+			if ($uri_dir === ''){
+				$p .= '[root]';
+			} else {
+				$fl = explode('/', $uri_dir);
+				$l = count($fl)-1;
+				$p .= '<a href="./">[root]</a>';
+				if($l>0)for($f=$fl[0],$i=0;$i<$l;++$i,$f.='/'.$fl[$i]) $p.='/<a href="?Dir='.$f.'">'.$fl[$i].'</a>';
+				$p .= '/'.$fl[$l];
+			}
+			$p .= '</td></tr>';
+			#先頭の/禁止
+			$u_dir = $uri_dir;
+			if($u_dir!=='') $u_dir.='/';
+			$files = scandir($current_dir,SCANDIR_SORT_NONE);
+			file_sort($files, $current_dir);
+			foreach ($files as $f){
+				if($f==='.'||$f==='..') continue;
+				$file = $current_dir.'/'.$f;
+				$fmt = '<tr><td><a href="?Dir=%s"%s>'.$f.'</a></td><td><a href="?Dir=%s&Menu=edit">編　集</a></td><td>%s '.file_perm($file).'</td><td>'.date('Y-m/d H:i',filemtime($file)).'</td></tr>';
+				if (is_dir($file)){
+					$p .= sprintf($fmt, $u_dir.$f,' class="dir"',$u_dir.$f,count(scandir($file))-2 .'item');
+				} else {
+					$e = str_ends_with($f,'.db')?'&Menu=edit_db':'';
+					$p .= sprintf($fmt, $uri_dir.'&File='.$f.$e,'',$uri_dir.'&File='.$f,filesize($file)/1000 .'kB '.mime_content_type($file));
+				}
+			}
+			$replace['FILE_LIST'] = $p;
 		}
 		if ($is_edit_mode){
 			if($html===$from) $html='admin_edit';
 		} elseif ($menu === 'edit'){
 			if($is_async) return 3;
-			header('Location:?Dir='.$uri_dir);
-			exit;
 		}
 	} elseif ($from === 'login'){
 		/* ログイン */
