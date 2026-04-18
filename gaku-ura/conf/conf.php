@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.7.9';
+const GAKU_URA_VERSION = '9.7.10';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
@@ -456,8 +456,8 @@ class GakuUra{
 		}
 		foreach($replace as $k=>$v) $c=str_replace('{'.$k.'}',self::h($v),$c);
 		$s = ['top_page'=>false,'title'=>self::h(innerHTML('h1',$c)),'description'=>self::h(innerHTML('p',$c)),'robots'=>$robots,'css_default_only'=>false,'css_standalone'=>false,'js_minify'=>true,'template'=>null];
-		while (($p=subrpos('<!option ','>',$c))!=='' && count($r=explode(' ',$p))>1 && isset($s[$r[0]])){
-			$v = implode(' ', array_slice($r,1));
+		while (($p=subrpos('<!option ','>',$c))!=='' && $r=explode(' ',$p)){
+			$v = ltrim(lreplace($p, $r[0]));
 			if(in_array($r[0],['robots','css_default_only','css_standalone','js_minify'])) $v=(bool)$v;
 			$s[$r[0]] = $v;
 			$c = str_replace('<!option '.$p.'>', '', $c);

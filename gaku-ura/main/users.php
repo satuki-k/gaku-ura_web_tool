@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.9
+#gaku-ura9.7.10
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -412,17 +412,7 @@ function main(string $from):int{
 			$replace['UPGRADE_IGNORE'] = implode('&#10;',GakuUra::UPGRADE_IGNORE).'&#10;'.($conf->config['upgrade.ignore']??'');
 			if ($user_data['admin']>=4 && str_starts_with($conf->d_root,$c_root)){
 				$replace['ERROR_MSG'] = '';
-				#TODO: 次のバージョンまで警告続ける
-				$u = [];
-				foreach (get_rows($user->user_list_file,2) as $row){
-					$d = $user->user_data_convert(explode("\t", $row));
-					if(!subrpos('$','$',$d['passwd'])) $u[]=$d['name'];
-				}
-				if($u){
-					$replace['ERROR_MSG'] = '【続行不可】従来のsha256でハッシュ化されたパスワードが未更新のユーザーがいます。('.implode(',',$u).')<br>次のバージョンで互換性を廃止するため、該当ユーザーに再ログインを依頼するか、削除してください。';
-				} else {
-					$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__upgrade');
-				}
+				$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__upgrade');
 			}
 		} elseif (($_GET['File']??'')!=='' && strpos($_GET['File'],'..')===false && strpos($_GET['File'], '/')===false){
 			#ファイルがある
@@ -596,16 +586,7 @@ function main(string $from):int{
 			$i = $user->user_exists($m?'':$name, $m?$name:'');
 			if (not_empty($name) && not_empty($passwd) && $i){
 				$d = $user->user_data_convert(explode("\t", get($user->user_list_file,$i+1)));
-				$p = 0;
-				if (subrpos('$','$',$d['passwd'])){
-					if(password_verify($passwd,$d['passwd'])) $p=1;
-				} elseif (pass($passwd) === $d['passwd']){
-					#TODO: この互換性は廃止予定
-					$d['passwd'] = password_hash($passwd, PASSWORD_BCRYPT);
-					$user->change_user_data($d);
-					$p = 1;
-				}
-				if ($p){
+				if (password_verify($passwd, $d['passwd'])){
 					$_SESSION[GakuUraUser::SKEY_ID] = $d['id'];
 					$_SESSION[GakuUraUser::SKEY_NAME] = $d['name'];
 					$_SESSION[GakuUraUser::SKEY_PASSWD] = $d['passwd'];
