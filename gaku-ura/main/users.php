@@ -1,8 +1,12 @@
 <?php
-#gaku-ura9.7.10
+#gaku-ura9.7.11
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
+function up_to(string $path):string{
+	$u = dirname($path);
+	return $u==='.'?'':$u;
+}
 function is_editable(string $fname):bool{
 	$f = fopen($fname, 'r');
 	while (($l=fgets($f)) !== false){
@@ -26,7 +30,6 @@ function file_perm(string $f):string{return substr(sprintf('%o',fileperms($f)),-
 function main(string $from):int{
 	$conf = new GakuUra();
 	$user = new GakuUraUser($conf);
-	$html = $from;
 	$api_args = [];
 	$submit = $_POST['submit']??$_POST['submit_type']??'';
 	$csrf_token = $_POST['csrf_token']??'';
@@ -70,7 +73,7 @@ function main(string $from):int{
 				}
 			}
 		} else {
-			$html = 'user_page';
+			$from = 'user_page';
 			$i = $user->user_exists(h(GakuUraUser::h($conf->url_param)));
 			if($i===0) $conf->not_found();
 			$u = $user->user_data_convert(explode("\t", get($user->user_list_file, $i+1)));
@@ -151,9 +154,7 @@ function main(string $from):int{
 				exit;
 			} elseif ($submit==='edit_dir' && list_isset($_POST,['new_name','perm']) && isset($perm_list[$_POST['perm']])){
 				$path = $current_dir;
-				$f = explode('/', $path);
-				array_pop($f);
-				$up_to_dir = implode('/', $f);
+				$up_to_dir = up_to($path);
 				#削除
 				if (($_POST['remove']??'')==='yes'){
 					rmdir_all($path);
@@ -170,13 +171,7 @@ function main(string $from):int{
 						}catch(Exception $e){}
 					}
 				}
-				$up_to = '';
-				if ($uri_dir !== ''){
-					$f = explode('/', $uri_dir);
-					array_pop($f);
-					$up_to = implode('/', $f);
-				}
-				header('Location:?Dir='.$up_to);
+				header('Location:?Dir='.up_to($uri_dir));
 				exit;
 			} elseif ($submit==='new' && list_isset($_POST,['new','name'])){
 				$template_dir = $conf->data_dir.'/default/file';
@@ -405,7 +400,7 @@ function main(string $from):int{
 		}
 		#upgrade menu
 		if ($menu === 'upgrade'){
-			$html = 'upgrade';
+			$from = 'upgrade';
 			$replace['ERROR_MSG'] = '権限が不足しています。';
 			$replace['CSRF_TOKEN'] = '';
 			$replace['GAKU_URA_FILES'] = implode('&#10;', GakuUra::GAKU_URA_FILES);
@@ -442,7 +437,7 @@ function main(string $from):int{
 			$replace['EXIT'] = '?Dir='.$uri_dir;
 			if ($menu === 'edit_db'){
 				#データベース編集
-				$html = 'admin_edit_table';
+				$from = 'admin_edit_table';
 				$replace['SUBMIT_TYPE'] = 'edit_db';
 				$replace['DBTYPE'] = 'sqlite';
 				$replace['DBNAME'] = $bname;
@@ -463,7 +458,7 @@ function main(string $from):int{
 						if ($i === $g->id_col){
 							$replace['COLS'] .= '<th style="width:3em;">'.h($i).'</th>';
 						} else {
-							$replace['COLS'] .= '<th><input type="text" name="col,'.h($i).'" value="'.h($i).'" style="width:95%;border:0;outline:0;"><i style="font:.8em/1 sans-serif;display:block;text-align:left;">'.$ci[$i].'</i></th>';
+							$replace['COLS'] .= '<th><input type="text" name="col,'.h($i).'" value="'.h($i).'" style="width:100%;border:0;outline:0;"><i style="font:.8em/1 sans-serif;display:block;text-align:left;">'.$ci[$i].'</i></th>';
 						}
 					}
 					foreach ($g->get_rows($t) as $r){
@@ -526,33 +521,19 @@ function main(string $from):int{
 			$is_edit_mode = 1;
 			$bname = basename($current_dir);
 			$replace['TITLE'] = lreplace($current_dir, $c_root.'/');
-			$up_to = '';
-			if ($uri_dir !== ''){
-				$up_to = explode('/', $uri_dir);
-				array_pop($up_to);
-				$up_to = implode('/', $up_to);
-			}
-			$replace['EXIT'] = '?Dir='.$up_to;
+			$replace['EXIT'] = '?Dir='.up_to($uri_dir);
 			$replace['NAME'] = $bname;
 			$replace['PERM'] = file_perm($current_dir);
 			$replace['SUBMIT_TYPE'] = 'edit_dir';
 			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__edit_dir');
 		} else {
 			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__new');
-			$p = '<tr><td colspan="5">';
-			if ($uri_dir === ''){
-				$p .= '[root]';
-			} else {
-				$fl = explode('/', $uri_dir);
-				$l = count($fl)-1;
-				$p .= '<a href="./">[root]</a>';
-				if($l>0)for($f=$fl[0],$i=0;$i<$l;++$i,$f.='/'.$fl[$i]) $p.='/<a href="?Dir='.$f.'">'.$fl[$i].'</a>';
-				$p .= '/'.$fl[$l];
-			}
-			$p .= '</td></tr>';
+			$l = '';
+			for($i=dirname($uri_dir);$i!==($j=dirname($i));$i=$j) $l='/<a href="?Dir='.$i.'">'.basename($i).'</a>'.$l;
+			$p = '<tr><td colspan="5"><a href="./">[root]</a>'.$l.'/'.basename($uri_dir).'</td></tr>';
 			#先頭の/禁止
-			$u_dir = $uri_dir;
-			if($u_dir!=='') $u_dir.='/';
+			$u = $uri_dir;
+			if($u!=='') $u.='/';
 			$files = scandir($current_dir,SCANDIR_SORT_NONE);
 			file_sort($files, $current_dir);
 			foreach ($files as $f){
@@ -560,7 +541,7 @@ function main(string $from):int{
 				$file = $current_dir.'/'.$f;
 				$fmt = '<tr><td><a href="?Dir=%s"%s>'.$f.'</a></td><td><a href="?Dir=%s&Menu=edit">編　集</a></td><td>%s '.file_perm($file).'</td><td>'.date('Y-m/d H:i',filemtime($file)).'</td></tr>';
 				if (is_dir($file)){
-					$p .= sprintf($fmt, $u_dir.$f,' class="dir"',$u_dir.$f,count(scandir($file))-2 .'item');
+					$p .= sprintf($fmt, $u.$f,' class="dir"',$u.$f,count(scandir($file))-2 .'item');
 				} else {
 					$e = str_ends_with($f,'.db')?'&Menu=edit_db':'';
 					$p .= sprintf($fmt, $uri_dir.'&File='.$f.$e,'',$uri_dir.'&File='.$f,filesize($file)/1000 .'kB '.mime_content_type($file));
@@ -569,7 +550,7 @@ function main(string $from):int{
 			$replace['FILE_LIST'] = $p;
 		}
 		if ($is_edit_mode){
-			if($html===$from) $html='admin_edit';
+			$from = 'admin_edit';
 		} elseif ($menu === 'edit'){
 			if($is_async) return 3;
 		}
@@ -628,6 +609,6 @@ function main(string $from):int{
 	}
 	$conf->content_type('text/html');
 	foreach($api_args as $k=>$v) $replace['API_ARGS'].=$k.'="'.$v.'" ';
-	return $conf->htmlf('users', $html, $replace);
+	return $conf->htmlf('users', $from, $replace);
 }
 
