@@ -14,11 +14,13 @@ const popup = new POPUP();
 $ID("form").innerHTML += '<input type="hidden" name="submit_type" value="'+$QS('#form [type="submit"]').value+'">';
 function table_editor(f){
 	const tprefix = "gaku-ura_table_";
+	const tw = document.createElement("div");
 	const table = document.createElement("table");
 	const tbody = document.createElement("tbody");
 	const add_row = document.createElement("button");
 	const add_col = document.createElement("button");
 	const d = f.endsWith(".csv")?",":"\t";
+	tw.classList.add("table");
 	$ID("text").style.display = "none";
 	add_row.innerHTML = "+行を追加";
 	add_col.innerHTML = "+列を追加";
@@ -45,7 +47,8 @@ function table_editor(f){
 		++c;
 	});
 	table.append(tbody);
-	$ID("form").append(table);
+	tw.append(table);
+	$ID("form").append(tw);
 	table.before(add_row);
 	table.before(add_col);
 	add_row.addEventListener("click", (e)=>{
@@ -163,7 +166,7 @@ class TextEditor{
 		window.addEventListener("wheel", (e)=>{
 			if (e.ctrlKey){
 				e.preventDefault();
-				(e.deltaY<0)?this.#f.value++:this.#f.value--;
+				e.deltaY<0?this.#f.value++:this.#f.value--;
 				this.zoom();
 			}
 		},{passive:false});
@@ -260,7 +263,7 @@ class TextEditor{
 		this.setup();
 	}
 	zoom(){
-		const v = (this.#f.value<1)?1:this.#f.value;
+		const v = this.#f.value<1?1:this.#f.value;
 		this.#ae.style.fontSize = $ID("text").style.fontSize = v+"px";
 		localStorage.setItem(key_f, v);
 	}
@@ -310,8 +313,24 @@ $ID("form").addEventListener("submit", async (e)=>{
 	e.preventDefault();
 	if (await reload_csrf("csrf_token")){
 		const c = $QS('[name="remove"]:checked');
-		if(!c||(c.value==="yes"&&(await popup.confirm("一度削除すると復元出来ません。<br>本当に削除しますか?")))) $ID("form").submit();
-		c.checked = false;
+		if (c && c.value==="yes"){
+			if(await popup.confirm("一度削除すると復元出来ません。<br>本当に削除しますか?")) $ID("form").submit();
+		} else if ($QS('[name="name"]').value!==$QS('[name="new_name"]').value || $QS('[name="perm"]').value!=="no"){
+			$ID("form").submit();
+		} else {
+			const h = $QS("h1").innerHTML;
+			$QS("h1").innerHTML = "[saving...]"+h;
+			const f = new FormData($ID("form"));
+			const x = new XMLHttpRequest();
+			f.append("submit", $QS('[type="submit"]').value);
+			x.addEventListener("load", (e)=>{
+				$QS("h1").innerHTML = "[saved]"+h;
+				setTimeout(()=>{$QS("h1").innerHTML=h;},1000);
+			});
+			x.open("POST", location.href);
+			x.send(f);
+		}
+		$QS('[name="remove"]').checked = false;
 	}
 });
 

@@ -4,7 +4,7 @@
 	word-break:break-all;
 	box-sizing:border-box;
 }
-body, input, textarea, form div, select{
+body, input, textarea, select{
 	background:#ffc;
 	color:#111;
 }

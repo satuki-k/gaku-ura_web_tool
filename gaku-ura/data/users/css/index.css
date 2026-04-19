@@ -62,6 +62,13 @@ button:hover{
 	background:transparent;
 	color:#fff;
 }
+
+.table{
+	overflow-x:scroll;
+}
+.table td{
+	min-width:5em;
+}
 #exit{
 	border:solid 1px #fff;
 	background:#f0b;

@@ -131,7 +131,7 @@ function mopen(e, c){
 		if(ur) u=ur+u;
 		m.push(["WEBページとして開く",u,1]);
 	}
-	const s = "color:#111;padding:.2em;display:block;";
+	const s = "color:#111;margin:.2em;display:block;";
 	m.forEach((i)=>{
 		const o = document.createElement("a");
 		o.innerHTML = i[0];
@@ -158,7 +158,7 @@ function mopen(e, c){
 			return;
 		}
 		prs("removing files...");
-		for (let i = 0; i < s.length; ++i){
+		for (let i = 0;i < s.length;++i){
 			try{
 				const l = s[i].querySelectorAll("a")[1].href+"&async";
 				const r = await fetch(l);

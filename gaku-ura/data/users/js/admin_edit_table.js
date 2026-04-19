@@ -171,6 +171,8 @@ const fn = {
 	"列を追加":"ALTER TABLE "+tn+" ADD COLUMN 列 型;",
 	"カウント":"SELECT COUNT(列)FROM "+tn+";",
 	"合計":"SELECT SUM(列)FROM "+tn+";"};
+const rs = document.createElement("pre");
+$ID("form").after(rs);
 mf.name = "sql_fn";
 for (const [k,v] of Object.entries(fn)){
 	const o = document.createElement("option");
@@ -198,6 +200,28 @@ mf.addEventListener("change", ()=>{
 $QS('select[name="ctable"]').addEventListener("change", ()=>{$QS('[type="submit"]').click();});
 $ID("form").addEventListener("submit", async (e)=>{
 	e.preventDefault();
-	if(await reload_csrf("csrf_token")) $ID("form").submit();
+	if (await reload_csrf("csrf_token")){
+		if (not_empty($QS('[name="query"]').value)){
+			const f = new FormData($ID("form"));
+			const x = new XMLHttpRequest();
+			f.append("submit", $QS('[type="submit"]').value);
+			x.addEventListener("load", (e)=>{
+				const r = x.responseText;
+				r&&!r.startsWith("<")?rs.innerHTML=r:location.reload();
+			});
+			x.open("POST", location.href);
+			x.send(f);
+		} else {
+			$ID("form").submit();
+		}
+		$QS('input[name="export"]').checked = false;
+		$QS('[name="query"]').value = "";
+	}
+});
+window.addEventListener("keydown", (e)=>{
+	if (isCtrlKey(e) && e.key==="s"){
+		e.preventDefault();
+		$QS('[type="submit"]').click();
+	}
 });
 

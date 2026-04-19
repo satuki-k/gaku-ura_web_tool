@@ -15,18 +15,20 @@
 	</p>
 	<p>{TTITLE}  table切替<select name="ctable"><option value="">───</option>{TABLE_LIST}</select> <button type="submit" name="submit_type" value="{SUBMIT_TYPE}">変更</button></p>
 	<p style="color:#ff0;">Issue:値以外の項目は各自でエスケープが必要です。UTF-8ではないファイルはインポートできません。</p>
-	<table>
-		<thead>
-			<tr>{COLS}</tr>
-		</thead>
-		<tbody>
-			{ROWS}
-		</tbody>
-	</table>
+	<div class="table">
+		<table>
+			<thead>
+				<tr>{COLS}</tr>
+			</thead>
+			<tbody>
+				{ROWS}
+			</tbody>
+		</table>
+	</div>
 	<p><label><input type="checkbox" name="export" value="true">export CSV</label></p>
 	<p>
 		<label>SQL実行<br><textarea name="query" rows="5"></textarea></label>
-		<button type="submit" name="submit_type" value="{SUBMIT_TYPE}">実行</button>
+		<button type="submit" name="submit_type" value="{SUBMIT_TYPE}" id="exec">実行</button>
 	</p>
 </form>
 
