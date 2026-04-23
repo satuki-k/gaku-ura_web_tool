@@ -39,12 +39,4 @@ button:hover{
 .panel .side{
 	width:50%;
 }
-.panel a, .panel a:visited{
-	text-decoration:underline;
-	color:#15d;
-}
-.panel a:hover{
-	text-decoration:none;
-	font-weight:bold;
-}
 
