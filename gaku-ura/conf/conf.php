@@ -1,6 +1,6 @@
 <?php
-#gaku-ura標準ライブラリが定義
-const GAKU_URA_VERSION = '9.7.11';
+#gaku-ura標準lib
+const GAKU_URA_VERSION = '9.7.12';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
@@ -493,13 +493,13 @@ class GakuUra{
 	#csrfトークン発行
 	public function set_csrf_token(string $name, int $l=32, int $r=64):string{
 		$t = one_time_pass($l, $r);
-		$_SESSION['csrf_token__'.$name] = implode("'",[$t,$this->here]);
+		$_SESSION['csrf_token__'.$name] = implode("'",[$t,$this->domain]);
 		return $t;
 	}
 	#nameはsetとcheckで同じ文字列にする
 	public function check_csrf_token(string $name, string $t, bool $chkref):bool{
 		$d = explode("'", $_SESSION['csrf_token__'.$name]??'');
-		return $t&&count($d)>1&&$d[0]===$t&&($d[1]===$this->referer||!$chkref);
+		return $t&&count($d)>1&&$d[0]===$t&&(str_starts_with($this->referer,$d[1])||!$chkref);
 	}
 	public function form_die():void{exit($this->html('error-','',to_html("#フォーム損傷\n予期しない送信内容により停止しました。")));}
 	#学裏ライブラリの上書き展開

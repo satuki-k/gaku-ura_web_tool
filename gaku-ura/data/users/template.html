@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{TITLE}{SITE_TITLE}</title>
+<link rel="stylesheet" href="{CSS_URL}">
+<link rel="icon" href="/favicon.ico">
+</head>
+<body>
+<!--
+管理ページ用テンプレート
+-->
+{CONTENT}
+<footer>
+<nav>
+<label for="SW"></label>
+<input type="checkbox" id="SW" style="display:none;">
+<p class="n">
+<label for="SW"></label>
+　<a href="{U_ROOT}">サイトへ移動</a>
+　<a href="{U_ROOT}users/admin/">ファイル管理</a>
+　<a href="{U_ROOT}users/admin/?Menu=upgrade">システム更新</a>
+　<a href="{U_ROOT}users/">🏚マイページ</a>
+　<a href="http://bq.f5.si/?Page=code" target="_blank">help</a>
+</p>
+</nav>
+<p class="c">&copy; gaku-ura project SINCE2023</p>
+</footer>
+<script src="{JS_URL}" nonce="{NONCE}"></script>
+</body>
+</html>
