@@ -1,5 +1,4 @@
 /* マイページ,ログイン・登録,プロフィール */
-#!include ../../../users/template.css;
 form{
 	padding:1em;
 }
