@@ -19,21 +19,37 @@ function table_editor(f){
 	const tbody = document.createElement("tbody");
 	const add_row = document.createElement("button");
 	const add_col = document.createElement("button");
+	const sort_id = document.createElement("button");
+	const del_row_btns = [];
 	const d = f.endsWith(".csv")?",":"\t";
+	table.id = tprefix;
 	tw.classList.add("table");
 	$ID("text").style.display = "none";
 	add_row.innerHTML = "+行を追加";
 	add_col.innerHTML = "+列を追加";
+	sort_id.innerHTML = "idを整列";
 	add_row.type = "button";
 	add_row.id = "add_row";
 	add_col.type = "button";
 	add_col.id = "add_col";
+	sort_id.type = "button";
+	sort_id.id = "sort_id";
 	let col = ($ID("text").value.split("\n")[0]??"").split(d).length;
 	let c = 0;
+	//table形成
 	$ID("text").value.split("\n").forEach((row)=>{
 		const tr = document.createElement("tr");
 		const l = row.split(d);
 		tr.id = tprefix+c;
+		const td = document.createElement("td");
+		const bn = document.createElement("input");
+		bn.type = "button";
+		bn.value = "削除";
+		bn.id = tprefix+"del"+c;
+		bn.name = "1";
+		td.append(bn);
+		tr.append(bn);
+		del_row_btns.push([c,bn]);
 		for (let i = 0;i < col;++i){
 			const td = document.createElement("td");
 			const ip = document.createElement("input");
@@ -49,8 +65,25 @@ function table_editor(f){
 	table.append(tbody);
 	tw.append(table);
 	$ID("form").append(tw);
+	if($ID(tprefix+"0,0").value==="id"||$ID(tprefix+"0,0").value.endsWith("_id")) table.before(sort_id);
 	table.before(add_row);
 	table.before(add_col);
+	//空行非表示+id整列
+	sort_id.addEventListener("click", async(e)=>{
+		if(!await popup.confirm("空行を削除してidを振り直します。")) return;
+		for (let i=1,x=0;i < c;++i){
+			if(!$ID(tprefix+i)) continue;
+			let m = 0;
+			for(let j = 0;j < col;++j)if($ID(tprefix+i+","+j).value.length>0) m=1;
+			if (m){
+				$ID(tprefix+i+",0").value=i-x;
+			} else {
+				$ID(tprefix+i).style.display = "none";
+				++x;
+			}
+		}
+	});
+	//行追加
 	add_row.addEventListener("click", (e)=>{
 		const tr = document.createElement("tr");
 		tr.id = tprefix+c;
@@ -65,6 +98,7 @@ function table_editor(f){
 		tbody.append(tr);
 		++c;
 	});
+	//列追加
 	add_col.addEventListener("click", (e)=>{
 		for (let i = 0;i < c;++i){
 			const td = document.createElement("td");
@@ -75,6 +109,32 @@ function table_editor(f){
 			$ID(tprefix+i).append(td);
 		}
 		++col;
+	});
+	//行の値削除
+	del_row_btns.forEach((j)=>{
+		j[1].addEventListener("click", (e)=>{
+			if (j[1].name){
+				const m = [];
+				for (let i=0;i < col;++i){
+					const v = $ID(tprefix+j[0]+","+i);
+					if (v){
+						m.push(v.value);
+						v.value = "";
+					}
+				}
+				j[1].setAttribute("mem", m.join(d));
+				j[1].name = "";
+				j[1].value = "復元";
+			} else {
+				const m = j[1].getAttribute("mem").split(d);
+				for (let i=0;i < col;++i){
+					const v = $ID(tprefix+j[0]+","+i);
+					if(v) v.value=m[i];
+				}
+				j[1].name = "1";
+				j[1].value = "削除";
+			}
+		});
 	});
 	const table2text = ()=>{
 		$ID("text").value = "";
@@ -101,7 +161,7 @@ function table_editor(f){
 		r.remove();
 		$ID("form").removeEventListener("submit", table2text);
 		table2text();
-		table.remove();
+		tw.remove();
 		add_col.remove();
 		add_row.remove();
 		new TextEditor();

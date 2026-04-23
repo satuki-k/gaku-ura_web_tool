@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.11
+#gaku-ura9.7.12
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -132,7 +132,6 @@ function main(string $from):int{
 		if ($submit && $conf->check_csrf_token('admin__'.$submit,$csrf_token,true)){
 			if ($submit==='edit_file' && list_isset($_POST,['name','new_name','perm']) && strpos($_POST['name'],'..')===false && strpos($_POST['name'], '/')===false && is_file($current_dir.'/'.h($_POST['name'])) && isset($perm_list[$_POST['perm']])){
 				$path = $current_dir.'/'.h($_POST['name']);
-				#削除
 				if (($path!==$conf->config_file&&!str_starts_with($path,$user->user_dir.'/'.GakuUraUser::TABLE_NAME)) || $user_data['admin']>=4){
 					if (($_POST['remove']??'')==='yes'){
 						unlink($path);
@@ -155,7 +154,6 @@ function main(string $from):int{
 			} elseif ($submit==='edit_dir' && list_isset($_POST,['new_name','perm']) && isset($perm_list[$_POST['perm']])){
 				$path = $current_dir;
 				$up_to_dir = up_to($path);
-				#削除
 				if (($_POST['remove']??'')==='yes'){
 					rmdir_all($path);
 				} else {
@@ -176,13 +174,14 @@ function main(string $from):int{
 			} elseif ($submit==='new' && list_isset($_POST,['new','name'])){
 				$template_dir = $conf->data_dir.'/default/file';
 				$name = str_replace('..','', str_replace('/','',h($_POST['name'])));
-				if (in_array($_POST['new'],['.htaccess','/sitemap.xml','/robots.txt'],true) && !str_starts_with($conf->d_root,$c_root)){
+				$nw = $_POST['new'];
+				if (in_array($nw,['.htaccess','/sitemap.xml','/robots.txt'],true) && !str_starts_with($conf->d_root,$c_root)){
 					$conf->not_found(false, '権限がありません');
 				}
-				if ($_POST['new'] === '.htaccess'){
+				if ($nw === '.htaccess'){
 					touch($current_dir.'/.htaccess');
-				} elseif ($_POST['new']==='/sitemap.xml' && str_starts_with($conf->d_root,$c_root) && is_file($template_dir.$_POST['new'])){
-					$f = $template_dir.$_POST['new'];
+				} elseif ($nw==='/sitemap.xml' && str_starts_with($conf->d_root,$c_root) && is_file($template_dir.$nw)){
+					$f = $template_dir.$nw;
 					$url_list = [''];
 					$d = $conf->data_dir.'/home/html';
 					foreach (scandir($d) as $i){
@@ -194,34 +193,34 @@ function main(string $from):int{
 					$t = '';
 					foreach(array_unique($url_list)as$i) $t.='<url><loc>'.$conf->domain.$i.'</loc></url>'."\n";
 					$s = str_replace('{URL_LIST}', $t, file_get_contents($f));
-					file_put_contents($conf->d_root.$_POST['new'], $s, LOCK_EX);
+					file_put_contents($conf->d_root.$nw, $s, LOCK_EX);
 					header('Location:?Dir='.lreplace($c_root,$conf->d_root.'/').'&File='.basename($f).'&Menu=edit');
 					exit;
-				} elseif ($_POST['new']==='/robots.txt' && str_starts_with($conf->d_root,$c_root) && is_file($template_dir.$_POST['new'])){
-					$s = file_get_contents($template_dir.$_POST['new']);
+				} elseif ($nw==='/robots.txt' && str_starts_with($conf->d_root,$c_root) && is_file($template_dir.$nw)){
+					$s = file_get_contents($template_dir.$nw);
 					$s = str_replace('{DOMAIN}', $conf->domain, $s);
 					file_put_contents($conf->d_root.'/robots.txt', $s, LOCK_EX);
 					header('Location:?Dir='.lreplace($c_root,$conf->d_root.'/').'&File=robots.txt&Menu=edit');
 					exit;
 				} elseif (not_empty($name) && !file_exists($current_dir.'/'.$name)){
-					if ($_POST['new'] === 'folder'){
+					if ($nw === 'folder'){
 						foreach(explode('\\',$name)as$n) if(!file_exists($current_dir.'/'.$n))mkdir($current_dir.'/'.$n,0777,true);
-					} elseif ($_POST['new'] === 'file'){
+					} elseif ($nw === 'file'){
 						foreach(explode('\\',$name)as$n) if(!file_exists($current_dir.'/'.$n))touch($current_dir.'/'.$n);
 					} else {
-						if (!str_ends_with($name,'.'.$_POST['new']) && in_array($_POST['new'],['php','html','css','js','pl','py','db'],true)){
-							$name .= '.'.$_POST['new'];
+						if (!str_ends_with($name,'.'.$nw) && in_array($nw,['php','html','css','js','pl','py','db'],true)){
+							$name .= '.'.$nw;
 						}
 						$new_path = $current_dir.'/'.str_replace('..','.',$name);
-						$t = $template_dir.'/index.'.$_POST['new'];
-						if($_POST['new']==='php' && $current_dir===__DIR__) $t=$template_dir.'/main.php';
+						$t = $template_dir.'/index.'.$nw;
+						if($nw==='php'&&$current_dir===__DIR__) $t=$template_dir.'/main.php';
 						$s = "\n";
 						if(is_file($t)) $s=file_get_contents($t);
 						$r = ['DOMAIN'=>$conf->domain,'GAKU_URA_VERSION'=>GAKU_URA_VERSION,'SITE_TITLE'=>($conf->config['title']??'無題')];
 						foreach($r as $k=>$v) $s=str_replace('{'.$k.'}',$v,$s);
 						file_put_contents($new_path, $s, LOCK_EX);
-						if(in_array($_POST['new'],['pl','py'],true)) chmod($new_path, 0745);
-						if ($_POST['new'] === 'db'){
+						if(in_array($nw,['pl','py'],true)) chmod($new_path, 0745);
+						if ($nw === 'db'){
 							header('Location:./?Dir='.$uri_dir.'&File='.basename($new_path).'&Menu=edit_db');
 							exit;
 						}
@@ -253,20 +252,23 @@ function main(string $from):int{
 				exit;
 			} elseif ($submit==='edit_db'&&list_isset($_POST,['dbtype','dbname','query','table','import_name'])){
 				#SQLite
-				if ($_POST['dbtype']==='sqlite' && strpos($_POST['dbname'],'..')===false && strpos($_POST['dbname'], '/')===false && is_file($current_dir.'/'.$_POST['dbname'])){
-					$current_table = h(($_POST['table']??''));
-					$dbname = h($_POST['dbname']);
-					$table = h($_POST['ctable']);
-					$g = new GakuUraSQL($_POST['dbtype'], $current_dir.'/'.$_POST['dbname']);
+				$current_table = h($_POST['table']??'');
+				$change_table = h($_POST['table_name']??'');
+				$dbname = h($_POST['dbname']);
+				$table = h($_POST['ctable']);
+				if ($_POST['dbtype']==='sqlite' && strpos($dbname,'..')===false && strpos($dbname,'/')===false && is_file($current_dir.'/'.$dbname)){
+					$g = new GakuUraSQL($_POST['dbtype'], $current_dir.'/'.$dbname);
 					#インポート
 					if (($tn=$_FILES['file']['tmp_name']??'')!=='' && is_file($tn)){
 						$fp = fopen($tn,'r');
-						$n = $_FILES['file']['name'];
+						$n = h($_FILES['file']['name']);
+						if($p=strpos($n,'.')) $n=substr($n,0,$p);
+						foreach(['.','-']as$i) $n=str_replace($i,'',$n);
 						$a = [];
 						$sep = str_ends_with($n,'.tsv')?"\t":',';
 						while(($l=fgetcsv($fp,9999999,$sep,'"',''))!==false) $a[]=$l;
 						if(not_empty($_POST['import_name'])) $n=$_POST['import_name'];
-						$g->import(str_replace('.','',str_replace('-','',h($n))), $a, $_POST['first_is_col']??''==='true', true);
+						$g->import($n, $a, $_POST['first_is_col']??''==='true', true);
 						fclose($fp);
 					}
 					#削除とtable切替を同時に行うと切替の優先で意図しない削除を防止
@@ -308,9 +310,9 @@ function main(string $from):int{
 							exit;
 						}
 					}
-					#table変更
-					if (($_POST['table_name']??'')!=='' && $_POST['table_name']!==$current_table){
-						if($g->change_table($current_table, $_POST['table_name'])) $current_table=$_POST['table_name'];
+					#table名変更
+					if ($change_table && $change_table!==$current_table){
+						if($g->change_table($current_table, $change_table)) $current_table=$change_table;
 					}
 					#列変更
 					$c = $g->get_cols($current_table);

@@ -1,15 +1,5 @@
 /* マイページ,ログイン・登録,プロフィール */
-html{
-	background:#000;
-	color:#fff;
-}
-body,input,textarea{
-	background:#ffc;
-	color:#111;
-}
-h1{
-	color:#938;
-}
+#!include ../../../users/template.css;
 form{
 	padding:1em;
 }

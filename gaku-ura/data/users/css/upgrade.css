@@ -1,4 +1,6 @@
 /* ugradeウィザード */
+#!include ../../../users/template.css;
+
 body,input,textarea{
 	background:#034;
 	color:#eee;
