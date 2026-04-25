@@ -3,7 +3,7 @@
 require __DIR__ .'/../conf/conf.php';
 function main():int{
 	$conf = new GakuUra();
-	$u = $_SERVER['REQUEST_URI']??'';
+	$u = urldecode($_SERVER['REQUEST_URI']??'');
 	$d = $conf->d_root.$u;
 	$reason = '';
 	$q = strpos($u,'?')===false?'':substr($u, strpos($u,'?'));
