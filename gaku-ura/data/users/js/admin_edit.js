@@ -10,6 +10,8 @@ const key_f = "gaku-ura_editor_fontSize";
 const cdn_a = "https:\/\/cdnjs.cloudflare.com/ajax/libs/ace/1.43.3/ace.js";
 const q = (new URL(document.location)).searchParams;
 const popup = new POPUP();
+const fparea = document.createElement("span");
+$QS("h1").prepend(fparea);
 //submitメソッドを使えるようにする
 $ID("form").innerHTML += '<input type="hidden" name="submit_type" value="'+$QS('#form [type="submit"]').value+'">';
 function table_editor(f){
@@ -43,12 +45,13 @@ function table_editor(f){
 		tr.id = tprefix+c;
 		const td = document.createElement("td");
 		const bn = document.createElement("input");
+		td.style.minWidth = "2em";
 		bn.type = "button";
 		bn.value = "削除";
 		bn.id = tprefix+"del"+c;
 		bn.name = "1";
 		td.append(bn);
-		tr.append(bn);
+		tr.append(td);
 		del_row_btns.push([c,bn]);
 		for (let i = 0;i < col;++i){
 			const td = document.createElement("td");
@@ -87,6 +90,9 @@ function table_editor(f){
 	add_row.addEventListener("click", (e)=>{
 		const tr = document.createElement("tr");
 		tr.id = tprefix+c;
+		const td = document.createElement("td");
+		td.style.minWidth = "2em";
+		tr.append(td);
 		for (let i = 0;i < col;++i){
 			const td = document.createElement("td");
 			const ip = document.createElement("input");
@@ -368,7 +374,7 @@ if($ID("text")){
 		new TextEditor();
 	});
 }
-//削除の警告
+//削除の警告・非同期投稿
 $ID("form").addEventListener("submit", async (e)=>{
 	e.preventDefault();
 	if (await reload_csrf("csrf_token")){
@@ -378,14 +384,17 @@ $ID("form").addEventListener("submit", async (e)=>{
 		} else if ($QS('[name="name"]').value!==$QS('[name="new_name"]').value || $QS('[name="perm"]').value!=="no"){
 			$ID("form").submit();
 		} else {
-			const h = $QS("h1").innerHTML;
-			$QS("h1").innerHTML = "[saving...]"+h;
+			fparea.innerHTML = "[saving...]";
 			const f = new FormData($ID("form"));
 			const x = new XMLHttpRequest();
 			f.append("submit", $QS('[type="submit"]').value);
 			x.addEventListener("load", (e)=>{
-				$QS("h1").innerHTML = "[saved]"+h;
-				setTimeout(()=>{$QS("h1").innerHTML=h;},1000);
+				fparea.innerHTML = "[saved]";
+				popup.alert("保存しました。");
+				setTimeout(()=>{
+					fparea.innerHTML="";
+					popup.disapear();
+				},500);
 			});
 			x.open("POST", location.href);
 			x.send(f);

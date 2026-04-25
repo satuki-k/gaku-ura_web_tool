@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.7.12';
+const GAKU_URA_VERSION = '9.7.13';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
@@ -35,7 +35,7 @@ function lreplace(string $s, string $left, string $to=''):string{
 }
 #末尾で
 function rreplace(string $s, string $right, string $to=''):string{
-	if($right!==''&&str_ends_with($s,$right)) return substr($s,0,strpos($s,$right)).$to;
+	if($right!==''&&str_ends_with($s,$right)) return substr($s,0,strrpos($s,$right)).$to;
 	return $s;
 }
 #改行除去
@@ -201,7 +201,7 @@ function list_isset(array $dict, array $keys):bool{
 #html互換md
 function to_html(string $text):string{
 	remove_comment_rows($text,'<!--','-->');
-	foreach(['|'=>124,'《'=>12298,'》'=>12299,'*'=>42,'#'=>35,'"'=>34,"'"=>39,'`'=>96,'~'=>126,'\\'=>92]as$k=>$v) $text=str_replace('\\'.$k,'&#'.$v.';',$text);
+	foreach(['|'=>124,'《'=>12298,'》'=>12299,'*'=>42,'#'=>35,'"'=>34,"'"=>39,'`'=>96,'~'=>126,'\\'=>92]as$k=>$v) $text=str_replace("\\$k","&#$v;",$text);
 	$rows = explode("\n", str_replace("\\\n",'',u8lf($text)));
 	$r = '';
 	for ($ol=0,$ul=0,$len=count($rows),$j=0;$j < $len;++$j){
@@ -248,16 +248,11 @@ function to_html(string $text):string{
 					break;
 				}
 			}
-			if ($i){
-				$r .= '<p>'.$l.'</p>';
-			} else {
-				$r .= $l;
-			}
+			$r .= $i?"<p>$l</p>":$l;
 		} elseif (str_starts_with($l,'`')){
 			$r .= $l;
 		} else {
-			if($l==='') $l='<br>';
-			$r .= '<p>'.$l.'</p>';
+			$r .= $l===''?'<p><br></p>':"<p>$l</p>";
 		}
 	}
 	foreach (['~~'=>'del','**'=>'b','```'=>'blockquote','`'=>'code','*'=>'i'] as $w=>$t){
@@ -493,13 +488,15 @@ class GakuUra{
 	#csrfトークン発行
 	public function set_csrf_token(string $name, int $l=32, int $r=64):string{
 		$t = one_time_pass($l, $r);
-		$_SESSION['csrf_token__'.$name] = implode("'",[$t,$this->domain]);
+		$_SESSION['csrf_token__'.$name] = implode("'",[$t,$this->here]);
 		return $t;
 	}
 	#nameはsetとcheckで同じ文字列にする
-	public function check_csrf_token(string $name, string $t, bool $chkref):bool{
+	public function check_csrf_token(string $name, string $t, bool $ref):bool{
 		$d = explode("'", $_SESSION['csrf_token__'.$name]??'');
-		return $t&&count($d)>1&&$d[0]===$t&&(str_starts_with($this->referer,$d[1])||!$chkref);
+		$a = strpos($d[1]??'', '://');
+		$b = strpos($this->referer, '://');
+		return $t&&$d[0]===$t&&(!$ref||($a&&$b&&substr($d[1],$a+3)===substr($this->referer,$b+3)));
 	}
 	public function form_die():void{exit($this->html('error-','',to_html("#フォーム損傷\n予期しない送信内容により停止しました。")));}
 	#学裏ライブラリの上書き展開

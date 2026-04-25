@@ -19,12 +19,12 @@ textarea{
 }
 button{
 	font-size:1em;
-	border:ridge .1em #111;
 	padding:.2em;
-	background:#eef;
+	background:#398;
+	color:#fff;
 }
 button:hover{
-	background:transparent;
+	background:#938;
 }
 .profile h1{
 	text-align:left;

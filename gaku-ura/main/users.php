@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.12
+#gaku-ura9.7.13
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -99,7 +99,7 @@ function main(string $from):int{
 		foreach(['max_file_uploads']as$i) $api_args[$i]=ini_get($i);
 		#要点ファイルショートカット
 		$scut = [];
-		$api_args['u_root'] = rreplace($conf->u_root,'/');
+		$api_args['u_root'] = $conf->u_root;
 		if (str_starts_with($conf->d_root,$c_root)){
 			$api_args['d_root'] = lreplace(lreplace($conf->d_root,$c_root), '/');
 			$scut[] = '<a href="?Dir='.$api_args['d_root'].'">TOP</a>';

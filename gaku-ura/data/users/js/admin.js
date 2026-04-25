@@ -68,7 +68,7 @@ document.body.append(g);
 const f = $QS('tbody');
 const r = f.children;
 const dr = arg.getAttribute("d_root");
-const ur = arg.getAttribute("u_root");
+const ur = arg.getAttribute("u_root")??"/";
 const udr = arg&&dr!==null&&(dr===""||~(q.get("Dir")??"").indexOf(dr));
 function mclose(e){
 	g.style.display="none";
@@ -125,11 +125,9 @@ function mopen(e, c){
 	if (udr){
 		const f = a.href.slice(a.href.indexOf("=")+1).slice(dr.length);
 		let u = ~f.indexOf("&")?f.slice(0,f.indexOf("&")):f;
-		if(u.slice(0,1)!=="/") u="/"+u;
-		if(u!=="/") u+="/";
+		u = ur+u+"/";
 		if(a.getAttribute("class")!=="dir") u+=a.textContent;
-		if(ur) u=ur+u;
-		m.push(["WEBページとして開く",u,1]);
+		m.push(["WEBページとして開く",u.replace("\/\/","/"),1]);
 	}
 	const s = "color:#111;margin:.2em;display:block;";
 	m.forEach((i)=>{
