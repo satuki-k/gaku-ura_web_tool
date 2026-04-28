@@ -1,1 +1,7 @@
 /* トップページのみ適応 */
+#!include tabs.css;
+
+.content_list{
+	border:solid 1px;
+}
+

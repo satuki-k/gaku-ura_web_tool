@@ -41,9 +41,18 @@ function rreplace(string $s, string $right, string $to=''):string{
 #改行除去
 function row(string $s):string{return str_replace("\r",'',str_replace("\n",'',$s));}
 #base64_URLencode
-function encode_a(string $s):string{return str_replace('+','-',str_replace('/','_',base64_encode($s)));}
+function encode_a(string $s):string{
+	$b = base64_encode($s);
+	return rtrim(strtr($b,'+/','-_'), '=');
+}
 #base64_URLdecode
-function decode_a(string $s):string{return base64_decode(str_replace('_','/',str_replace('-','+',$s)));}
+function decode_a(string $s):string{
+	$b = strtr($s, '-_', '+/');
+	$p = strlen($b)%4;
+	if($p) $b.=str_repeat('=',4-$p);
+	$d = base64_decode($b, true);
+	return is_string($d)?$d:'';
+}
 #乱数文字列
 function one_time_pass(int $l,int $r):string{return encode_a(random_bytes(random_int($l,$r)));}
 #開始と終了の文字列で囲まれた中身の文字列
@@ -91,11 +100,14 @@ function path_list(string $dir):array{
 	return $l;
 }
 #ディレクトリ再帰コピー (from,to,[上書きしないパス]) 引数は絶対パスで正規化すること
-function copy_path(string $dir, string $to, array $skip=[]):void{
-	if(!file_exists($dir)||(is_dir($dir)&&is_file($to))||(is_file($dir)&&is_dir($to))) return;
+#ファイルでコピー先が無い場合: to全体をディレクトリとして作成
+function copy_path(string $dir, string $to, array $skip=[]):bool{
+	if(!file_exists($dir)||(is_dir($dir)&&is_file($to))) return true;
 	if (is_file($dir)){
-		if(!in_array($to,$skip,true)) copy($dir,$to);
-		return;
+		if(in_array($to,$skip,true)) return true;
+		if(!file_exists($to)) mkdir($to,0777,true);
+		if(is_dir($to)) $to=rreplace($to,'/').'/'.basename($dir);
+		return copy($dir,$to);
 	}
 	if(!is_dir($to)) mkdir($to,0777,true);
 	foreach (scandir($dir) as $i){
@@ -103,9 +115,14 @@ function copy_path(string $dir, string $to, array $skip=[]):void{
 			$f = $dir.'/'.$i;
 			$t = $to.'/'.$i;
 			foreach($skip as $s)if($t===$s) continue 2;
-			is_dir($f)?copy_path($f,$t,$skip):copy($f,$t);
+			if(is_dir($f)){
+				if(!copy_path($f,$t,$skip)) return false;
+			} elseif (!copy($f,$t)){
+				return false;
+			}
 		}
 	}
+	return true;
 }
 #ディレクトリ再帰削除
 function rmdir_all(string $dir):void{
@@ -198,12 +215,13 @@ function list_isset(array $dict, array $keys):bool{
 	foreach($keys as $k) if(!isset($dict[$k]))return false;
 	return true;
 }
-#html互換md
+#html互換md 内部処理用。ユーザー入力で使用する場合は事前にエスケープしてください
 function to_html(string $text):string{
 	remove_comment_rows($text,'<!--','-->');
 	foreach(['|'=>124,'《'=>12298,'》'=>12299,'*'=>42,'#'=>35,'"'=>34,"'"=>39,'`'=>96,'~'=>126,'\\'=>92]as$k=>$v) $text=str_replace("\\$k","&#$v;",$text);
 	$rows = explode("\n", str_replace("\\\n",'',u8lf($text)));
 	$r = '';
+	$hid = [];
 	for ($ol=0,$ul=0,$len=count($rows),$j=0;$j < $len;++$j){
 		$l = trim($rows[$j]);
 		if (str_starts_with($l,'*') && substr_count($l,'*')%2){
@@ -236,7 +254,10 @@ function to_html(string $text):string{
 			for ($i=6;$i > 0;--$i){
 				$p = str_repeat('#', $i);
 				if (substr($l,0,$i) === $p){
-					$r .= '<h'.$i.'>'.trim(substr($l,$i)).'</h'.$i.'>';
+					$h = trim(substr($l, $i));
+					$d = subrpos('<!id ','>', $h);
+					if($d!=='') $d=' id="'.$d.'"';
+					$r .= '<h'.$i.$d.'>'.$h.'</h'.$i.'>';
 					break;
 				}
 			}
@@ -271,7 +292,7 @@ function to_html(string $text):string{
 	}
 	return $r;
 }
-#真IP
+#まあまあ正確なIP
 function get_ip():string{
 	if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])){
 		$i = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
@@ -303,7 +324,12 @@ class GakuUra{
 		'gaku-ura/data/default/default.css','gaku-ura/data/users/html/custom'];
 	function __construct(?bool $third=null){
 		header('Referrer-Policy:same-origin');
-		if(!isset($_SESSION)) session_start(['cookie_lifetime'=>time()+3600*2400]);
+		if (!isset($_SESSION)){
+			session_set_cookie_params([
+				'lifetime'=>2400*3600,'secure'=>!empty($_SERVER['HTTPS']),'httponly'=>true,'samesite'=>'Strict'
+			]);
+			session_start();
+		}
 		$this->d_root = realpath(__DIR__ .'/../..');
 		$this->system_dir = realpath(__DIR__ .'/..');
 		$this->data_dir = $this->system_dir.'/data';
@@ -347,8 +373,9 @@ class GakuUra{
 		$a = strpos($type,'text/')===0?'charset='.$c:'';
 		header('Content-Type:'.$type.';'.$a);
 	}
+	#htmlやmdの変数展開をエスケープする用 通常のhtmlエスケープはこれではなくh関数を使用
 	public static function h(string $s):string{
-		return str_replace('{','&#123;', str_replace('}','&#125;',$s));#不意置換防止
+		return str_replace('{','&#123;', str_replace('}','&#125;',$s));
 	}
 	#ファイル同時アクセス防止
 	public function file_lock(string $label):void{
@@ -504,12 +531,19 @@ class GakuUra{
 		if(!is_file($tar_gz)) return 1;
 		$l = 'gaku-ura_upgrade';
 		$this->file_lock($l);
-		$u = [];
-		foreach(array_merge(self::UPGRADE_IGNORE,explode(',',$this->config['upgrade.ignore']??''))as$i) $u[]=$this->d_root.'/'.$i;
 		$m = $this->system_dir.'/tmp';
 		$t = $m.'/g/';
+		$b = $m.'/b/';
+		$u = [];
+		$ub = [];
+		foreach (array_merge(self::UPGRADE_IGNORE,explode(',',$this->config['upgrade.ignore']??'')) as $i){
+			$u[] = $this->d_root.'/'.$i;
+			$ub[] = $b.$i;
+		}
 		if(is_dir($m)) rmdir_all($m);
 		mkdir($t, 0777, true);
+		mkdir($b, 0777, true);
+		foreach(self::GAKU_URA_FILES as $f)if(file_exists($this->d_root.'/'.$f)) copy_path($this->d_root.'/'.$f,$b.$f,$ub);
 		$a = $m.'/upgrade.tar.gz';
 		copy($tar_gz, $a);
 		try{
@@ -524,21 +558,25 @@ class GakuUra{
 			$this->file_unlock($l);
 			return 2;
 		}
-		$a = 0;
+		$r = 0;
 		foreach (self::GAKU_URA_FILES as $f){
 			$s = $t.$f;
 			$o = $this->d_root.'/'.$f;
 			if (!file_exists($s)){
-				$a = 3;
+				$r = 3;
 				is_file($o)?unlink($o):rmdir_all($o);
 				if($reduced!==null) $reduced[]=$f;
 				continue;
 			}
-			copy_path($s, $o, $u);
+			if (!copy_path($s,$o,$u)){
+				copy_path($b, $this->d_root, $u);
+				$this->file_unlock($l);
+				return 4;
+			}
 		}
 		rmdir_all($m);
 		$this->file_unlock($l);
-		return $a;
+		return $r;
 	}
 }
 

@@ -3,68 +3,42 @@
 
 
 /********** タブ画面 **********/
-/* 重要: tabsクラスにheightを設定しないといけません */
 /*
-html例1: 通常のタブ(label forに対応するinput idが必要。現在のタブに下線をつける等のアクセスは出来ない)
-<label for="tab1">tab1</label> <label for="tab2">tab2</label> <label for="tab3">tab3</label>
-<input type="radio" id="tab1" name="name" class="tab_in" checked>
-<p class="tab">this is tab1</p>
-<input type="radio" id="tab2" name="name" class="tab_in">
-<p class="tab">this is tab2</p>
-<input type="radio" id="tab3" name="name" class="tab_in">
-<p class="tab">this is tab3</p>
-*/
-/*
-html例2: タブを横に引き伸ばす(絶対位置を使うのでタブリスト全体のheight設定必須)
-<div class="tabs" style="height:3em;">
-	<label class="tab_lb">
-		<div><span>tab1</span></div>
-		<input type="radio" name="name" class="tab_in" checked>
-		<p class="tab">this is tab1</p>
-	</label>
-	<label class="tab_lb">
-		<div><span>tab2</span></div>
-		<input type="radio" name="name" class="tab_in">
-		<p class="tab">this is tab2</p>
-	</label>
-	<label class="tab_lb">
-		<div><span>tab3</span></div>
-		<input type="radio" name="name" class="tab_in">
-		<p class="tab">this is tab3</p>
-	</label>
+html例: input,label,タブ要素で1セット。inputにはtab_in,タブ要素にはtabクラスを付ける
+<div class="tabs">
+	<input type="radio" name="name" id="tab1" class="tab_in" checked>
+	<label for="tab1">tab1</label>
+	<div class="tab">this is tab1</div>
+	<input type="radio" name="name" id="tab2" class="tab_in">
+	<label for="tab2">tab2</label>
+	<div class="tab">this is tab2</div>
+	<input type="radio" name="name" id="tab3" class="tab_in">
+	<label for="tab3">tab3</label>
+	<div class="tab">this is tab3</div>
 </div>
 */
 .tabs{
 	display:flex;
-	position:relative;
+	flex-wrap:wrap;
 }
-.tab_lb div{
-	flex-grow:1;
-	display:block;
-	text-align:center;
-	background:#eef;
-}
-.tab_lb{
-	width:100%;
-	flex-grow:1;
-}
-.tabs .tab{
-	position:absolute;
-	left:0;
-	width:100%;
-}
-
-/* タブを隠す */
-.tab_in, .tab{
+.tab_in, .tab_in+label+.tab{
 	display:none;
 }
-/* クリックしたら変化 */
-label:has(.tab_in:checked) div{
+.tab_in:checked+label+.tab{
+	display:block;
+	width:100%;
+}
+.tab_in+label{
+	display:block;
+	text-align:center;
+	flex-grow:1;
+	order:-1;
+	background:#eff;
+	padding:.4em;
+}
+.tab_in:checked+label{
 	font-weight:bold;
 	background:transparent;
-}
-.tab_in:checked+.tab{
-	display:block;
 }
 
 /********** メニュー **********/
