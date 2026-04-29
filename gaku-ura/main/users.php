@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.13
+#gaku-ura9.7.15
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -512,12 +512,12 @@ function main(string $from):int{
 					$f .= '<p><video controls src="'.$d.'"></video></p>';
 				}
 				$replace['FORM_AFTER'] = $is_async?'':$f;
-				$replace['DOWNLOAD'] = '<p><a href="'.$d.'">ダウンロードする</a></p><p><br></p>';
+				$replace['DOWNLOAD'] = $d;
 			}
 			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__'.$replace['SUBMIT_TYPE']);
 		} elseif (not_empty($uri_dir) && $menu==='edit'){
 			#ディレクトリの編集
-			foreach(['DOWNLOAD','FORM_AFTER']as$i) $replace[$i]='';
+			$replace['FORM_AFTER'] = '';
 			$is_edit_mode = 1;
 			$bname = basename($current_dir);
 			$replace['TITLE'] = lreplace($current_dir, $c_root.'/');
@@ -526,6 +526,24 @@ function main(string $from):int{
 			$replace['PERM'] = file_perm($current_dir);
 			$replace['SUBMIT_TYPE'] = 'edit_dir';
 			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__edit_dir');
+			$replace['DOWNLOAD'] = '?Dir='.$uri_dir.'&download';
+		} elseif (isset($_GET['download'])){
+			$m = tempnam(sys_get_temp_dir(),'_');
+			$t = $m.'.tar';
+			if($m){
+				$p = new PharData($t);
+				$p->buildFromDirectory($current_dir);
+				$p->compress(Phar::GZ);
+				$t .= '.gz';
+				$conf->content_type(mime_content_type($t));
+				header('Content-Disposition:attachment;filename="'.basename($current_dir).'.tar.gz"');
+				header('Content-Length:'.filesize($t));
+				$f = fopen($t, 'rb');
+				fpassthru($f);
+				fclose($f);
+				unlink($t);
+			}
+			return 0;
 		} else {
 			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__new');
 			$l = '';
