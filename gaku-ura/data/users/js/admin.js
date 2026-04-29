@@ -119,7 +119,6 @@ function mopen(e, c){
 			if(!(~u.indexOf("Menu="))) u+="&Menu=edit_db";
 			m.push(['SQLで編集',u]);
 		}
-		m.push(['ダウンロード',a.href+'&download']);
 	}
 	//実際のURL算出(hrefに「./」使用禁止)
 	if (udr){
@@ -129,6 +128,8 @@ function mopen(e, c){
 		if(a.getAttribute("class")!=="dir") u+=a.textContent;
 		m.push(["WEBページとして開く",u.replace("\/\/","/"),1]);
 	}
+	m.push(['ダウンロード',a.href+'&download']);
+	m.push(['全てダウンロード',"?Dir="+(q.get("Dir")??"")+'&download']);
 	const s = "color:#111;margin:.2em;display:block;";
 	m.forEach((i)=>{
 		const o = document.createElement("a");

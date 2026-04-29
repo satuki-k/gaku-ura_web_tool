@@ -1,3 +1,5 @@
-user_list*
-google*
+/gaku-ura/data/users/user_list.*
+/gaku-ura/data/*.gz
+/gaku-ura/flock/*
+/google*.html
 

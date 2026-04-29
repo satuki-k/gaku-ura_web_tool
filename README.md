@@ -215,6 +215,8 @@ session.cookie_samesite = "Strict"
 
 [Date]
 date.timezone = "Asia/Tokyo"
+
+phar.readonly = Off
 ```
 
 ## 外部ライブラリ
