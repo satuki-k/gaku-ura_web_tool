@@ -228,16 +228,16 @@ function main(string $from):int{
 				}
 				#アップロード
 				foreach ($_FILES??[] as $k=>$v){
-					if (isset($_FILES[$k]['tmp_name']) && (int)$_FILES[$k]['error']===0 && is_file($_FILES[$k]['tmp_name']) && not_empty($_FILES[$k]['name'])){
-						$t = $_FILES[$k]['tmp_name'];
-						$n = $_FILES[$k]['name'];
-						$p = $current_dir.'/'.$n;
+					$t = $_FILES[$k]['tmp_name']??'';
+					$n = $_FILES[$k]['name']??'';
+					$p = $current_dir.'/'.$n;
+					if ($t && (int)$_FILES[$k]['error']===0 && is_file($t) && not_empty($n)){
 						#権限昇華防止
 						if ($p===$conf->config_file || str_starts_with($p,$user->user_dir.'/'.GakuUraUser::TABLE_NAME)){
 							#最高権限のみ
-							if($user_data['admin']===4) rename($t, $p);
+							if($user_data['admin']===4) move_uploaded_file($t,$p);
 						} else {
-							rename($t, $p);
+							move_uploaded_file($t, $p);
 						}
 						#403防止
 						$l = get($p, 1);
@@ -364,14 +364,15 @@ function main(string $from):int{
 					$r = $conf->upgrade($conf->data_dir.'/'.$_POST['file']);
 					unlink($conf->data_dir.'/'.$_POST['file']);
 					$m = '完了(success)';
-					if ($r !== 0){
-						$m = '失敗 <b>更新が不安定な状態で停止しました。FTP等を用いてバックアップで全てのファイルを上書きアップロードしてください。</b>';
-					}
+					if($r!==0) $m='失敗(failed)';
 					$m .= ' status:'.$r;
 					$replace['ERROR_MSG'] = $m;
-				} elseif (($f=$_FILES['file']['tmp_name']??'')!==''){
+				} else {
+					$f = $_FILES['file']['tmp_name']??'';
+					$a = $conf->data_dir.'/'.($_FILES['file']['name']??'');
 					$d = [];
-					$r = $conf->upgrade($_FILES['file']['tmp_name'], $d);
+					$r = $conf->upgrade($f, $d);
+					move_uploaded_file($f, $a);
 					$m = '成功(success)';
 					if ($r === 1){
 						$m = '失敗(invalid file)';
@@ -382,16 +383,13 @@ function main(string $from):int{
 					}
 					$m .= ' status:'.$r;
 					if ($r===0 || $r===3){
-						copy($f, $conf->data_dir.'/'.$_FILES['file']['name']);
 						$m .= '<b>操作はまだ完了していません。</b>アップグレード対象のファイル一覧が更新されたので、以下のボタンを押して完了してください。';
 						if($m===3) $m.=implode(',',$d).' は廃止されました。';
-						$m .= '<form action="" method="POST"><label><button type="submit" name="submit" value="'.$submit.'">完了</button></label><input type="hidden" name="csrf_token" value="'.$conf->set_csrf_token('admin__upgrade').'"><input type="hidden" name="file" value="'.$_FILES['file']['name'].'"><input type="hidden" name="reupgrade" value="true"></form>';
+						$m .= '<form action="" method="POST"><label><button type="submit" name="submit" value="'.$submit.'">完了</button></label><input type="hidden" name="csrf_token" value="'.$conf->set_csrf_token('admin__upgrade').'"><input type="hidden" name="file" value="'.basename($a).'"><input type="hidden" name="reupgrade" value="true"></form>';
 					} else {
 						$m .= '<b>失敗しました。</b>';
 					}
 					$replace['ERROR_MSG'] = $m;
-				} else {
-					$conf->form_die();
 				}
 				return $conf->htmlf('users', 'upgrade', $replace);
 			} else {

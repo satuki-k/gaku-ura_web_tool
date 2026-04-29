@@ -3,6 +3,43 @@
 <!option robots 0>
 <h1>hello</h1>
 <main>
-	<p>gaku-ura{VERSION}</p>
-	<p>管理機能を使う・無効化するには、<a href="./users/">ログイン</a>して生成されたuser_list.tsvのadminを4に上書きするか、gaku-ura/conf/gaku-ura.conf (設定)でログイン機能を無効化します。</p>
+	<h2>ようこそ</h2>
+	<div class="tabs content_list">
+		<input type="radio" name="name" id="welcome" class="tab_in" checked>
+		<label for="welcome">はじめに</label>
+		<div class="tab">
+			<p>学裏にようこそ。</p>
+			<p>ver{VERSION}</p>
+			<h2>チェックリスト</h2>
+			<ol>
+				<li>gaku-ura lib の配布ファイルを全て公開ディレクトリに配置しましたか</li>
+				<li>gaku-uraディレクトリとその配下のパーミッションを、phpが書き換えや実行が出来るように設定しましたか</li>
+				<li>設定ファイルの書き換え - gaku-ura/conf/gaku-ura.conf の各項目を確認</li>
+				<li>管理機能の設定 - <a href="users/">新規登録・ログイン</a>をする</li>
+				<li>管理権限の設定 - gaku-ura/data/users/user_list.tsv 対象ユーザーのadmin列を4にする</li>
+			</ol>
+		</div>
+		<input type="radio" name="name" id="tips" class="tab_in">
+		<label for="tips">小技</label>
+		<div class="tab">
+			<h2>php</h2>
+			<p>gaku-ura/conf ディレクトリには共通部分のソースコードがありますが、便利なライブラリでもあります。</p>
+			<p>index.phpのようにgaku-ura/main ディレクトリのphpを呼び出し、gaku-ura/main に本体のphpを作ってgaku-ura/conf内のライブラリを使うと簡単に共通html/cssテンプレートを使う準備が整います。</p>
+			<p><br></p>
+			<h2>css/javascript</h2>
+			<p>疑似命令で他のファイルをincludeしたりできます。</p>
+			<p><br></p>
+			<h2>html/md</h2>
+			<p>GakuUra::htmlf()を使って出力するhtmlには、疑似命令で読み込むcss/javascriptや、タイトル・説明・検索インデックスなどを指定出来ます。</p>
+			<p>また、html/mdファイル中の「{KEY}」が、'KEY'がキーの連想配列をGakuUra::htmlf()で指定すると、対応する値に置換される機能もあります。</p>
+			<p>これらの設定は、index.php(トップページ)で使うファイルには既に構成済みです。</p>
+			<p><br></p>
+			<p>詳細はgaku-ura配布ページからご確認を。</p>
+		</div>
+		<input type="radio" name="name" id="about" class="tab_in">
+		<label for="about">about</label>
+		<div class="tab">
+			<p><a href="?Page=about">about</a>ページが同封されています。</p>
+		</div>
+	</div>
 </main>

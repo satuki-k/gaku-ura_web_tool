@@ -19,7 +19,7 @@
 	</ol>
 	<h2>アップグレード操作</h2>
 	<p>以上を確認できたら、gaku-ura libで入手したファイルを追加してください。</p>
-	<p class="warning">注意: 途中で失敗しても変更を差し戻すような機能はありません。</p>
+	<p class="warning">注意: 途中で失敗しても完全に指し戻し出来るとは限りません。</p>
 	<form action="" method="POST" id="form" enctype="multipart/form-data">
 		<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
 		<input type="hidden" name="reupgrade" value="false">
@@ -33,6 +33,7 @@
 		<tr><td>1</td><td>失敗。送信したファイルが存在しないなど不備があります。</td></tr>
 		<tr><td>2</td><td>失敗。送信したファイルを展開できませんでした。</td></tr>
 		<tr><td>3</td><td>成功。ただし廃止されたファイルがあります。</td></tr>
+		<tr><td>4</td><td>失敗。権限が無いなどで上書き出来なかったファイルがあります。可能な限り差し戻しました。</td></tr>
 		<tr><td>何も無い</td><td>フォームが受け入れられませんでした。</td></tr>
 	</table>
 </div>

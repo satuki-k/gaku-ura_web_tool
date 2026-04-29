@@ -1,0 +1,59 @@
+/* モーダル画面ツール */
+/* ="name"は任意の名前 */
+
+
+/********** タブ画面 **********/
+/*
+html例: input,label,タブ要素で1セット。inputにはtab_in,タブ要素にはtabクラスを付ける
+<div class="tabs">
+	<input type="radio" name="name" id="tab1" class="tab_in" checked>
+	<label for="tab1">tab1</label>
+	<div class="tab">this is tab1</div>
+	<input type="radio" name="name" id="tab2" class="tab_in">
+	<label for="tab2">tab2</label>
+	<div class="tab">this is tab2</div>
+	<input type="radio" name="name" id="tab3" class="tab_in">
+	<label for="tab3">tab3</label>
+	<div class="tab">this is tab3</div>
+</div>
+*/
+.tabs{
+	display:flex;
+	flex-wrap:wrap;
+}
+.tab_in, .tab_in+label+.tab{
+	display:none;
+}
+.tab_in:checked+label+.tab{
+	display:block;
+	width:100%;
+}
+.tab_in+label{
+	display:block;
+	text-align:center;
+	flex-grow:1;
+	order:-1;
+	background:#eff;
+	padding:.4em;
+}
+.tab_in:checked+label{
+	font-weight:bold;
+	background:transparent;
+}
+
+/********** メニュー **********/
+/*
+<label for="name">開く</label>
+<input type="checkbox" id="name" class="mmenu_in">
+<div class="mmenu">
+	<label for="name">閉じる</label>
+	this is menu
+</div>
+*/
+.mmenu_in, .mmenu{
+	display:none;
+}
+.mmenu_in:checked+.mmenu{
+	display:block;
+}
+
