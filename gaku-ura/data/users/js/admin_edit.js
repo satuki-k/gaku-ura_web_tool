@@ -384,17 +384,18 @@ $ID("form").addEventListener("submit", async (e)=>{
 		} else if ($QS('[name="name"]').value!==$QS('[name="new_name"]').value || $QS('[name="perm"]').value!=="no"){
 			$ID("form").submit();
 		} else {
-			fparea.innerHTML = "[saving...]";
 			const f = new FormData($ID("form"));
 			const x = new XMLHttpRequest();
+			const c = $QS("h1").style.color;
+			fparea.innerHTML = "(saving...)";
+			$QS("h1").style.color = "#ff0";
 			f.append("submit", $QS('[type="submit"]').value);
 			x.addEventListener("load", (e)=>{
-				fparea.innerHTML = "[saved]";
-				popup.alert("保存しました。");
+				fparea.innerHTML = "(saved)";
+				$QS("h1").style.color = c;
 				setTimeout(()=>{
 					fparea.innerHTML="";
-					popup.disapear();
-				},500);
+				},2000);
 			});
 			x.open("POST", location.href);
 			x.send(f);

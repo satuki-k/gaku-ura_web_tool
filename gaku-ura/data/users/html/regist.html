@@ -2,11 +2,9 @@
 <!include users.css>
 <h1>新規登録</h1>
 <p>アカウントを新規登録します。</p>
-<form action="" method="POST">
-	<section>
-		<p><label><b>名前(必須)</b><input type="text" name="user_name"></label></p>
-		<p><label><b>パスワード(必須)</b><input type="password" name="passwd"></label></p>
-	</section>
+<form action="" method="POST" id="form">
+	<p><label><b>名前(必須)</b><input type="text" name="user_name"></label></p>
+	<p><label><b>パスワード(必須)</b><input type="password" name="passwd"></label></p>
 	<p><label>メールアドレス(任意)<input type="email" name="mail"></label></p>
 	<p><button type="submit" name="csrf_token" value="{CSRF_TOKEN}">登 録</button></p>
 	<p>{WARNING}</p>

@@ -1,11 +1,11 @@
 <!option robots 0>
 <!include users.css>
 <h1>ログイン</h1>
-<form action="" method="POST">
-<p><label><b>名前</b><input type="text" name="user_name"></label> <label><input type="checkbox" name="mail" value="true">メールアドレスを使う</label></p>
-<p><label><b>パスワード</b><input type="password" name="passwd"></label></p>
-<p><label><button type="submit" name="csrf_token" value="{CSRF_TOKEN}">ログイン</button></label></p>
-<p>{WARNING}</p>
+<form action="" method="POST" id="form">
+	<p><label><b>名前</b><input type="text" name="user_name"></label> <label><input type="checkbox" name="mail" value="true">メールアドレスを使う</label></p>
+	<p><label><b>パスワード</b><input type="password" name="passwd"></label></p>
+	<p><label><button type="submit" name="csrf_token" value="{CSRF_TOKEN}">ログイン</button></label></p>
+	<p>{WARNING}</p>
 </form>
 <p><br></p>
 <p>未登録の場合は、<a href="./regist/">新規登録</a>して下さい。</p>
