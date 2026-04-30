@@ -90,7 +90,7 @@ function fmd(e){
 }
 function fm(){
 	let i = r.length;
-	while (--i){
+	while (i--){
 		r[i].removeEventListener("click", fmc);
 		r[i].removeEventListener("contextmenu", fmo);
 		r[i].removeEventListener("dblclick", fmd);
@@ -197,7 +197,7 @@ window.addEventListener("keydown", (e)=>{
 	if (isCtrlKey(e)){
 		if (e.key === "a"){
 			e.preventDefault();
-			for(let i=1;i<r.length;++i) r[i].classList.add("select_row");
+			for(let i=0;i<r.length;++i) r[i].classList.add("select_row");
 		}
 	}
 });

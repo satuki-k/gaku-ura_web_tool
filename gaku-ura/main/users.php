@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.15
+#gaku-ura9.7.16
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -27,6 +27,14 @@ function file_sort(array &$files, string $dir):void{
 	$files = array_merge($d, $f);
 }
 function file_perm(string $f):string{return substr(sprintf('%o',fileperms($f)),-3);}
+function fsz(string $f):string{
+	$s = filesize($f);
+	foreach (['','K','M','G','T'] as $k=>$v){
+		$b = 1024**$k;
+		if($s/1024<$b) return round(100*$s/$b)/100 .$v.'B';
+	}
+	return $s;
+}
 function main(string $from):int{
 	$conf = new GakuUra();
 	$user = new GakuUraUser($conf);
@@ -105,7 +113,7 @@ function main(string $from):int{
 			$scut[] = '<a href="?Dir='.$api_args['d_root'].'">TOP</a>';
 		}
 		#shortcut dir
-		foreach ([$conf->data_dir=>'project dirs',__DIR__=>'main files',$conf->data_dir.'/home'=>'homeages'] as $k=>$v){
+		foreach ([$conf->data_dir=>'data dir',__DIR__=>'main files',$conf->data_dir.'/default'=>'templates',$conf->data_dir.'/home'=>'homeages'] as $k=>$v){
 			if(str_starts_with($k,$c_root)) $scut[$v]='<a href="?Dir='.lreplace($c_root===$k?'':lreplace($k,$c_root),'/').'">'.$v.'</a>';
 		}
 		#shortcut file admin
@@ -548,7 +556,8 @@ function main(string $from):int{
 			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__new');
 			$l = '';
 			for($i=dirname($uri_dir);$i!==($j=dirname($i));$i=$j) $l='/<a href="?Dir='.$i.'">'.basename($i).'</a>'.$l;
-			$p = '<tr><td colspan="5"><a href="./">[root]</a>'.$l.'/'.basename($uri_dir).'</td></tr>';
+			$replace['PATH'] = '<a href="./">[root]</a>'.$l.'/'.basename($uri_dir);
+			$p = '';
 			#先頭の/禁止
 			$u = $uri_dir;
 			if($u!=='') $u.='/';
@@ -557,12 +566,12 @@ function main(string $from):int{
 			foreach ($files as $f){
 				if($f==='.'||$f==='..') continue;
 				$file = $current_dir.'/'.$f;
-				$fmt = '<tr><td><a href="?Dir=%s"%s>'.$f.'</a></td><td><a href="?Dir=%s&Menu=edit">編　集</a></td><td>%s '.file_perm($file).'</td><td>'.date('Y-m/d H:i',filemtime($file)).'</td></tr>';
+				$fmt = '<tr><td><a href="?Dir=%s"%s>'.$f.'</a></td><td><a href="?Dir=%s&Menu=edit">編集</a></td><td>%s '.file_perm($file).'</td><td>'.date('Y-m/d H:i',filemtime($file)).'</td></tr>';
 				if (is_dir($file)){
 					$p .= sprintf($fmt, $u.$f,' class="dir"',$u.$f,count(scandir($file))-2 .'item');
 				} else {
 					$e = str_ends_with($f,'.db')?'&Menu=edit_db':'';
-					$p .= sprintf($fmt, $uri_dir.'&File='.$f.$e,'',$uri_dir.'&File='.$f,filesize($file)/1000 .'kB '.mime_content_type($file));
+					$p .= sprintf($fmt, $uri_dir.'&File='.$f.$e,'',$uri_dir.'&File='.$f,mime_content_type($file).' '.fsz($file));
 				}
 			}
 			$replace['FILE_LIST'] = $p;

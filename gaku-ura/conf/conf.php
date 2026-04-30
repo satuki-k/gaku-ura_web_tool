@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.7.15';
+const GAKU_URA_VERSION = '9.7.16';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
@@ -325,9 +325,7 @@ class GakuUra{
 	function __construct(?bool $third=null){
 		header('Referrer-Policy:same-origin');
 		if (!isset($_SESSION)){
-			session_set_cookie_params([
-				'lifetime'=>2400*3600,'secure'=>!empty($_SERVER['HTTPS']),'httponly'=>true,'samesite'=>'Strict'
-			]);
+			session_set_cookie_params(['lifetime'=>2400*3600,'secure'=>!empty($_SERVER['HTTPS']),'httponly'=>true,'samesite'=>'Strict']);
 			session_start();
 		}
 		$this->d_root = realpath(__DIR__ .'/../..');
@@ -365,8 +363,7 @@ class GakuUra{
 			$this->nonce = one_time_pass(20, 30);
 			header("Content-Security-Policy:connect-src 'self';object-src 'none';base-uri 'self';script-src 'nonce-{$this->nonce}' 'strict-dynamic' https:;");
 		}
-		if(isset($_COOKIE)) foreach($_COOKIE as $k=>$v)if($k!==$n)setcookie($k,$v,time()+3600*2400,'/');
-		if(isset($_POST)) foreach($_POST as $k=>$v)$_POST[$k]=u8lf($v);
+		if(isset($_POST))foreach($_POST as $k=>$v) $_POST[$k]=u8lf($v);
 	}
 	#ヘッダー content-type
 	public function content_type(string $type, string $c='UTF-8'):void{
@@ -390,28 +387,29 @@ class GakuUra{
 	}
 	#ライブラリのinclude
 	public function include_lib(string $code, string $mode):string{
-		remove_comment_rows($code, '/*', '*/');
+		remove_comment_rows($code, '/*','*/');
 		$b = '#!include ';
 		$e = ';';
-		$ald = [];
+		$a = [];
 		while (($p=subrpos($b,$e,$code)) !== ''){
 			$f = $this->data_dir.'/default/lib/'.$mode.'/'.trim($p);
 			$r = '';
-			if (!in_array($f,$ald,true) && file_exists($f)){
+			if (!in_array($f,$a,true) && file_exists($f)){
 				if ($mode === 'js'){
 					$r = js_out($f);
 				} elseif ($mode === 'css'){
 					$r = css_out($f);
 				}
-				$ald[] = $f;
+				$a[] = $f;
 			}
 			$code = str_replace($b.$p.$e, $r, $code);
 		}
 		if($mode!=='css') return $code;
+		$b = '@import';
 		$l = '';
-		while (($p=subrpos('@import',$e,$code)) !== ''){
-			$l .= '@import'.$p.$e;
-			$code = str_replace('@import'.$p.$e, '', $code);
+		while (($p=subrpos($b,$e,$code)) !== ''){
+			$l .= $b.$p.$e;
+			$code = str_replace($b.$p.$e, '', $code);
 		}
 		return $l.$code;
 	}
@@ -430,7 +428,7 @@ class GakuUra{
 		'NONCE'=>$this->nonce,'DESCRIPTION'=>self::h(($robots&&not_empty($description))?$description:'なし'),'TITLE'=>self::h($title),
 		'CONTENT'=>self::h($content),'SITE_TITLE'=>self::h($this->config['title']??'無題'),'U_ROOT'=>$this->u_root];
 		if ($this->here !== $this->canonical){
-			$h = str_replace('</head>', '<link rel="canonical" href="'.$this->canonical.'"></head>', $h);
+			$h = nreplace($h, '</head>', '<link rel="canonical" href="'.$this->canonical.'"></head>', 1);
 			$robots = false;
 		}
 		if(!$robots) $h=str_replace('<ti','<meta name="robots" content="noindex"><ti',$h);
@@ -444,7 +442,7 @@ class GakuUra{
 			}
 			$this->ld_json['description'] = $description;
 			$j = json_encode($this->ld_json, JSON_UNESCAPED_UNICODE);
-			$h = str_replace('</body>', '<script type="application/ld+json">'.$j.'</script></body>', $h);
+			$h = nreplace($h, '</body>', '<script type="application/ld+json">'.$j.'</script></body>', 1);
 		}
 		echo $h;
 		return 0;
@@ -459,10 +457,12 @@ class GakuUra{
 		$c = file_get_contents($pr.'/'.$h);
 		if(str_ends_with($h,'.md')) $c=to_html($c);
 		remove_comment_rows($c, '<!--','-->');
+		$b = '<!include ';
+		$e = '>';
 		$js = '';
 		$css = $pr.'/css/index.css';
-		while (($p=subrpos('<!include ','>',$c)) !== ''){
-			$t = '<!include '.$p.'>';
+		while (($p=subrpos($b,$e,$c)) !== ''){
+			$t = $b.$p.$e;
 			if (str_ends_with($p, '.js')){
 				if(file_exists($pr.'/js/'.$p)) $js=$pr.'/js/'.$p;
 			} elseif (str_ends_with($p, '.css')){
@@ -477,12 +477,13 @@ class GakuUra{
 			$c = str_replace($t, '', $c);
 		}
 		foreach($replace as $k=>$v) $c=str_replace('{'.$k.'}',self::h($v),$c);
+		$b = '<!option ';
 		$s = ['top_page'=>false,'title'=>self::h(innerHTML('h1',$c)),'description'=>self::h(innerHTML('p',$c)),'robots'=>$robots,'css_default_only'=>false,'css_standalone'=>false,'js_minify'=>true,'template'=>null];
-		while (($p=subrpos('<!option ','>',$c))!=='' && $r=explode(' ',$p)){
+		while (($p=subrpos($b,$e,$c))!=='' && $r=explode(' ',$p)){
 			$v = ltrim(lreplace($p, $r[0]));
 			if(in_array($r[0],['robots','css_default_only','css_standalone','js_minify'])) $v=(bool)$v;
 			$s[$r[0]] = $v;
-			$c = str_replace('<!option '.$p.'>', '', $c);
+			$c = str_replace($b.$p.$e, '', $c);
 		}
 		remove_comment_rows($c, '<!','>');
 		$s['title'] .= '-';
