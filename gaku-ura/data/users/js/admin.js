@@ -126,7 +126,7 @@ function mopen(e, c){
 		let u = ~f.indexOf("&")?f.slice(0,f.indexOf("&")):f;
 		u = ur+u+"/";
 		if(a.getAttribute("class")!=="dir") u+=a.textContent;
-		m.push(["WEBページとして開く",u.replace("\/\/","/"),1]);
+		m.push(["WEBページとして開く",u.replace("//","/"),1]);
 	}
 	m.push(['ダウンロード',a.href+'&download']);
 	m.push(['全てダウンロード',"?Dir="+(q.get("Dir")??"")+'&download']);

@@ -7,7 +7,7 @@
 const key_m = "gaku-ura_editor_mode";
 const key_f = "gaku-ura_editor_fontSize";
 /*! ace (web)ace.c9.io !*/
-const cdn_a = "https:\/\/cdnjs.cloudflare.com/ajax/libs/ace/1.43.3/ace.js";
+const cdn_a = "https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.3/ace.js";
 const q = (new URL(document.location)).searchParams;
 const popup = new POPUP();
 const fparea = document.createElement("span");

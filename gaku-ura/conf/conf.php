@@ -1,15 +1,13 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.7.16';
+const GAKU_URA_VERSION = '9.7.17';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
-function h(string $t):string{return htmlspecialchars($t,ENT_QUOTES,'UTF-8');}
+function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
 #UTF-8/LFにする
-function u8lf(string $t):string{
-	$t = str_replace("\r\n", "\n", $t);
-	$t = str_replace("\r", "\n", $t);
-	return mb_convert_encoding($t,'UTF-8');
-}
+function lf(string $s):string{return str_replace(["\r\n","\r"],"\n",$s);}
+function u8(string $s):string{return mb_convert_encoding($s,'UTF-8');}
+function u8lf(string $s):string{return lf(u8($s));}
 #埋め込みとjs禁止エスケープ
 function expelliarmus(string $s):string{
 	foreach (['script','iframe','frame','embed','object'] as $t){
@@ -39,7 +37,7 @@ function rreplace(string $s, string $right, string $to=''):string{
 	return $s;
 }
 #改行除去
-function row(string $s):string{return str_replace("\r",'',str_replace("\n",'',$s));}
+function row(string $s):string{return str_replace(["\r","\n"],'',$s);}
 #base64_URLencode
 function encode_a(string $s):string{
 	$b = base64_encode($s);
@@ -167,23 +165,21 @@ function remove_comment_rows(string &$t, string $s='/*', string $g='*/'):string{
 }
 #css軽量化
 function css_out(string $file):string{
-	if($file==='') return '';
 	$r = '';
-	$l = [];
+	if($file==='') return $r;
 	if (is_dir($file)){
-		foreach(scandir($file)as$f)if(str_ends_with(strtolower($f),'.css')) $l[]=$file.'/'.$f;
+		foreach(scandir($file)as$f)if(str_ends_with(strtolower($f),'.css')) $r.=file_get_contents($file.'/'.$f);
 	} elseif (is_file($file)){
-		$l = [$file];
+		$r = file_get_contents($file);
 	}
-	foreach($l as $c) $r.=file_get_contents($c);
 	remove_comment_rows($r);
-	$r = str_replace("\t", '', row($r));
-	return preg_replace('/( |)(,|:|;|{|})( |)/', '$2', $r);
+	return preg_replace('/(\s*(,|:|;|{|})\s*)/', '$2', row($r));
 }
 #js軽量化
 function js_out(string $file, bool $minify=true):string{
-	if($file==='') return '';
 	$r = '';
+	if($file==='') return $r;
+	$o = '#!option ';
 	$l = [];
 	if (is_dir($file)){
 		foreach(scandir($file)as$f)if(str_ends_with(strtolower($f),'.js')) $l[]=$file.'/'.$f;
@@ -192,13 +188,25 @@ function js_out(string $file, bool $minify=true):string{
 	}
 	foreach ($l as $f){
 		$j = file_get_contents($f);
-		if(subrpos('#!option ',';',$j)==='notminify') $minify=false;
-		remove_comment_rows($j, '#!option ', ';');
+		if(subrpos($o,';',$j)==='notminify') $minify=false;
+		remove_comment_rows($j, $o, ';');
 		if ($minify){
 			remove_comment_rows($j);
 			$t = '';
-			foreach(explode("\n",$j)as$i) $t.=preg_replace('/\/\/.*/','',trim($i));
-			$r .= preg_replace('/( |)(,|=|{|}|\(|\)|[|]|\?|!|\&|-|\+|<|>|:|;|\*|\/)( |)/', '$2', $t);
+			foreach (explode("\n",$j) as $i){
+				for ($k=0,$q='',$n=strlen($i)-1;$k<$n;++$k){
+					if ($q){
+						if($q===$i[$k]) $q='';
+					} elseif (in_array($i[$k],['"',"'"],true)){
+						$q = $i[$k];
+					} elseif (substr($i,$k,2)==='//' && !$q){
+						$i = substr($i, 0, $k);
+						break;
+					}
+				}
+				$t .= trim($i);
+			}
+			$r .= preg_replace('/(\s*(,|=|{|}|\(|\)|[|]|\?|!|\&|-|\+|<|>|:|;|\*|\/)\s*)/', '$2', $t);
 		} else {
 			$r .= $j;
 		}
@@ -206,10 +214,7 @@ function js_out(string $file, bool $minify=true):string{
 	return $r;
 }
 #全ての不可視文字はfalse
-function not_empty(string $s):bool{
-	foreach(["\t","\v",' ','　']as$i) $s=str_replace($i,'',$s);
-	return row($s)!=='';
-}
+function not_empty(string $s):bool{return str_replace(["\t","\v",' ','　'],'',row($s))!=='';}
 #連想配列の一括キー存在確認
 function list_isset(array $dict, array $keys):bool{
 	foreach($keys as $k) if(!isset($dict[$k]))return false;
@@ -219,7 +224,7 @@ function list_isset(array $dict, array $keys):bool{
 function to_html(string $text):string{
 	remove_comment_rows($text,'<!--','-->');
 	foreach(['|'=>124,'《'=>12298,'》'=>12299,'*'=>42,'#'=>35,'"'=>34,"'"=>39,'`'=>96,'~'=>126,'\\'=>92]as$k=>$v) $text=str_replace("\\$k","&#$v;",$text);
-	$rows = explode("\n", str_replace("\\\n",'',u8lf($text)));
+	$rows = explode("\n", str_replace("\\\n",'',lf($text)));
 	$r = '';
 	$hid = [];
 	for ($ol=0,$ul=0,$len=count($rows),$j=0;$j < $len;++$j){
@@ -310,9 +315,9 @@ class GakuUra{
 	public array $config;
 	public string $here;#今のURL
 	public string $url_param;#URLパラメーター
-	public string $domain;#このサイトのドメイン
-	public string $referer;#リファラ
-	public string $canonical;#正規URL(URLにセッションIDがあるときに取り除いたURL)
+	public string $domain;#トップリンク
+	public string $referer;
+	public string $canonical;#正規URL
 	public array $ld_json;#構造化データ辞書
 	private string $system_dir;
 	public const GAKU_URA_FILES = [
@@ -387,7 +392,7 @@ class GakuUra{
 	}
 	#ライブラリのinclude
 	public function include_lib(string $code, string $mode):string{
-		remove_comment_rows($code, '/*','*/');
+		remove_comment_rows($code);
 		$b = '#!include ';
 		$e = ';';
 		$a = [];
@@ -451,10 +456,10 @@ class GakuUra{
 	public function htmlf(string $project_name,?string $file_name,array $replace,bool $robots=false):int{
 		$pr = $this->data_dir.'/'.$project_name;
 		$fn = basename($file_name??'index');
-		if(strpos($fn,'.')===false) $fn.=is_file('html/'.$fn.'.md')?'.md':'.html';
-		$h = 'html/'.$fn;
-		if(!is_file($pr.'/'.$h)) return -1;
-		$c = file_get_contents($pr.'/'.$h);
+		$h = $pr.'/html/'.$fn;
+		if(strpos($fn,'.')===false) $h.=is_file($h.'.md')?'.md':'.html';
+		if(!is_file($h)) return -1;
+		$c = file_get_contents($h);
 		if(str_ends_with($h,'.md')) $c=to_html($c);
 		remove_comment_rows($c, '<!--','-->');
 		$b = '<!include ';
