@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.5
+#gaku-ura9.7.17
 /*
  * このファイルはスタンドアロンで動作します。conf.phpに依存しません
  * データベースの操作
@@ -302,7 +302,7 @@ class GakuUraSQL{
 		$l = 0;
 		foreach($rows as $r)if(($c=count($r))>$l) $l=$c;
 		if ($first_is_col){
-			foreach($rows[0]as$i) $col[]=$i;
+			foreach($rows[0]as$i) $col[]=str_replace(' ','_',str_replace(')','',str_replace('(','_',$i)));
 			for($i=count($col);$i<$l;++$i) $col[]='C'.$i;
 			$idi = array_search('id', $col, true);
 			if ($idi !== false){
