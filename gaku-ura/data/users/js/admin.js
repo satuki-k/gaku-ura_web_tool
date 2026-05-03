@@ -108,16 +108,17 @@ function mopen(e, c){
 	if(g.style.display!=="none") mclose();
 	const a = c.querySelector('a');
 	const a2 = c.querySelectorAll('a')[1];
-	g.innerHTML = "";
+	const s = "color:#111;margin:.2em;display:block;";
+	g.innerHTML = '<p style="'+s+'">'+a.textContent+'</p>';
 	const m = [];
-	m.push(['編集する',a2.href]);
+	m.push(['✍編集する',a2.href]);
 	if (a.getAttribute("class") === "dir"){
-		m.unshift(['開く',a.href]);
+		m.unshift(['📂開く',a.href]);
 	} else {
 		if(a.textContent.endsWith(".db")){
 			let u = a.href.replace(/(Menu=[^&]*)/, "Menu=edit_db");
 			if(!(~u.indexOf("Menu="))) u+="&Menu=edit_db";
-			m.push(['SQLで編集',u]);
+			m.push(['📗SQLで編集',u]);
 		}
 	}
 	//実際のURL算出(hrefに「./」使用禁止)
@@ -126,11 +127,10 @@ function mopen(e, c){
 		let u = ~f.indexOf("&")?f.slice(0,f.indexOf("&")):f;
 		u = ur+u+"/";
 		if(a.getAttribute("class")!=="dir") u+=a.textContent;
-		m.push(["WEBページとして開く",u.replace("//","/"),1]);
+		m.push(["🔗WEBページとして開く",u.replace("//","/"),1]);
 	}
-	m.push(['ダウンロード',a.href+'&download']);
-	m.push(['全てダウンロード',"?Dir="+(q.get("Dir")??"")+'&download']);
-	const s = "color:#111;margin:.2em;display:block;";
+	m.push(['📥ダウンロード',a.href+'&download']);
+	m.push(['📥全てダウンロード',"?Dir="+(q.get("Dir")??"")+'&download']);
 	m.forEach((i)=>{
 		const o = document.createElement("a");
 		o.innerHTML = i[0];
@@ -140,7 +140,7 @@ function mopen(e, c){
 		g.append(o);
 	});
 	const o = document.createElement("a");
-	o.innerHTML = "削除";
+	o.innerHTML = "🔥削除";
 	o.href = "#";
 	o.style = s;
 	o.addEventListener("click", async (e)=>{
