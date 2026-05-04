@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.7.17';
+const GAKU_URA_VERSION = '9.7.18';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
@@ -13,6 +13,7 @@ function expelliarmus(string $s):string{
 	foreach (['script','iframe','frame','embed','object'] as $t){
 		$s = str_ireplace('</'.$t.'>', '', $s);
 		while(($a=stripos($s,'<'.$t))!==false&&($b=stripos($s,'>',$a))!==false) $s=str_replace(substr($s,$a,$b-$a+1),'',$s);
+		while(($a=stripos($s,'</'.$t))!==false&&($b=stripos($s,'>',$a))!==false) $s=str_replace(substr($s,$a,$b-$a+1),'',$s);
 	}
 	return $s;
 }
@@ -139,11 +140,10 @@ function read_conf(string $file):array{
 	if(!is_file($file)) return $c;
 	$fp = fopen($file, 'r');
 	while (($i=fgets($fp)) !== false){
-		$r = trim($i);
-		$e = strpos($r, '=');
-		if(!$e||in_array(substr($r,0,1),[';','#','['],true)) continue;
-		$k = trim(substr($r, 0, $e));
-		$v = trim(substr($r, $e +1));
+		$e = strpos($i, '=');
+		if(!$e||in_array(trim($i)[0],[';','#','['],true)) continue;
+		$k = trim(substr($i, 0, $e));
+		$v = trim(substr($i, $e +1));
 		if ($v === (string)(int)$v){
 			$v = (int)$v;
 		} else {
@@ -505,14 +505,11 @@ class GakuUra{
 			if(is_file($f)&&str_starts_with(get($f,'#!/',1))) chmod($f, 0745);
 		}
 		if ($is404){
-			$l = $this->config['error.moved_list']??'';
-			foreach (explode(' ',$l) as $m){
-				if (strpos($m,'=>') !== false){
-					list($e, $t) = explode('=>', $m);
-					if ($_SERVER['REQUEST_URI'] === trim($e)){
-						$h = trim($t);
-						break;
-					}
+			foreach (explode(' ',$this->config['error.moved_list']??'') as $m){
+				$e = explode('=>', $m);
+				if (count($e)===2 && $_SERVER['REQUEST_URI']===trim($e[0])){
+					$h = trim($e[1]);
+					break;
 				}
 			}
 		}

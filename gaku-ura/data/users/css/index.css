@@ -47,7 +47,11 @@ tbody tr:hover{
 	background:#335;
 }
 .select_row, .select_row:hover{
-	background:#531;
+	background:#3ad;
+	color:#fff;
+}
+.select_row a{
+	color:#ff0;
 }
 
 textarea{
@@ -85,7 +89,6 @@ button:hover{
 }
 /* ディレクトリだけ見分けをつける */
 .dir:before{
-	content:'■';
+	content:"📁";
 	color:#fff;
 }
-
