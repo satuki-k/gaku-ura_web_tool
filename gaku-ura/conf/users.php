@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.5
+#gaku-ura9.7.19
 #ログイン必須とは限らない機能を考慮し、ログインチェックは初期化では行わない
 class GakuUraUser{
 	public string $user_dir;
@@ -7,7 +7,7 @@ class GakuUraUser{
 	public array $user_list_keys;
 	public array $own_dir;
 	public int $admin_revel;
-	private object $conf;
+	private object $c;
 	public const SKEY_ID = 'gaku-ura_login:id';
 	public const SKEY_PASSWD = 'galu-ura_login:passwd';
 	public const SKEY_NAME = 'gaku-ura_login:name';
@@ -15,27 +15,29 @@ class GakuUraUser{
 	public const TABLE_NAME = 'user_list';
 	#GakuUraオブジェクトが引数
 	function __construct(object &$conf){
-		if((int)($conf->config['login.enable']??0)===0) $conf->not_found(false,'この機能は無効です。');
+		if((int)($conf->config['login.enable']??0)===0) $conf->not_found(false,'disabled');
+		$d = explode(' ', $conf->config['login.dir']??'');
 		$this->own_dir = ['/','/','/','/','/'];
-		if (isset($conf->config['login.dir'])){
-			$dirs = explode(' ', $conf->config['login.dir']);
-			if(count($dirs)===5) $this->own_dir=$dirs;
+		for ($i = 0;$i < 5;++$i){
+			$j = $conf->config['login.dir'.$i]??$d[$i]??'';
+			if(!str_ends_with($j,'/')) $j.='/';
+			if(!str_starts_with($j,'/')) $j='/'.$j;
+			$this->own_dir[$i] = $j;
 		}
-		#個別に設定出来るように
-		for($i=0;$i<5;++$i) if(isset($conf->config['login.dir'.$i])) $this->own_dir[$i]=$conf->config['login.dir'.$i];
 		$this->admin_revel = (int)($conf->config['login.admin_revel']??3);
-		if($this->admin_revel < 1) $conf->not_found(false,'管理者権限の要件が1未満で危険です');
+		if($this->admin_revel < 1) $conf->not_found(false,'初回ユーザー登録しただけで管理権限を持つような設定になっています。危険です。');
 		$this->user_dir = $conf->data_dir.'/users';
 		$this->user_list_file = $this->user_dir.'/'.self::TABLE_NAME.'.tsv';
 		$this->user_list_keys = ['id','name','mail','passwd','admin','profile','enable'];
-		if (is_file($this->user_list_file) && filesize($this->user_list_file)){
-			$f = explode("\t", get($this->user_list_file, 1));
-			foreach($this->user_list_keys as $k) if(!in_array($k,$f,true))$conf->not_found(false,'ユーザー管理ファイルに'.$k.'列がありません');
+		$rows = get_rows($this->user_list_file, 1);
+		if ($rows && count($rows)>1){
+			$f = explode("\t", $rows[0]);
+			foreach($this->user_list_keys as $k) if(!in_array($k,$f,true))$conf->not_found(false,'Col "'.$k.'" is not in "user_list.tsv".');
 			$this->user_list_keys = $f;
 		} else {
 			file_put_contents($this->user_list_file, implode("\t",$this->user_list_keys)."\n", LOCK_EX);
 		}
-		$this->conf = $conf;
+		$this->c = $conf;
 	}
 	#区切り文字エスケープ
 	public static function h(string $t):string{
@@ -84,7 +86,7 @@ class GakuUraUser{
 	}
 	#idが0なら新規登録になる
 	public function change_user_data(array $user_data):void{
-		$this->conf->file_lock(self::TABLE_NAME);
+		$this->c->file_lock(self::TABLE_NAME);
 		$rows = get_rows($this->user_list_file, 1);
 		$row = '';
 		foreach ($this->user_list_keys as $k){
@@ -113,7 +115,7 @@ class GakuUraUser{
 				file_put_contents($this->user_list_file, implode("\n",$rows)."\n", LOCK_EX);
 			}
 		}
-		$this->conf->file_unlock(self::TABLE_NAME);
+		$this->c->file_unlock(self::TABLE_NAME);
 	}
 }
 
