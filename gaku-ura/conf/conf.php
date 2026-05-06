@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.7.18';
+const GAKU_URA_VERSION = '9.7.19';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
@@ -72,8 +72,9 @@ function get(string $file, int $l):string|false{
 	return false;
 }
 #任意の行以降全部
-function get_rows(string $file, int $l):array|false{
-	$r = file($file, FILE_IGNORE_NEW_LINES);
+function get_rows(string $f, int $l):array|false{
+	if(!is_file($f)) return false;
+	$r = file($f, FILE_IGNORE_NEW_LINES);
 	return $r?array_slice($r,$l-1):$r;
 }
 #任意時間以上更新ないファイル削除
