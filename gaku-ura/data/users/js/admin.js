@@ -68,8 +68,6 @@ document.body.append(g);
 const f = $QS('tbody');
 const r = f.children;
 const dr = arg.getAttribute("d_root");
-const ur = arg.getAttribute("u_root")??"/";
-const udr = arg&&dr!==null&&(dr===""||~(q.get("Dir")??"").indexOf(dr));
 function mclose(e){
 	g.style.display="none";
 	g.innerHTML = "";
@@ -121,14 +119,8 @@ function mopen(e, c){
 			m.push(['📗SQLで編集',u]);
 		}
 	}
-	//実際のURL算出(hrefに「./」使用禁止)
-	if (udr){
-		const f = a.href.slice(a.href.indexOf("=")+1).slice(dr.length);
-		let u = ~f.indexOf("&")?f.slice(0,f.indexOf("&")):f;
-		u = ur+u+"/";
-		if(a.getAttribute("class")!=="dir") u+=a.textContent;
-		m.push(["🔗WEBページとして開く",u.replace("//","/"),1]);
-	}
+	const u = a.getAttribute("url");
+	if(u.length) m.push(["🔗WEBページとして開く",u,1]);
 	m.push(['📥ダウンロード',a.href+'&download']);
 	m.push(['📥全てダウンロード',"?Dir="+(q.get("Dir")??"")+'&download']);
 	m.forEach((i)=>{
@@ -161,15 +153,8 @@ function mopen(e, c){
 			try{
 				const l = s[i].querySelectorAll("a")[1].href+"&async";
 				const r = await fetch(l);
-				const t = await r.text();
-				const f = subrpos("<form ", "</form>", t);
-				if(!f) continue;
-				const h = document.createElement("div");
-				h.style.display = "none";
-				h.innerHTML = "<form "+f+"</form>";
-				document.body.append(h);
-				const j = {"remove":"yes","submit":"edit_file","new_name":"","perm":"no","submit":h.querySelector('button[type="submit"]').value};
-				h.querySelectorAll('input[type="hidden"]').forEach((k)=>{j[k.name]=k.value;});
+				const t = await r.json();
+				const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"remove":"yes","submit":t["SUBMIT_TYPE"],"new_name":"","perm":"no"};
 				const p = await new URLSearchParams(j);
 				await fetch(l,{
 					referrer:l,
