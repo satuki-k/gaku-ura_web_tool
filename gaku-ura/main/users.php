@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.16
+#gaku-ura9.7.20
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -521,6 +521,8 @@ function main(string $from):int{
 				}
 				$replace['FORM_AFTER'] = $is_async?'':$f;
 				$replace['DOWNLOAD'] = $d;
+				if(str_starts_with($current_file,$conf->doc_root)) $replace['WEB_OPEN']='<a href="'.lreplace($current_file,$conf->doc_root).'" target="_blank">WEBで開く</a>';
+
 			}
 			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__'.$replace['SUBMIT_TYPE']);
 		} elseif (not_empty($uri_dir) && $menu==='edit'){
@@ -534,6 +536,7 @@ function main(string $from):int{
 			$replace['PERM'] = file_perm($current_dir);
 			$replace['SUBMIT_TYPE'] = 'edit_dir';
 			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__edit_dir');
+			if(str_starts_with($current_dir,$conf->doc_root)) $replace['WEB_OPEN']='<a href="'.lreplace($current_dir,$conf->doc_root).'" target="_blank">WEBで開く</a>';
 			$replace['DOWNLOAD'] = '?Dir='.$uri_dir.'&download';
 		} elseif (isset($_GET['download'])){
 			$m = tempnam(sys_get_temp_dir(),'_');
@@ -566,7 +569,9 @@ function main(string $from):int{
 			foreach ($files as $f){
 				if($f==='.'||$f==='..') continue;
 				$file = $current_dir.'/'.$f;
-				$fmt = '<tr><td><a href="?Dir=%s"%s>'.$f.'</a></td><td><a href="?Dir=%s&Menu=edit">編集</a></td><td>%s '.file_perm($file).'</td><td>'.date('Y-m/d H:i',filemtime($file)).'</td></tr>';
+				$url = '';
+				if(str_starts_with($file,$conf->doc_root)) $url=lreplace($file,$conf->doc_root);
+				$fmt = '<tr><td><a href="?Dir=%s"%s url="'.$url.'">'.$f.'</a></td><td><a href="?Dir=%s&Menu=edit">編集</a></td><td>%s '.file_perm($file).'</td><td>'.date('Y-m/d H:i',filemtime($file)).'</td></tr>';
 				if (is_dir($file)){
 					$p .= sprintf($fmt, $u.$f,' class="dir"',$u.$f,count(scandir($file))-2 .'item');
 				} else {
@@ -577,6 +582,11 @@ function main(string $from):int{
 			$replace['FILE_LIST'] = $p;
 		}
 		if ($is_edit_mode){
+			if ($is_async){
+				$conf->content_type('application/json;charset=UTF-8');
+				echo json_encode($replace, JSON_UNESCAPED_UNICODE);
+				return 0;
+			}
 			$from = 'admin_edit';
 		} elseif ($menu === 'edit'){
 			if($is_async) return 3;

@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.7.19';
+const GAKU_URA_VERSION = '9.7.20';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
@@ -310,6 +310,7 @@ function get_ip():string{
 class GakuUra{
 	public string $d_root;
 	public string $u_root;
+	public string $doc_root;
 	public string $data_dir;
 	public string $nonce;
 	public string $config_file;
@@ -352,7 +353,10 @@ class GakuUra{
 		$this->canonical = $c;
 		$this->referer = $_SERVER['HTTP_REFERER']??'';
 		$u = $this->config['u_root']??'';
-		$this->u_root = not_empty($u)?$u:'/';
+		if(!str_ends_with($u,'/')) $u.='/';
+		if(!str_starts_with($u,'/')) $u='/'.$u;
+		$this->u_root = $u;
+		$this->doc_root = rreplace(rreplace($this->d_root.'/',$u),'/');
 		$this->ld_json = ['@context'=>'https://schema.org','@type'=>'WebPage','url'=>$this->canonical,'author'=>['@type'=>'Person','name'=>'unknown'],'image'=>'/favicon.ico'];
 		if (isset($this->config['seo.author']) && count($d=explode(',',$this->config['seo.author']))>1){
 			$this->ld_json['author']['@type'] = trim($d[0]);
