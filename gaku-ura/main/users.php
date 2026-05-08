@@ -45,7 +45,7 @@ function main(string $from):int{
 	$l = $user->login_check();
 	$is_login = $l['result'];
 	$user_data = $l['user_data']??[];
-	$replace = ['GAKU_URA_VERSION'=>GAKU_URA_VERSION,'CONFIG'=>'','WARNING'=>'','FOR_ADMIN'=>'','API_ARGS'=>''];
+	$replace = ['GAKU_URA_VERSION'=>GAKU_URA_VERSION,'CONFIG'=>'','WARNING'=>'','FOR_ADMIN'=>'','API_ARGS'=>'','WEB_OPEN'=>''];
 	if ($from === 'home'){
 		/* ユーザーホーム */
 		if (!$is_login){
