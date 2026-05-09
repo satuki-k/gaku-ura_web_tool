@@ -183,6 +183,7 @@ class TextEditor{
 	#ae;
 	#h;
 	#p;
+	#t;
 	constructor(){
 		this.#ae = document.createElement("pre");
 		this.#m1 = document.createElement("select");
@@ -221,6 +222,7 @@ class TextEditor{
 		$ID("text").value===""?this.reload():this.setup();
 	}
 	setup(){
+		this.#t = $ID("text").value;
 		this.#m1.addEventListener("change", ()=>{this.editor();});
 		this.#f.addEventListener("input", ()=>{this.zoom();});
 		this.#w.addEventListener("change", ()=>{this.row();});
@@ -247,6 +249,7 @@ class TextEditor{
 				}
 			}
 		});
+		this.sync();
 	}
 	editor(){
 		this.#m = this.#m1.value;
@@ -307,14 +310,62 @@ class TextEditor{
 			this.#h = ace.edit(this.#ae.id,{
 				useSoftTabs:false,
 				mode:"ace/mode/"+m,
-				theme:"ace/theme/Tomorrow"
 			});
-			this.#ae.addEventListener("wheel",
-				(e)=>{e.preventDefault();},
-				{passive:false});
+			ace.define("ace/theme/gkur", ["require","exports","module","ace/lib/dom"], function(r,e,m){
+				e.isDark = false;
+				e.cssClass = "ace-gkur";
+				const c = [
+					' .ace_gutter{background:#eee;color:#000;}',
+					'{background-color:#fff;color:#000;}',
+					/* コメント */
+					' .ace_comment{color:#c00;}',
+					/* キーワード */
+					' .ace_keyword{color:#00a;font-weight:bold;}',
+					/* 文字列 */
+					' .ace_string {color:#f80;}',
+					/* 数値 */
+					' .ace_constant.ace_numeric{color:#0a0;}',
+					/* 関数名 */
+					' .ace_support.ace_function{color:#000;}',
+					/* 型名 */
+					' .ace_support.ace_type{color:#00a;}',
+					/* 変数 */
+					' .ace_identifier{color:#030;}',
+					/* 選択範囲 */
+					' .ace_marker-layer .ace_selection{background:#cce;}',
+					/* 現在行 */
+					' .ace_marker-layer .ace_active-line{background:#f0f0f0;}',
+					/* カーソル */
+					' .ace_cursor{color:#000;}'];
+				e.cssText = "";
+				c.forEach((i)=>{e.cssText += "."+e.cssClass+i;});
+				const d = r("ace/lib/dom");
+				d.importCssString(e.cssText, e.cssClass);
+			});
+			this.#h.setTheme("ace/theme/gkur");
+			this.#ae.addEventListener("wheel",(e)=>{e.preventDefault();},{passive:false});
 			this.zoom();
 		}
 		this.#h.getSession().setValue(t);
+	}
+	async sync(){
+		try{
+			const d = q.get("Dir");
+			const f = q.get("File");
+			const r = await fetch("?Dir="+d+"&File="+f+"&download");
+			const t = await r.text();
+			if (this.#t !== t){
+				$ID("text").value = t;
+				this.#t = t;
+				if (this.#m==="ace" && this.#h){
+					const c = this.#h.selection.getCursor();
+					this.#h.getSession().setValue(t, -1);
+					this.#h.moveCursorToPosition(c);
+					this.#h.renderer.scrollCursorIntoView(c, 0.5);
+				}
+			}
+		}catch{}
+		setTimeout(async ()=>{await this.sync()}, 100);
 	}
 	//readfileじゃないと取得出来ないファイルの閲覧
 	async reload(){
@@ -322,8 +373,8 @@ class TextEditor{
 			const d = q.get("Dir");
 			const f = q.get("File");
 			const r = await fetch("?Dir="+d+"&File="+f+"&download");
-			const t = await r.text();
-			$ID("text").value = t;
+			const v = await r.text();
+			$ID("text").value = v;
 			if(this.#m==="ace") this.#h.getSession().setValue(v);
 		}catch{}
 		this.setup();
