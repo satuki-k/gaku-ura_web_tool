@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.20
+#gaku-ura9.7.21
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -521,8 +521,11 @@ function main(string $from):int{
 				}
 				$replace['FORM_AFTER'] = $is_async?'':$f;
 				$replace['DOWNLOAD'] = $d;
-				if(str_starts_with($current_file,$conf->doc_root)) $replace['WEB_OPEN']='<a href="'.lreplace($current_file,$conf->doc_root).'" target="_blank">WEBで開く</a>';
-
+				if (str_starts_with($current_file,$conf->doc_root)){
+					$u = lreplace($current_file,$conf->doc_root);
+					if($current_dir===$conf->data_dir.'/home/html') $u=$conf->u_root.'?Page='.rreplace(rreplace(basename($current_file),'.html'),'.md');
+					$replace['WEB_OPEN'] = '<a href="'.$u.'" target="_blank">WEBで開く</a>';
+				}
 			}
 			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__'.$replace['SUBMIT_TYPE']);
 		} elseif (not_empty($uri_dir) && $menu==='edit'){
@@ -570,7 +573,10 @@ function main(string $from):int{
 				if($f==='.'||$f==='..') continue;
 				$file = $current_dir.'/'.$f;
 				$url = '';
-				if(str_starts_with($file,$conf->doc_root)) $url=lreplace($file,$conf->doc_root);
+				if (str_starts_with($file,$conf->doc_root)){
+					$url = lreplace($file,$conf->doc_root);
+					if($current_dir===$conf->data_dir.'/home/html') $url=$conf->u_root.'?Page='.rreplace(rreplace(basename($file),'.html'),'.md');
+				}
 				$fmt = '<tr><td><a href="?Dir=%s"%s url="'.$url.'">'.$f.'</a></td><td><a href="?Dir=%s&Menu=edit">編集</a></td><td>%s '.file_perm($file).'</td><td>'.date('Y-m/d H:i',filemtime($file)).'</td></tr>';
 				if (is_dir($file)){
 					$p .= sprintf($fmt, $u.$f,' class="dir"',$u.$f,count(scandir($file))-2 .'item');
