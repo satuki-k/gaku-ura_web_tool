@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.7.21';
+const GAKU_URA_VERSION = '9.7.22';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
@@ -402,15 +402,34 @@ class GakuUra{
 		$e = ';';
 		$a = [];
 		while (($p=subrpos($b,$e,$code)) !== ''){
-			$f = $this->data_dir.'/default/lib/'.$mode.'/'.trim($p);
+			$i = lreplace(trim($p),'\/','/');
+			$m = '';
+			$f = $this->data_dir.'/'.$i;
+			foreach (['js','css'] as $j){
+				if (str_ends_with($i, '.'.$j)){
+					$m = $j;
+					break;
+				}
+			}
+			if ($m && !str_starts_with($i,'/')){
+				$f = $this->data_dir.'/default/lib/'.$m.'/'.$i;
+			} elseif (str_starts_with($i,'/')){
+				$f = $this->d_root.$i;
+			}
 			$r = '';
-			if (!in_array($f,$a,true) && file_exists($f)){
-				if ($mode === 'js'){
+			if ($m && !in_array($f,$a,true)){
+				if ($m === 'js'){
 					$r = js_out($f);
-				} elseif ($mode === 'css'){
+				} elseif ($m === 'css'){
 					$r = css_out($f);
 				}
 				$a[] = $f;
+			} elseif (!$m){
+				if (str_ends_with($i, '.json')){
+					$r = js_out($f);
+				} else {
+					$r = file_get_contents($f);
+				}
 			}
 			$code = str_replace($b.$p.$e, $r, $code);
 		}
