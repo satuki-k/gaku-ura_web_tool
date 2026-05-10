@@ -1,0 +1,58 @@
+/* テキストエディターの色を変更 */
+.ace-gkur .ace_gutter{
+	background:#eee;
+	color:#000;
+}
+.ace-gkur{
+	background-color:#fff;
+	color:#000;
+}
+/* コメント */
+.ace-gkur .ace_comment{
+	color:#c00;
+}
+/* キーワード */
+.ace-gkur .ace_keyword{
+	color:#00a;
+	font-weight:bold;
+}
+/* 文字列 */
+.ace-gkur .ace_string{
+	color:#f80;
+}
+/* 数値 */
+.ace-gkur .ace_constant.ace_numeric{
+	color:#0a0;
+}
+/* 関数名 */
+.ace-gkur .ace_support.ace_function{
+	color:#000;
+}
+/* 型名 */
+.ace-gkur .ace_support.ace_type{
+	color:#00a;
+}
+/* 変数 */
+.ace-gkur .ace_identifier{
+	color:#030;
+}
+/** html **/
+.ace-gkur .ace_meta.ace_tag, .ace_entity.ace_name.ace_tag{
+	color:#00c;
+}
+.ace-gkur .ace_entity.ace_other.ace_attribute-name{
+	color:#00f;
+}
+/* 選択範囲 */
+.ace-gkur .ace_marker-layer .ace_selection{
+	background:#cce;
+}
+/* 現在行 */
+.ace-gkur .ace_marker-layer .ace_active-line{
+	background:#f0f0f0;
+}
+/* カーソル */
+.ace-gkur .ace_cursor{
+	color:#000;
+}
+

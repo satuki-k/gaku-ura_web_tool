@@ -1,0 +1,12 @@
+/* ファイル拡張子やシェルバングと言語の対応表 */
+{
+	"md":"markdown",
+	"py":"python",
+	"pl":"perl",
+	"rb":"ruby",
+	"js":"javascript",
+	"conf":"ini",
+	"htaccess":"ini",
+	"python3":"python"
+}
+

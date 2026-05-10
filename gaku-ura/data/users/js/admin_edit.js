@@ -296,49 +296,30 @@ class TextEditor{
 	}
 	ace(){
 		const t = $ID("text").value;
-		const l = {"md":"markdown","py":"python","pl":"perl","rb":"ruby","js":"javascript","conf":"ini","htaccess":"ini"};
+		const l = #!include users/js/editor_lang.json;;//json埋め込み
 		const v = $QS('input[name="new_name"]').value;
-		const f = v.slice(v.indexOf(".")+1);
-		let m = l[f]??f;
+		let f = v.slice(v.indexOf(".")+1);
 		if (t.slice(0,3)==='#!/'){
 			const r = t.split("\n")[0];
-			["perl","python","python3","ruby","php","sh","bash"].forEach((i)=>{
-				if(r.endsWith(i)) m=i;
-			});
+			f = r.split(~r.indexOf(" ")?" ":"/").pop();
 		}
+		const m = l[f]??f;
 		if(!this.#h){
 			this.#h = ace.edit(this.#ae.id,{
 				useSoftTabs:false,
 				mode:"ace/mode/"+m,
 			});
-			ace.define("ace/theme/gkur", ["require","exports","module","ace/lib/dom"], function(r,e,m){
+			ace.define("ace/theme/gkur", ["require","exports","module","ace/lib/dom"], function(r,e,_){
 				e.isDark = false;
 				e.cssClass = "ace-gkur";
-				const c = [
-					' .ace_gutter{background:#eee;color:#000;}',
-					'{background-color:#fff;color:#000;}',
-					/* コメント */
-					' .ace_comment{color:#c00;}',
-					/* キーワード */
-					' .ace_keyword{color:#00a;font-weight:bold;}',
-					/* 文字列 */
-					' .ace_string {color:#f80;}',
-					/* 数値 */
-					' .ace_constant.ace_numeric{color:#0a0;}',
-					/* 関数名 */
-					' .ace_support.ace_function{color:#000;}',
-					/* 型名 */
-					' .ace_support.ace_type{color:#00a;}',
-					/* 変数 */
-					' .ace_identifier{color:#030;}',
-					/* 選択範囲 */
-					' .ace_marker-layer .ace_selection{background:#cce;}',
-					/* 現在行 */
-					' .ace_marker-layer .ace_active-line{background:#f0f0f0;}',
-					/* カーソル */
-					' .ace_cursor{color:#000;}'];
-				e.cssText = "";
-				c.forEach((i)=>{e.cssText += "."+e.cssClass+i;});
+				e.cssText = "#!include \/gaku-ura/data/users/css/editor.css;";//css埋め込み
+				if (m === "html"){
+					e.cssText += '.ace-gkur .ace_string{color:#080;}';
+				} else if (m === "php"){
+					e.cssText += '.ace-gkur .ace_identifier{color:#00c;}';
+				} else if (m === "javascript"){
+					e.cssText += '.ace-gkur .ace_support.ace_function{color:#00c;}';
+				}
 				const d = r("ace/lib/dom");
 				d.importCssString(e.cssText, e.cssClass);
 			});
