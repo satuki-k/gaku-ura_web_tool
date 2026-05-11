@@ -45,14 +45,19 @@
 }
 /* 選択範囲 */
 .ace-gkur .ace_marker-layer .ace_selection{
-	background:#cce;
+	background:#ccd;
 }
 /* 現在行 */
 .ace-gkur .ace_marker-layer .ace_active-line{
-	background:#f0f0f0;
+	background:#eee;
 }
 /* カーソル */
 .ace-gkur .ace_cursor{
 	color:#000;
+}
+/* 対応トークン */
+.ace-gkur .ace_bracket, .ace-gkur .ace_bracket-highlight{
+	background:#eff;
+	font-weight:bold;
 }
 

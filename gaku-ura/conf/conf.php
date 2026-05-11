@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.7.22';
+const GAKU_URA_VERSION = '9.7.23';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
@@ -79,11 +79,10 @@ function get_rows(string $f, int $l):array|false{
 }
 #任意時間以上更新ないファイル削除
 function unlink_by_date(string $dir, int $ds):void{
-	if (is_dir($dir)){
-		foreach (scandir($dir)as$i){
-			$f = $dir.'/'.$i;
-			if(is_file($f)&&time()-filemtime($f)>$ds) unlink($f);
-		}
+	if(is_dir($dir)) return;
+	foreach (scandir($dir)as$i){
+		$f = $dir.'/'.$i;
+		if(is_file($f)&&time()-filemtime($f)>$ds) unlink($f);
 	}
 }
 #パス一覧再帰取得
@@ -443,18 +442,18 @@ class GakuUra{
 		return $l.$code;
 	}
 	#タイトル,説明,bodyタグの中身,[cssファイル,jsファイル,クロール可否,共通css使うか,jsの軽量化,雛形のhtml]
-	public function html(string $title,string $description,string $content,string $css='',string $js='',bool $robots=false,bool $css_default=true,bool $minify=true,?string $htm=null):int{
+	public function html(string $title,string $summary,string $content,string $css='',string $js='',bool $robots=false,bool $css_default=true,bool $minify=true,?string $htm=null):int{
 		$htm = $htm??'default/default.html';
 		$f = $this->data_dir.'/'.$htm;
 		if(!is_file($f)) return 1;
 		$h = row(file_get_contents($f))."\n";
 		remove_comment_rows($h, '<!--','-->');
 		remove_comment_rows($title, '<','>');
-		remove_comment_rows($description, '<','>');
+		remove_comment_rows($summary, '<','>');
 		$r = [
 		'CSS_URL'=>$this->u_root.'css/?'.lreplace($css,$this->data_dir).($css_default?'':'&STANDALONE'),
 		'JS_URL'=>$this->u_root.'js/?'.lreplace($js,$this->data_dir).($minify?'':'&NOTMINIFY'),
-		'NONCE'=>$this->nonce,'DESCRIPTION'=>self::h(($robots&&not_empty($description))?$description:'なし'),'TITLE'=>self::h($title),
+		'NONCE'=>$this->nonce,'DESCRIPTION'=>self::h(($robots&&not_empty($summary))?$summary:'なし'),'TITLE'=>self::h($title),
 		'CONTENT'=>self::h($content),'SITE_TITLE'=>self::h($this->config['title']??'無題'),'U_ROOT'=>$this->u_root];
 		if ($this->here !== $this->canonical){
 			$h = nreplace($h, '</head>', '<link rel="canonical" href="'.$this->canonical.'"></head>', 1);
@@ -469,7 +468,7 @@ class GakuUra{
 				$this->ld_json['name'] = $r['SITE_TITLE'];
 				$this->ld_json['headline'] = $r['TITLE'].$r['SITE_TITLE'];
 			}
-			$this->ld_json['description'] = $description;
+			$this->ld_json['description'] = $summary;
 			$j = json_encode($this->ld_json, JSON_UNESCAPED_UNICODE);
 			$h = nreplace($h, '</body>', '<script type="application/ld+json">'.$j.'</script></body>', 1);
 		}
@@ -518,23 +517,20 @@ class GakuUra{
 		$s['title'] .= '-';
 		if($s['css_default_only']) $css='';
 		if($s['top_page']) $s['title']='';
-		return $this->html($s['title'], $s['description'], str_replace("\t",'',row($c)), $css, $js, $s['robots'], !$s['css_standalone'], $s['js_minify'], $s['template']);
+		return $this->html($s['title'],$s['description'],str_replace("\t",'',row($c)),$css,$js, $s['robots'],!$s['css_standalone'],$s['js_minify'],$s['template']);
 	}
 	#エラーページ
 	public function not_found(bool $is404=false, string $reason=''):void{
 		if($reason==='') $reason='アクセス拒否または無効なURLです。';
 		$h = $this->u_root;
-		if (http_response_code()===500 && isset($_SERVER['REQUEST_URI'])){
-			$f = $this->d_root.$_SERVER['REQUEST_URI'];
-			if(is_file($f)&&str_starts_with(get($f,'#!/',1))) chmod($f, 0745);
-		}
-		if ($is404){
-			foreach (explode(' ',$this->config['error.moved_list']??'') as $m){
-				$e = explode('=>', $m);
-				if (count($e)===2 && $_SERVER['REQUEST_URI']===trim($e[0])){
-					$h = trim($e[1]);
-					break;
-				}
+		$u = urldecode($_SERVER['REQUEST_URI']??'');
+		$f = $this->d_root.$u;
+		if(http_response_code()===500&&is_file($f)&&str_starts_with(get($f,'#!/',1))) chmod($f,0745);
+		if($is404) http_response_code(404);
+		foreach (explode(' ',$this->config['error.moved_list']??'') as $m){
+			if (($e=strpos($m,'=>')) && ($k=trim(substr($m,0,$e))) && $u===$k){
+				$h = trim(substr($m, $e +2));
+				break;
 			}
 		}
 		exit($this->htmlf('404',null,['HERE'=>$this->here,'GAKU_URA_VERSION'=>GAKU_URA_VERSION,'PERHAPS'=>$h,'REASON'=>$reason]));
