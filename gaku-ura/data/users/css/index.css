@@ -4,14 +4,14 @@
 h1{
 	font-size:1.1em;
 }
-h1,#exit{
+h1, #exit{
 	color:#fff;
 }
-body,input,textarea{
+body, input, textarea{
 	background:#000;
 	color:#eee;
 }
-select,option{
+select, option{
 	font-size:1em;
 	background:#fff;
 	color:#000;
@@ -26,7 +26,7 @@ tbody input[type="text"]{
 	border:0;
 	outline:0;
 }
-a,a:visited{
+a, a:visited{
 	color:#0a0;
 }
 a:hover{
@@ -92,3 +92,4 @@ button:hover{
 	content:"📁";
 	color:#fff;
 }
+
