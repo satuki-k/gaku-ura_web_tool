@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.21
+#gaku-ura9.7.24
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -92,6 +92,10 @@ function main(string $from):int{
 	} elseif ($from === 'admin'){
 		/* 管理機能 */
 		if (!$is_login){
+			if ($is_async){
+				if(isset($_GET['download'])) $_SESSION[GakuUraUser::SKEY_FROM]=str_replace('&download','',$_SERVER['REQUEST_URI']??'');
+				return -1;
+			}
 			header('Location:../login/');
 			exit;
 		}

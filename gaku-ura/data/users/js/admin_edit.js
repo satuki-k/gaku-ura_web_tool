@@ -229,6 +229,9 @@ class TextEditor{
 		this.#f.addEventListener("keydown", (e)=>{
 			if(isEnterKey(e)) e.preventDefault();
 		});
+		$ID("form").addEventListener("submit", (e)=>{
+			if(this.#m==="ace"&&this.#h) $ID("text").value=this.#h.getValue();
+		});
 		this.editor();
 		this.zoom();
 		window.addEventListener("wheel", (e)=>{
@@ -270,12 +273,7 @@ class TextEditor{
 				s.src = cdn_a;
 				s.id = "include_ace";
 				document.body.appendChild(s);
-				s.addEventListener("load", ()=>{
-					this.ace();
-					$ID("form").addEventListener("submit", ()=>{
-						if(this.#m==="ace") $ID("text").value=this.#h.getValue();
-					});
-				});
+				s.addEventListener("load", ()=>{this.ace();});
 			}
 			break;
 			case "exit":
@@ -305,10 +303,6 @@ class TextEditor{
 		}
 		const m = l[f]??f;
 		if(!this.#h){
-			this.#h = ace.edit(this.#ae.id,{
-				useSoftTabs:false,
-				mode:"ace/mode/"+m,
-			});
 			ace.define("ace/theme/gkur", ["require","exports","module","ace/lib/dom"], function(r,e,_){
 				e.isDark = false;
 				e.cssClass = "ace-gkur";
@@ -323,25 +317,31 @@ class TextEditor{
 				const d = r("ace/lib/dom");
 				d.importCssString(e.cssText, e.cssClass);
 			});
-			this.#h.setTheme("ace/theme/gkur");
+			this.#h = ace.edit(this.#ae.id,{
+				useSoftTabs:false,
+				mode:"ace/mode/"+m,
+				theme:"ace/theme/gkur"});
 			this.#ae.addEventListener("wheel",(e)=>{e.preventDefault();},{passive:false});
 			this.zoom();
 		}
-		this.#h.getSession().setValue(t);
+		this.#h.setValue(t, -1);
+		this.#h.clearSelection();
+		this.#h.getSession().getUndoManager().reset();
 	}
 	async sync(){
 		try{
 			const d = q.get("Dir");
 			const f = q.get("File");
-			const r = await fetch("?Dir="+d+"&File="+f+"&download");
+			const r = await fetch("?Dir="+d+"&File="+f+"&download&async");
 			const t = await r.text();
 			if (this.#t !== t){
 				$ID("text").value = t;
 				this.#t = t;
 				if (this.#m==="ace" && this.#h){
 					const c = this.#h.selection.getCursor();
-					this.#h.getSession().setValue(t, -1);
+					this.#h.setValue(t, -1);
 					this.#h.moveCursorToPosition(c);
+					this.#h.clearSelection();
 					this.#h.renderer.scrollCursorIntoView(c, 0.5);
 				}
 			}
@@ -353,10 +353,13 @@ class TextEditor{
 		try{
 			const d = q.get("Dir");
 			const f = q.get("File");
-			const r = await fetch("?Dir="+d+"&File="+f+"&download");
+			const r = await fetch("?Dir="+d+"&File="+f+"&download&async");
 			const v = await r.text();
 			$ID("text").value = v;
-			if(this.#m==="ace") this.#h.getSession().setValue(v);
+			if(this.#m==="ace"){
+				this.#h.setValue(v, -1);
+				this.#h.clearSelection();
+			}
 		}catch{}
 		this.setup();
 	}
