@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.7.23';
+const GAKU_URA_VERSION = '9.7.24';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
@@ -450,6 +450,7 @@ class GakuUra{
 		remove_comment_rows($h, '<!--','-->');
 		remove_comment_rows($title, '<','>');
 		remove_comment_rows($summary, '<','>');
+		if(!$js) remove_comment_rows($h, '<script ','</script>');
 		$r = [
 		'CSS_URL'=>$this->u_root.'css/?'.lreplace($css,$this->data_dir).($css_default?'':'&STANDALONE'),
 		'JS_URL'=>$this->u_root.'js/?'.lreplace($js,$this->data_dir).($minify?'':'&NOTMINIFY'),

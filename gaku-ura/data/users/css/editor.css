@@ -57,7 +57,9 @@
 }
 /* 対応トークン */
 .ace-gkur .ace_bracket, .ace-gkur .ace_bracket-highlight{
-	background:#eff;
+	background:#ff5;
 	font-weight:bold;
 }
+
+
 
