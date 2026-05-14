@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.24
+#gaku-ura9.7.25
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -92,8 +92,12 @@ function main(string $from):int{
 	} elseif ($from === 'admin'){
 		/* 管理機能 */
 		if (!$is_login){
+			if (isset($_POST['async'])){
+				echo -1;
+				return -1;
+			}
 			if ($is_async){
-				if(isset($_GET['download'])) $_SESSION[GakuUraUser::SKEY_FROM]=str_replace('&download','',$_SERVER['REQUEST_URI']??'');
+				if(isset($_GET['download'])) $_SESSION[GakuUraUser::SKEY_FROM]=str_replace(['&download','&async'],'',$_SERVER['REQUEST_URI']??'');
 				return -1;
 			}
 			header('Location:../login/');
@@ -399,7 +403,7 @@ function main(string $from):int{
 						if($m===3) $m.=implode(',',$d).' は廃止されました。';
 						$m .= '<form action="" method="POST"><label><button type="submit" name="submit" value="'.$submit.'">完了</button></label><input type="hidden" name="csrf_token" value="'.$conf->set_csrf_token('admin__upgrade').'"><input type="hidden" name="file" value="'.basename($a).'"><input type="hidden" name="reupgrade" value="true"></form>';
 					} else {
-						$m .= '<b>失敗しました。</b>';
+						$m .= '失敗しました。';
 					}
 					$replace['ERROR_MSG'] = $m;
 				}
