@@ -425,7 +425,12 @@ $ID("form").addEventListener("submit", async (e)=>{
 			fparea.innerHTML = "(saving...)";
 			$QS("h1").style.color = "#ff0";
 			f.append("submit", $QS('[type="submit"]').value);
-			x.addEventListener("load", (e)=>{
+			f.append("async", 1);
+			x.addEventListener("load", async (e)=>{
+				if (x.responseText == -1){
+					if(await popup.confirm("ログアウトしました。リロードしてください。")) location.reload();
+					return;
+				}
 				fparea.innerHTML = "(saved)";
 				$QS("h1").style.color = c;
 				setTimeout(()=>{
