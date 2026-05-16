@@ -549,7 +549,7 @@ class GakuUra{
 		$b = strpos($this->referer, '://');
 		return $t&&$d[0]===$t&&(!$ref||($a&&$b&&substr($d[1],$a+3)===substr($this->referer,$b+3)));
 	}
-	public function form_die():void{exit($this->html('error-','',to_html("#フォーム損傷\n予期しない送信内容により停止しました。")));}
+	public function form_die():void{exit($this->htmlf('404','form_die',[]));}
 	#学裏ライブラリの上書き展開
 	public function upgrade(string $tar_gz, ?array &$reduced=null):int{
 		if(!is_file($tar_gz)) return 1;

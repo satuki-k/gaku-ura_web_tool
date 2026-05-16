@@ -1,10 +1,11 @@
 /* ポップアップ画面の作成 */
 #!include keyboard.js;
+#!include string.js;
 class POPUP{
 	#w;
 	constructor(style=""){
 		this.#w = document.createElement("div");
-		this.#w.style = "padding:1em;position:fixed;top:25%;left:50%;transform:translateX(-50%);width:70%;background:#fff;color:#000;pointer-events:auto;"+style;
+		this.#w.style = subrpos("{","}","#!include popup.css;")+style;
 		this.#w.style.display = "none";
 		this.#w.id = "POPUP";
 		document.body.append(this.#w);

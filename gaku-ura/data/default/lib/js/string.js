@@ -21,6 +21,6 @@ function remove_comment_rows(code, s, e){
 }
 function not_empty(s=""){
 	if(s===null||s===undefined) return false;
-	return(s.replace(" ","").replace(/　/g,"").replace(/\s/g,"").replace(/\r|\n|\r\n/,"")!=="");
+	return s.replace(" ","").replace(/　|\s|\r|\n|\r\n/g,"")!=="";
 }
 
