@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.19
+#gaku-ura9.8.0
 #ログイン必須とは限らない機能を考慮し、ログインチェックは初期化では行わない
 class GakuUraUser{
 	public string $user_dir;
@@ -116,6 +116,29 @@ class GakuUraUser{
 			}
 		}
 		$this->c->file_unlock(self::TABLE_NAME);
+	}
+	#ファイル権限確認
+	public function permitted(string $file, array $user_data, bool $write=false, bool $download=false):bool{
+		if(
+			$this->admin_revel>$user_data['admin']||
+			!str_starts_with($file,realpath($this->c->d_root.$this->own_dir[$user_data['admin']]))||
+			((str_starts_with($file,$this->user_dir.'/'.self::TABLE_NAME)||($write&&$file===$this->c->config_file))&&$user_data['admin']<4)
+		) return false;
+		if (($this->c->config['login.admin_block']??0)>=$user_data['admin']){
+			if((($this->c->config['login.block_readonly']??0)&&$write)||($download&&($this->c->config['login.block_dir_download']??0))) return false;
+			foreach(explode(' ',$this->c->config['login.deny_ftype']??'')as$i) if(str_ends_with($file,$i)) return false;
+			if ($write&&!is_dir($file)){
+				$o = 1;
+				foreach (explode(' ',strtolower($this->c->config['login.allow_ftype']??'')) as $i){
+					if (str_ends_with($file,$i)){
+						$o = 0;
+						break;
+					}
+				}
+				if($o) return false;
+			}
+		}
+		return true;
 	}
 }
 

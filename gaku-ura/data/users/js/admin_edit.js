@@ -430,6 +430,11 @@ $ID("form").addEventListener("submit", async (e)=>{
 				if (x.responseText == -1){
 					if(await popup.confirm("ログアウトしました。リロードしてください。")) location.reload();
 					return;
+				} else if (x.responseText==1||x.responseText==2){
+					if(await popup.confirm("ファイルまたはディレクトリが削除されました。")) location.reload();
+					return;
+				} else if (x.responseText == 4){
+					return popup.alert("編集権限がありません。");
 				}
 				fparea.innerHTML = "(saved)";
 				$QS("h1").style.color = c;
