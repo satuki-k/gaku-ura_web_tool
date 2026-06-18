@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.7.25
+#gaku-ura9.8.0
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -41,7 +41,7 @@ function main(string $from):int{
 	$api_args = [];
 	$submit = $_POST['submit']??$_POST['submit_type']??'';
 	$csrf_token = $_POST['csrf_token']??'';
-	$is_async = isset($_GET['async']);
+	$is_async = isset($_GET['async'])||isset($_POST['async']);
 	$l = $user->login_check();
 	$is_login = $l['result'];
 	$user_data = $l['user_data']??[];
@@ -106,8 +106,7 @@ function main(string $from):int{
 		if($user_data['admin']<$user->admin_revel) $conf->not_found();
 		$is_edit_mode = 0;
 		$menu = $_GET['Menu']??'';
-		$admin_dir = $user->own_dir[$user_data['admin']];
-		$c_root = realpath($conf->d_root.$admin_dir);
+		$c_root = realpath($conf->d_root.$user->own_dir[$user_data['admin']]);
 		$current_dir = $c_root;
 		$uri_dir = h(str_replace('..','',$_GET['Dir']??''));
 		$perm_list = ['no'=>0,'DIR'=>0755,'CGI'=>0745,'CGI2'=>0755,'STATIC'=>0644,'STATIC2'=>0666,'MPRIVATE'=>0604,'PRIVATE'=>0600];
@@ -116,19 +115,19 @@ function main(string $from):int{
 		#要点ファイルショートカット
 		$scut = [];
 		$api_args['u_root'] = $conf->u_root;
-		if (str_starts_with($conf->d_root,$c_root)){
+		if ($user->permitted($conf->d_root,$user_data)){
 			$api_args['d_root'] = lreplace(lreplace($conf->d_root,$c_root), '/');
 			$scut[] = '<a href="?Dir='.$api_args['d_root'].'">TOP</a>';
 		}
 		#shortcut dir
 		foreach ([$conf->data_dir=>'data dir',__DIR__=>'main files',$conf->data_dir.'/default'=>'templates',$conf->data_dir.'/home'=>'homeages'] as $k=>$v){
-			if(str_starts_with($k,$c_root)) $scut[$v]='<a href="?Dir='.lreplace($c_root===$k?'':lreplace($k,$c_root),'/').'">'.$v.'</a>';
+			if($user->permitted($k,$user_data)) $scut[$v]='<a href="?Dir='.lreplace($c_root===$k?'':lreplace($k,$c_root),'/').'">'.$v.'</a>';
 		}
 		#shortcut file admin
 		if ($user_data['admin'] >= 4){
 			foreach ([$conf->config_file=>'config',$user->user_list_file=>'users'] as $k=>$v){
 				$b = basename($k);
-				if (str_starts_with($k, $c_root)){
+				if ($user->permitted($k,$user_data)){
 					$scut[$v] = '<a href="?Dir='.lreplace(lreplace(rreplace($k,'/'.$b),$c_root),'/').'&File='.$b.'">'.$v.'</a>';
 					$replace[strtoupper($v)] = $scut[$v];
 				}
@@ -140,6 +139,7 @@ function main(string $from):int{
 		if (is_dir($d)){
 			$current_dir = $d;
 		} elseif ($is_async){
+			echo 1;
 			return 1;
 		} else {
 			$uri_dir = '';
@@ -148,28 +148,34 @@ function main(string $from):int{
 		if ($submit && $conf->check_csrf_token('admin__'.$submit,$csrf_token,true)){
 			if ($submit==='edit_file' && list_isset($_POST,['name','new_name','perm']) && strpos($_POST['name'],'..')===false && strpos($_POST['name'], '/')===false && is_file($current_dir.'/'.h($_POST['name'])) && isset($perm_list[$_POST['perm']])){
 				$path = $current_dir.'/'.h($_POST['name']);
-				if (($path!==$conf->config_file&&!str_starts_with($path,$user->user_dir.'/'.GakuUraUser::TABLE_NAME)) || $user_data['admin']>=4){
-					if (($_POST['remove']??'')==='yes'){
-						unlink($path);
-						header('Location:./?Dir='.$uri_dir);
-						exit;
-					} else {
-						if($_POST['perm']!=='no') chmod($path,$perm_list[$_POST['perm']]);
-						if (not_empty($_POST['new_name']) && !file_exists($current_dir.'/'.h($_POST['new_name']))){
-							$n = h($_POST['new_name']);
-							$p = $current_dir.'/'.$n;
-							rename($path, $p);
-							$path = $p;
-							$_GET['File'] = $n;
-						}
-						if(isset($_POST['content'])) file_put_contents($path,$_POST['content'],LOCK_EX);
+				if (!$user->permitted($path,$user_data,true)){
+					if ($is_async){
+						echo 4;
+						return 4;
 					}
+					$conf->not_found(false,'権限がありません。');
+				}
+				if (($_POST['remove']??'')==='yes'){
+					unlink($path);
+					header('Location:./?Dir='.$uri_dir);
+					exit;
+				} else {
+					if($_POST['perm']!=='no') chmod($path,$perm_list[$_POST['perm']]);
+					if (not_empty($_POST['new_name']) && !file_exists($current_dir.'/'.h($_POST['new_name']))){
+						$n = h($_POST['new_name']);
+						$p = $current_dir.'/'.$n;
+						rename($path, $p);
+						$path = $p;
+						$_GET['File'] = $n;
+					}
+					if(isset($_POST['content'])) file_put_contents($path,$_POST['content'],LOCK_EX);
 				}
 				header('Location:?Dir='.$uri_dir.'&File='.$_GET['File'].'&Menu=edit');
 				exit;
 			} elseif ($submit==='edit_dir' && list_isset($_POST,['new_name','perm']) && isset($perm_list[$_POST['perm']])){
 				$path = $current_dir;
 				$up_to_dir = up_to($path);
+				if(!$user->permitted($path,$user_data,true)) $conf->not_found(false,'権限がありません。');
 				if (($_POST['remove']??'')==='yes'){
 					rmdir_all($path);
 				} else {
@@ -189,14 +195,15 @@ function main(string $from):int{
 				exit;
 			} elseif ($submit==='new' && list_isset($_POST,['new','name'])){
 				$template_dir = $conf->data_dir.'/default/file';
-				$name = str_replace('..','', str_replace('/','',h($_POST['name'])));
+				$name = h(str_replace(['/','..'],'',$_POST['name']));
 				$nw = $_POST['new'];
-				if (in_array($nw,['.htaccess','/sitemap.xml','/robots.txt'],true) && !str_starts_with($conf->d_root,$c_root)){
-					$conf->not_found(false, '権限がありません');
+				if (in_array($nw,['/sitemap.xml','/robots.txt'],true)){
+					if(!$user->permitted($conf->d_root.$nw,$user_data,true,false,$template_dir.$nw)) $conf->not_found(false,'権限がありません。');
+					if(!is_file($template_dir.$nw)) $conf->not_found(false,$nw.'の作成テンプレートがありません。');
 				}
 				if ($nw === '.htaccess'){
-					touch($current_dir.'/.htaccess');
-				} elseif ($nw==='/sitemap.xml' && str_starts_with($conf->d_root,$c_root) && is_file($template_dir.$nw)){
+					touch($current_dir.$nw);
+				} elseif ($nw==='/sitemap.xml'){
 					$f = $template_dir.$nw;
 					$url_list = [''];
 					$d = $conf->data_dir.'/home/html';
@@ -212,22 +219,23 @@ function main(string $from):int{
 					file_put_contents($conf->d_root.$nw, $s, LOCK_EX);
 					header('Location:?Dir='.lreplace($c_root,$conf->d_root.'/').'&File='.basename($f).'&Menu=edit');
 					exit;
-				} elseif ($nw==='/robots.txt' && str_starts_with($conf->d_root,$c_root) && is_file($template_dir.$nw)){
+				} elseif ($nw==='/robots.txt'){
 					$s = file_get_contents($template_dir.$nw);
 					$s = str_replace('{DOMAIN}', $conf->domain, $s);
-					file_put_contents($conf->d_root.'/robots.txt', $s, LOCK_EX);
+					file_put_contents($conf->d_root.$nw, $s, LOCK_EX);
 					header('Location:?Dir='.lreplace($c_root,$conf->d_root.'/').'&File=robots.txt&Menu=edit');
 					exit;
-				} elseif (not_empty($name) && !file_exists($current_dir.'/'.$name)){
+				} elseif (not_empty($name)){
 					if ($nw === 'folder'){
-						foreach(explode('\\',$name)as$n) if(!file_exists($current_dir.'/'.$n))mkdir($current_dir.'/'.$n,0777,true);
+						foreach(explode('\\',$name)as$n)if(!file_exists($current_dir.'/'.$n)) mkdir($current_dir.'/'.$n,0777,true);
 					} elseif ($nw === 'file'){
-						foreach(explode('\\',$name)as$n) if(!file_exists($current_dir.'/'.$n))touch($current_dir.'/'.$n);
-					} else {
+						foreach(explode('\\',$name)as$n)if(!file_exists($current_dir.'/'.$n)&&$user->permitted($current_dir.'/'.$n,$user_data,true)) touch($current_dir.'/'.$n);
+					} elseif (!file_exists($current_dir.'/'.$name)){
+						if(!$user->permitted($current_dir.'/'.$name,$user_data,true)) $conf->not_found(false,'この拡張子は編集権限がありません。');
 						if (!str_ends_with($name,'.'.$nw) && in_array($nw,['php','html','css','js','pl','py','db'],true)){
 							$name .= '.'.$nw;
 						}
-						$new_path = $current_dir.'/'.str_replace('..','.',$name);
+						$new_path = $current_dir.'/'.$name;
 						$t = $template_dir.'/index.'.$nw;
 						if($nw==='php'&&$current_dir===__DIR__) $t=$template_dir.'/main.php';
 						$s = "\n";
@@ -237,7 +245,7 @@ function main(string $from):int{
 						file_put_contents($new_path, $s, LOCK_EX);
 						if(in_array($nw,['pl','py'],true)) chmod($new_path, 0745);
 						if ($nw === 'db'){
-							header('Location:./?Dir='.$uri_dir.'&File='.basename($new_path).'&Menu=edit_db');
+							header('Location:./?Dir='.$uri_dir.'&File='.$name.'&Menu=edit_db');
 							exit;
 						}
 					}
@@ -247,14 +255,8 @@ function main(string $from):int{
 					$t = $_FILES[$k]['tmp_name']??'';
 					$n = $_FILES[$k]['name']??'';
 					$p = $current_dir.'/'.$n;
-					if ($t && (int)$_FILES[$k]['error']===0 && is_file($t) && not_empty($n)){
-						#権限昇華防止
-						if ($p===$conf->config_file || str_starts_with($p,$user->user_dir.'/'.GakuUraUser::TABLE_NAME)){
-							#最高権限のみ
-							if($user_data['admin']===4) move_uploaded_file($t,$p);
-						} else {
-							move_uploaded_file($t, $p);
-						}
+					if ($t && (int)$_FILES[$k]['error']===0 && is_file($t) && not_empty($n) && $user->permitted($p,$user_data,true,false)){
+						move_uploaded_file($t, $p);
 						#403防止
 						$l = get($p, 1);
 						if ($l && str_starts_with($l,'#!/')){
@@ -270,9 +272,9 @@ function main(string $from):int{
 				#SQLite
 				$current_table = h($_POST['table']??'');
 				$change_table = h($_POST['table_name']??'');
-				$dbname = h($_POST['dbname']);
+				$dbname = h(str_replace(['..','/'],'',$_POST['dbname']));
 				$table = h($_POST['ctable']);
-				if ($_POST['dbtype']==='sqlite' && strpos($dbname,'..')===false && strpos($dbname,'/')===false && is_file($current_dir.'/'.$dbname)){
+				if ($_POST['dbtype']==='sqlite' && is_file($current_dir.'/'.$dbname) && $user->permitted($current_dir.'/'.$dbname,$user_data,true)){
 					$g = new GakuUraSQL($_POST['dbtype'], $current_dir.'/'.$dbname);
 					#インポート
 					if (($tn=$_FILES['file']['tmp_name']??'')!=='' && is_file($tn)){
@@ -430,13 +432,14 @@ function main(string $from):int{
 			$bname = h($_GET['File']);
 			$current_file = $current_dir.'/'.$bname;
 			if (!is_file($current_file)){
-				if($is_async) return 2;
+				if ($is_async){
+					echo 2;
+					return 2;
+				}
 				header('Location:?Dir='.$uri_dir);
 				exit;
 			}
-			if (str_starts_with($current_file,$user->user_dir.'/'.GakuUraUser::TABLE_NAME) && $user_data['admin']<4){
-				$conf->not_found(false, '権限がありません。');
-			}
+			if(!$user->permitted($current_file,$user_data)) $conf->not_found(false,'権限がありません。');
 			$editable = is_editable($current_file);
 			if (isset($_GET['download']) || (!$editable&&!str_starts_with($menu,'edit'))){
 				header('Content-Description:File Transfer');
@@ -538,6 +541,7 @@ function main(string $from):int{
 			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__'.$replace['SUBMIT_TYPE']);
 		} elseif (not_empty($uri_dir) && $menu==='edit'){
 			#ディレクトリの編集
+			if(!$user->permitted($current_dir,$user_data,true,false)) $conf->not_found(false,'権限がありません。');
 			$replace['FORM_AFTER'] = '';
 			$is_edit_mode = 1;
 			$bname = basename($current_dir);
@@ -550,6 +554,7 @@ function main(string $from):int{
 			if(str_starts_with($current_dir,$conf->doc_root)) $replace['WEB_OPEN']='<a href="'.lreplace($current_dir,$conf->doc_root).'" target="_blank">WEBで開く</a>';
 			$replace['DOWNLOAD'] = '?Dir='.$uri_dir.'&download';
 		} elseif (isset($_GET['download'])){
+			if(!$user->permitted($current_dir,$user_data,false,true)) $conf->not_found(false,'権限がありません。');
 			$m = tempnam(sys_get_temp_dir(),'_');
 			$t = $m.'.tar';
 			if($m){
@@ -567,6 +572,7 @@ function main(string $from):int{
 			}
 			return 0;
 		} else {
+			if(!$user->permitted($current_dir,$user_data)) $conf->not_found(false,'権限がありません。');
 			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__new');
 			$l = '';
 			for($i=dirname($uri_dir);$i!==($j=dirname($i));$i=$j) $l='/<a href="?Dir='.$i.'">'.basename($i).'</a>'.$l;
@@ -603,7 +609,10 @@ function main(string $from):int{
 			}
 			$from = 'admin_edit';
 		} elseif ($menu === 'edit'){
-			if($is_async) return 3;
+			if ($is_async){
+				echo 3;
+				return 3;
+			}
 		}
 	} elseif ($from === 'login'){
 		/* ログイン */
