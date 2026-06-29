@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.8.0';
+const GAKU_URA_VERSION = '9.8.1';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
@@ -120,6 +120,27 @@ function copy_path(string $dir, string $to, array $skip=[]):bool{
 				return false;
 			}
 		}
+	}
+	return true;
+}
+#ファイル展開(zipは非対応)
+function file_extract(string $file, string $to):bool{
+	$f = strtolower($file);
+	if(!file_exists($to)) mkdir($to,0777,true);
+	if (str_ends_with($f,'.tar.gz')){
+		try{
+			$p = new PharData($file);
+			$p->decompress();
+			$p = new PharData(rreplace($file,'.gz'));
+			if (!$p->extractTo($to)){
+				return false;
+			}
+			unlink(rreplace($file,'.gz'));
+		}catch(Exception $e){
+			return false;
+		}
+	} else {
+		return false;
 	}
 	return true;
 }
@@ -565,23 +586,11 @@ class GakuUra{
 			$ub[] = $b.$i;
 		}
 		if(is_dir($m)) rmdir_all($m);
-		mkdir($t, 0777, true);
 		mkdir($b, 0777, true);
 		foreach(self::GAKU_URA_FILES as $f)if(file_exists($this->d_root.'/'.$f)) copy_path($this->d_root.'/'.$f,$b.$f,$ub);
 		$a = $m.'/upgrade.tar.gz';
 		copy($tar_gz, $a);
-		try{
-			$p = new PharData($a);
-			$p->decompress();
-			$p = new PharData(rreplace($a,'.gz'));
-			if (!$p->extractTo($t)){
-				$this->file_unlock($l);
-				return 2;
-			}
-		}catch(Exception $e){
-			$this->file_unlock($l);
-			return 2;
-		}
+		if(!file_extract($a,$t)) return 2;
 		$r = 0;
 		foreach (self::GAKU_URA_FILES as $f){
 			$s = $t.$f;

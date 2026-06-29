@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.0
+#gaku-ura9.8.1
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -154,6 +154,9 @@ function main(string $from):int{
 						return 4;
 					}
 					$conf->not_found(false,'権限がありません。');
+				}
+				if (($_POST['extract']??'')==='yes'){
+					file_extract($path, $current_dir);
 				}
 				if (($_POST['remove']??'')==='yes'){
 					unlink($path);
@@ -517,8 +520,11 @@ function main(string $from):int{
 				$replace['SUBMIT_TYPE'] = 'edit_file';
 				$m = mime_content_type($current_file);
 				$f = '';
-				if (str_ends_with($current_file,'.db')){
+				$cfl = strtolower($current_file);
+				if (str_ends_with($cfl,'.db')){
 					$f = '<p><a href="?Dir='.$uri_dir.'&File='.$bname.'&Menu=edit_db">tableを編集</a></p>';
+				} elseif (str_ends_with($cfl,'.tar.gz')){
+					$f = '<p><label><input type="checkbox" name="extract" value="yes">展開する</label></p>';
 				}
 				if ($editable){
 					$c = str_replace("\t",'&#9;',str_replace("\n",'&#10;',u8lf(h(file_get_contents($current_file)))));

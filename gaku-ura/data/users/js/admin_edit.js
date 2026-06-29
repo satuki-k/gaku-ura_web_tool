@@ -446,6 +446,7 @@ $ID("form").addEventListener("submit", async (e)=>{
 			x.send(f);
 		}
 		$QS('[name="remove"]').checked = false;
+		if($QS('[name="extract"]:checked')) $ID("exit").click();
 	}
 });
 

@@ -110,7 +110,8 @@ function mopen(e, c){
 	g.innerHTML = '<p style="'+s+'">'+a.textContent+'</p>';
 	const m = [];
 	m.push(['✍編集する',a2.href]);
-	if (a.getAttribute("class") === "dir"){
+	const isdir = a.getAttribute("class") === "dir";
+	if (isdir){
 		m.unshift(['📂開く',a.href]);
 	} else {
 		if(a.textContent.endsWith(".db")){
@@ -170,6 +171,44 @@ function mopen(e, c){
 		await reload_csrf("csrf_token");
 		prs(0);
 	});
+	const x = document.createElement("a");
+	if (!isdir && a.textContent.endsWith(".tar.gz")){
+		x.innerHTML = "📂すべて展開";
+		x.href = "#";
+		x.style = s;
+		x.addEventListener("click", async (e)=>{
+			e.preventDefault();
+			move_file = 1;
+			const s = f.querySelectorAll(".select_row");
+			const n = [];
+			s.forEach((i)=>{
+				const a = i.querySelector('a');
+				n.push(a.innerHTML);
+			});
+			prs("extracting files...");
+			for (let i = 0;i < s.length;++i){
+				try{
+					const l = s[i].querySelectorAll("a")[1].href+"&async";
+					const r = await fetch(l);
+					const t = await r.json();
+					const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"remove":"","submit":t["SUBMIT_TYPE"],"new_name":"","perm":"no","extract":"yes"};
+					const p = await new URLSearchParams(j);
+					await fetch(l,{
+						referrer:l,
+						method:"POST",
+						headers:{"content-type":"application/x-www-form-urlencoded"},
+						body:p.toString()
+					});
+					fm();
+				}catch{}
+			}
+			move_file = 0;
+			await reload_csrf("csrf_token");
+			prs(0);
+			location.reload();
+		});
+	}
+	g.append(x);
 	g.append(o);
 	g.style.display = "block";
 	g.style.left = Math.min(e.pageX-scrollX,innerWidth-g.offsetWidth)+"px";
