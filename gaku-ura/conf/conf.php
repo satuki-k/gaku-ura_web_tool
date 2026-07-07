@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.8.1';
+const GAKU_URA_VERSION = '9.8.2';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
@@ -315,6 +315,23 @@ function to_html(string $text):string{
 		if (count($l=explode('《',$c)) === 2){
 			$r = str_replace('|'.$c.'》', '<ruby><rb>'.$l[0].'</rb><rt>'.$l[1].'</rt></ruby>', $r);
 		}
+	}
+	for ($j=5;$j--;){
+		$k = $j?$j:'';
+		for ($i=0;$i!==false&&($c=subrpos('<over'.$k.'>','</over'.$k.'>',substr($r,$i)))!=='';$i=strpos($r,'<over'.$k.'>',$i+6)){
+			if (count($l=explode('<>',$c)) === 2){
+				$r = str_replace('<over'.$k.'>'.$c.'</over'.$k.'>', '<span style="display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;"><span style="padding:0 .5em;">'.$l[0].'</span><span style="padding:0 .5em;border-top:solid 1px #111;" class="over">'.$l[1].'</span></span>', $r);
+			}
+		}
+	}
+	while (($p=subrpos('<math>','</math>',$r))!==''){
+		$q = '';
+		foreach (preg_split('/\b/',$p) as $i){
+			$o = explode('_', $i);
+			if(count($o)===2&&$o[0]!==''&&$o[1]!=='') $i=$o[0].'<sub>'.$o[1].'</sub>';
+			$q .= $i;
+		}
+		$r=str_replace('<math>'.$p.'</math>','<span style="display:inline-block;" class="math">'.$q.'</span>',$r);
 	}
 	return $r;
 }
