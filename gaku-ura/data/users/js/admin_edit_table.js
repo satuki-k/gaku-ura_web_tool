@@ -164,7 +164,7 @@ const mt = document.createElement("button");
 const mf = document.createElement("select");
 const tn = $QS('input[name="table"]').value;
 const fn = {
-	"SQL文>":"",
+	"操作・命令>":"",
 	"エクスポート(export)":"",
 	"インポート(import)":"",
 	"列を削除":"ALTER TABLE "+tn+" DROP COLUMN 列;",
@@ -207,7 +207,8 @@ $ID("form").addEventListener("submit", async (e)=>{
 			f.append("submit", $QS('[type="submit"]').value);
 			x.addEventListener("load", (e)=>{
 				const r = x.responseText;
-				r&&!r.startsWith("<")?rs.innerHTML=r:location.reload();
+				r&&!r.startsWith("<")?rs.innerHTML=$QS('[name="query"]').value+"\n"+r+"\n"+rs.innerHTML:location.reload();
+				$QS('[name="query"]').value = "";
 			});
 			x.open("POST", location.href);
 			x.send(f);
@@ -215,7 +216,6 @@ $ID("form").addEventListener("submit", async (e)=>{
 			$ID("form").submit();
 		}
 		$QS('input[name="export"]').checked = false;
-		$QS('[name="query"]').value = "";
 	}
 });
 window.addEventListener("keydown", (e)=>{
