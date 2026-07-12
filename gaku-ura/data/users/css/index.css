@@ -68,6 +68,15 @@ button{
 button:hover{
 	background:#fff;
 }
+details{
+	font-weight:500;
+}
+summary{
+	text-decoration:underline;
+}
+summary:hover{
+	text-decoration:none;
+}
 
 .table{
 	overflow-x:scroll;

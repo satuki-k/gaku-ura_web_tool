@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.1
+#gaku-ura9.8.3
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -34,6 +34,19 @@ function fsz(string $f):string{
 		if($s/1024<$b) return round(100*$s/$b)/100 .$v.'B';
 	}
 	return $s;
+}
+function upload(array $fk, string $to, object &$user, array &$user_data, array &$perm_list):void{
+	$t = $fk['tmp_name']??$fk[0];
+	$n = $fk['name']??$fk[1];
+	if ($t && (int)($fk['error']??$fk[2])===0 && is_file($t) && not_empty($n) && $user->permitted($to,$user_data,true,false)){
+		move_uploaded_file($t,$to);
+		$l = get($to, 1);
+		if ($l && str_starts_with($l,'#!/')){
+			chmod($to, 0745);
+		} else {
+			chmod($to, $perm_list['STATIC']);
+		}
+	}
 }
 function main(string $from):int{
 	$conf = new GakuUra();
@@ -257,16 +270,17 @@ function main(string $from):int{
 				foreach ($_FILES??[] as $k=>$v){
 					$t = $_FILES[$k]['tmp_name']??'';
 					$n = $_FILES[$k]['name']??'';
-					$p = $current_dir.'/'.$n;
-					if ($t && (int)$_FILES[$k]['error']===0 && is_file($t) && not_empty($n) && $user->permitted($p,$user_data,true,false)){
-						move_uploaded_file($t, $p);
-						#403防止
-						$l = get($p, 1);
-						if ($l && str_starts_with($l,'#!/')){
-							chmod($p, 0745);
-						} else {
-							chmod($p, $perm_list['STATIC']);
+					if (gettype($t)===gettype([])){
+						$c = count($t);
+						for ($i = 0;$i < $c;++$i){
+							$t = $_FILES[$k]['tmp_name'][$i];
+							$n = $_FILES[$k]['name'][$i]??'';
+							$f = $current_dir.'/'.dirname($_FILES[$k]['full_path'][$i]??'');
+							if($f&&!file_exists($f)) mkdir($f,0777,true);
+							upload([$t,$n,$_FILES[$k]['error'][$i]], $f.'/'.$n, $user, $user_data, $perm_list);
 						}
+					} else {
+						upload($_FILES[$k], $current_dir.'/'.$n, $user, $user_data, $perm_list);
 					}
 				}
 				header('Location:./?Dir='.$uri_dir);
