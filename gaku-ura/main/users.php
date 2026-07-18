@@ -469,7 +469,7 @@ function main(string $from):int{
 				readfile($current_file);
 				return 0;
 			}
-			$replace['TITLE'] = lreplace($current_file, $c_root.'/');
+			$replace['TITLE'] = lreplace($current_file, $c_root);
 			$replace['EXIT'] = '?Dir='.$uri_dir;
 			if ($menu === 'edit_db'){
 				#データベース編集
@@ -529,6 +529,7 @@ function main(string $from):int{
 				#編集
 				$is_edit_mode = 1;
 				$d = '?Dir='.$uri_dir.'&File='.$bname.'&download';
+				$replace['PATH'] = lreplace($current_dir, $c_root);
 				$replace['NAME'] = $bname;
 				$replace['PERM'] = file_perm($current_file);
 				$replace['SUBMIT_TYPE'] = 'edit_file';
@@ -565,8 +566,9 @@ function main(string $from):int{
 			$replace['FORM_AFTER'] = '';
 			$is_edit_mode = 1;
 			$bname = basename($current_dir);
-			$replace['TITLE'] = lreplace($current_dir, $c_root.'/');
+			$replace['TITLE'] = lreplace($current_dir, $c_root);
 			$replace['EXIT'] = '?Dir='.up_to($uri_dir);
+			$replace['PATH'] = rreplace(up_to($current_dir), $c_root);
 			$replace['NAME'] = $bname;
 			$replace['PERM'] = file_perm($current_dir);
 			$replace['SUBMIT_TYPE'] = 'edit_dir';

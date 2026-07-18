@@ -10,8 +10,6 @@ const key_f = "gaku-ura_editor_fontSize";
 const cdn_a = "https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.3/ace.js";
 const q = (new URL(document.location)).searchParams;
 const popup = new POPUP();
-const fparea = document.createElement("span");
-$QS("h1").prepend(fparea);
 //submitメソッドを使えるようにする
 $ID("form").innerHTML += '<input type="hidden" name="submit_type" value="'+$QS('#form [type="submit"]').value+'">';
 function table_editor(f){
@@ -161,7 +159,7 @@ function table_editor(f){
 	const r = document.createElement("a");
 	r.href = "#";
 	r.innerHTML = "テキストエディターに戻す";
-	$ID("form").prepend(r);
+	$QS("#form p").prepend(r);
 	r.addEventListener("click", (e)=>{
 		e.preventDefault();
 		r.remove();
@@ -217,7 +215,7 @@ class TextEditor{
 		this.#p.append(this.#m1);
 		this.#p.append(this.#f);
 		this.#p.append(w);
-		$ID("form").before(this.#p);
+		$QS("#form p").before(this.#p);
 		$ID("form").after(this.#ae);
 		$ID("text").value===""?this.reload():this.setup();
 	}
@@ -421,9 +419,9 @@ $ID("form").addEventListener("submit", async (e)=>{
 		} else {
 			const f = new FormData($ID("form"));
 			const x = new XMLHttpRequest();
-			const c = $QS("h1").style.color;
-			fparea.innerHTML = "(saving...)";
-			$QS("h1").style.color = "#ff0";
+			const c = $ID("fparea").style;
+			$ID("fparea").innerHTML = "(saving...)";
+			$ID("fparea").style = "color:#ff0;background:#000;";
 			f.append("submit", $QS('[type="submit"]').value);
 			f.append("async", 1);
 			x.addEventListener("load", async (e)=>{
@@ -436,10 +434,10 @@ $ID("form").addEventListener("submit", async (e)=>{
 				} else if (x.responseText == 4){
 					return popup.alert("編集権限がありません。");
 				}
-				fparea.innerHTML = "(saved)";
-				$QS("h1").style.color = c;
+				$ID("fparea").innerHTML = "(saved)";
+				$ID("fparea").style = c;
 				setTimeout(()=>{
-					fparea.innerHTML="";
+					$ID("fparea").innerHTML="";
 				},2000);
 			});
 			x.open("POST", location.href);

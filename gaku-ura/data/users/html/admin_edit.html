@@ -1,14 +1,14 @@
 <!option robots 0>
 <!option template users/template.html>
+<!option title {TITLE}>
 <!include admin_edit.js>
 <!option css_standalone 1>
-<h1>{TITLE}</h1>
 <form method="POST" action="" id="form">
 	<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
 	<input type="hidden" name="name" value="{NAME}">
+	<h1><span id="fparea"></span>{PATH}/<label><input type="text" name="new_name" value="{NAME}" placeholder="{NAME}"></label></h1>
 	<p>
 		<a href="{EXIT}" id="exit">戻る</a>
-		<label>name<input type="text" name="new_name" value="{NAME}" placeholder="変更なし"></label>
 		<label>mode
 			<select name="perm">
 				<option value="no">{PERM} (変更しない)</option>

@@ -4,54 +4,46 @@
 h1{
 	font-size:1.1em;
 }
-h1, #exit{
+#exit{
 	color:#fff;
-}
-body, input, textarea{
-	background:#000;
-	color:#eee;
 }
 select, option{
 	font-size:1em;
-	background:#fff;
+	background:#fffa;
 	color:#000;
 }
 input[type="text"]{
-	border:solid 1px #fff;
+	border:solid 1px #ccc;
 	font-size:1em;
 	width:10em;
+	outline:0;
 }
 tbody input[type="text"]{
 	width:100%;
 	border:0;
-	outline:0;
 }
-a, a:visited{
-	color:#0a0;
+h1 input{
+	padding:0;
 }
-a:hover{
-	color:#ba0;
-}
+
 table{
 	width:100%;
 	border-collapse:collapse;
+	border:0;
 }
-table, th, thead td, .table td{
-	border:solid 1px #aaa;
+th{
+	text-align:left;
 }
-tbody a{
+tbody a, tbody a:hover{
 	text-decoration:none;
-	font-weight:bold;
+	font-weight:normal;
 }
-tbody tr:hover{
-	background:#158;
-}
-.select_row, .select_row:hover{
+.select_row{
 	background:#3ad;
 	color:#fff;
 }
 .select_row a{
-	color:#ff0;
+	color:#fff;
 }
 
 textarea{
@@ -84,6 +76,9 @@ summary:hover{
 .table td{
 	min-width:5em;
 }
+.table th, .table td{
+	border:solid 1px #aaa;
+}
 #f{
 	text-align:left;
 }
@@ -99,6 +94,7 @@ summary:hover{
 /* ディレクトリだけ見分けをつける */
 .dir:before{
 	content:"📁";
-	color:#fff;
+	color:#000;
+	padding:.2em;
 }
 

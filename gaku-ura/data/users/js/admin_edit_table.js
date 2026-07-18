@@ -55,6 +55,7 @@ function mkt(e){
 	h.append(error_msg);
 	["col","type","not null","default value"].forEach((i)=>{
 		const th = document.createElement("th");
+		th.style.border = "solid 1px";
 		th.textContent = i;
 		tr.append(th);
 	});
@@ -66,6 +67,7 @@ function mkt(e){
 		col_list.forEach((j)=>{
 			const i = remove_comment_rows(j, "(", ")");
 			const td = document.createElement("td");
+			td.style.border = "solid 1px";
 			if (i === "select"){
 				const p  = document.createElement(i);
 				p.name = j;
