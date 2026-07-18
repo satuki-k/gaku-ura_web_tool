@@ -28,19 +28,18 @@
 					</label>
 					<label>名前<input type="text" name="name"></label>
 					<label id="files"><input type="file" name="file0"></label>
-					<label><button type="submit" name="submit" value="new">作成</button></label>
+					<label><button type="submit" name="submit" value="new">O K</button></label>
 					<details>
 						<summary>フォルダ選択</summary>
 						<label id="folder"><input type="file" name="folder[]" webkitdirectory multiple></label>
-						<p>階層構造をそのままアップロードするわけではなく、選択されたフォルダー以下のすべてのファイルを抽出するだけです。例えば「a/b.txt」と「a/b/b.txt」は同じになります。</p>
-						<p>階層構造をアップロードしたい場合は、<b>tar.gz圧縮ファイルを投稿した後に展開して</b>ください。</p>
+						<p>環境によっては階層構造を無視してアップロードしてしまう場合があります。また、フォルダアップロードにブラウザが対応していないこともあります。</p>
 					</details>
 				</form>
 			</th>
 		</tr>
-		<tr><th>名 前</th><th>編 集</th><th>詳 細</th><th>更 新</th></tr>
 		<tr><td colspan="4">{SHORTCUT}</td></tr>
 		<tr><td colspan="4">{PATH}</td></tr>
+		<tr><th>名 前</th><th>編 集</th><th>詳 細</th><th>更 新</th></tr>
 	</thead>
 	<tbody>
 		{FILE_LIST}
