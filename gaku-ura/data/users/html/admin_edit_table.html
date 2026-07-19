@@ -13,10 +13,10 @@
 		<label><input type="file" name="file" accept=".csv,.tsv"></label>
 		<label>as<input type="text" name="import_name" placeholder="same to file name"></label>
 		<label><input type="checkbox" name="first_is_col" value="true">一行目をタイトルにする</label>
-		<button type="submit" name="submit_type" value="{SUBMIT_TYPE}">保存</button>
+		<button type="submit" name="submit_type" value="{SUBMIT_TYPE}">O K</button>
 	</p>
 	<p>{TTITLE}  table切替<select name="ctable"><option value="">───</option>{TABLE_LIST}</select> <button type="submit" name="submit_type" value="{SUBMIT_TYPE}">変更</button></p>
-	<p style="color:#ff0;background:#000;">Issue:値以外の項目は各自でエスケープが必要です。UTF-8ではないファイルはインポートできません。</p>
+	<p class="note">Issue:値以外の項目は各自でエスケープが必要です。UTF-8ではないファイルはインポートできません。</p>
 	<div class="table">
 		<table>
 			<thead>

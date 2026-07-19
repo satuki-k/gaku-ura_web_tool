@@ -8,7 +8,7 @@ const q = (new URL(window.location)).searchParams;
 const popup = new POPUP();
 let move_file = 0;
 const prs_msg = document.createElement("p");
-prs_msg.style = "background:#ff0;color:#111;display:block;";
+prs_msg.classList.add("note");
 $ID("form").before(prs_msg);
 function prs(m){
 	prs_msg.innerHTML = m;
@@ -63,7 +63,7 @@ async function dg(e){
 ["dragover","dragleave","drop"].forEach((i)=>{d.addEventListener(i,dg);});
 /* 操作メニュー */
 const g = document.createElement("pre");//クリックメニュー
-g.style = "background:#fff;position:fixed;display:none;";
+g.classList.add("cmenu");
 document.body.append(g);
 const f = $QS('tbody');
 const r = f.children;
@@ -106,8 +106,7 @@ function mopen(e, c){
 	if(g.style.display!=="none") mclose();
 	const a = c.querySelector('a');
 	const a2 = c.querySelectorAll('a')[1];
-	const s = "color:#111;margin:.2em;display:block;";
-	g.innerHTML = '<p style="'+s+'">'+a.textContent+'</p>';
+	g.innerHTML = '<p>'+a.textContent+'</p>';
 	const m = [];
 	m.push(['✍編集する',a2.href]);
 	const isdir = a.getAttribute("class") === "dir";
@@ -128,14 +127,12 @@ function mopen(e, c){
 		const o = document.createElement("a");
 		o.innerHTML = i[0];
 		o.href = i[1];
-		o.style = s;
 		if(i[2]) o.target = "_blank";
 		g.append(o);
 	});
 	const o = document.createElement("a");
 	o.innerHTML = "🔥削除";
 	o.href = "#";
-	o.style = s;
 	o.addEventListener("click", async (e)=>{
 		e.preventDefault();
 		move_file = 1;
@@ -175,7 +172,6 @@ function mopen(e, c){
 	if (!isdir && a.textContent.endsWith(".tar.gz")){
 		x.innerHTML = "📂すべて展開";
 		x.href = "#";
-		x.style = s;
 		x.addEventListener("click", async (e)=>{
 			e.preventDefault();
 			move_file = 1;

@@ -31,6 +31,9 @@ table{
 	border-collapse:collapse;
 	border:0;
 }
+tbody{
+	background:#fff;
+}
 th{
 	text-align:left;
 }
@@ -50,6 +53,7 @@ textarea{
 	width:99%;
 	max-height:400px;
 	tab-size:4;
+	background:#fff;
 }
 button{
 	font-size:1em;
@@ -98,3 +102,43 @@ summary:hover{
 	padding:.2em;
 }
 
+
+.note{
+	background:#000;
+	color:#ff0;
+	display:block;
+}
+.cmenu{
+	background:#fff;
+	position:fixed;
+	display:none;
+	border:solid 1px #ccc;
+}
+.cmenu a, .cmenu p{
+	color:#111;
+	margin:.2em;
+	display:block;
+}
+.blue_btn{
+	color:#fff;
+	background:#00c;
+	padding:.2em;
+	border:solid 1px #fff;
+	font-size:1em;
+}
+.blue_btn:hover{
+	background:#00e;
+}
+.full_screen{
+	position:fixed;
+	top:0;
+	left:0;
+	width:100%;
+	height:100%;
+	background:#fff;
+	color:#000;
+	overflow-y:scroll;
+}
+.full_screen input{
+	background:#fff;
+}

@@ -27,19 +27,16 @@ function mkt(e){
 	const tbody = document.createElement("tbody");
 	const error_msg = document.createElement("p");
 	const col_list = ["text","select","checkbox","text(1)"];
-	const bs = "padding:.2em;font-size:1em;color:#fff;background:#00e;";
-	const ps = "background:#fff;color:#000;";
-	h.style = "position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;color:#000;overflow-y:scroll;";
+	h.classList.add("full_screen");
 	b.style = "display:flex;margin-top:1em;";
 	f.style = "padding:1em;";
-	tn.style = ps;
 	error_msg.style = "color:#ae3803;";
 	tn.type = "text";
 	tn.name = "new_name";
 	isid.type = "checkbox";
 	isid.name = "isadd_id";
 	isid.value = isid.checked = true;
-	c.style = d.style = m.style = bs;
+	[c,d,m].forEach((i)=>{i.classList.add("blue_btn")});
 	m.style.background = "#0f0";
 	m.style.marginLeft = "1em";
 	c.textContent = "☓キャンセル";
@@ -81,7 +78,6 @@ function mkt(e){
 				const p = document.createElement("input");
 				p.name = j;
 				p.type = i;
-				p.style = ps;
 				td.append(p);
 				if(i==="text") p.addEventListener("keydown", (e)=>{
 					if(isEnterKey(e)) mkcol();
