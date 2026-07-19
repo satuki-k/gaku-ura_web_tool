@@ -133,7 +133,7 @@ function table_editor(f){
 				const m = j[1].getAttribute("mem").split(d);
 				for (let i=0;i < col;++i){
 					const v = $ID(tprefix+j[0]+","+i);
-					if(v) v.value=m[i];
+					if(v&&m[i]!==undefined) v.value=m[i];
 				}
 				j[1].name = "1";
 				j[1].value = "削除";
@@ -387,7 +387,7 @@ if($ID("text")){
 	const p = document.createElement("div");
 	const r = document.createElement("a");
 	p.style.margin = "1em";
-	r.style = "color:#fff;background:#00c;padding:.2em;border:solid 1px #fff;";
+	r.classList.add("blue_btn");
 	r.href = "#";
 	r.innerHTML = "無理やり編集する";
 	p.append(r);
@@ -419,9 +419,8 @@ $ID("form").addEventListener("submit", async (e)=>{
 		} else {
 			const f = new FormData($ID("form"));
 			const x = new XMLHttpRequest();
-			const c = $ID("fparea").style;
 			$ID("fparea").innerHTML = "(saving...)";
-			$ID("fparea").style = "color:#ff0;background:#000;";
+			$ID("fparea").classList.add("note");
 			f.append("submit", $QS('[type="submit"]').value);
 			f.append("async", 1);
 			x.addEventListener("load", async (e)=>{
@@ -435,9 +434,9 @@ $ID("form").addEventListener("submit", async (e)=>{
 					return popup.alert("編集権限がありません。");
 				}
 				$ID("fparea").innerHTML = "(saved)";
-				$ID("fparea").style = c;
 				setTimeout(()=>{
 					$ID("fparea").innerHTML="";
+					$ID("fparea").classList.remove("note");
 				},2000);
 			});
 			x.open("POST", location.href);
