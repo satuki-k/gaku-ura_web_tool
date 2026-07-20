@@ -20,7 +20,7 @@
 	<h2>アップグレード操作</h2>
 	<p>以上を確認できたら、gaku-ura libで入手したファイルを追加してください。</p>
 	<p class="warning">注意: 途中で失敗しても完全に指し戻し出来るとは限りません。</p>
-	<form action="" method="POST" id="form" enctype="multipart/form-data">
+	<form method="POST" id="form" enctype="multipart/form-data">
 		<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
 		<input type="hidden" name="reupgrade" value="false">
 		<label id="file"><input type="file" name="file" accept=".tar.gz" required></label>

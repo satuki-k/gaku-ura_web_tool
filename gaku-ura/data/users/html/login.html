@@ -1,7 +1,7 @@
 <!option robots 0>
 <!include users.css>
 <h1>ログイン</h1>
-<form action="" method="POST" id="form">
+<form method="POST" id="form">
 	<p><label><b>名前</b><input type="text" name="user_name"></label> <label><input type="checkbox" name="mail" value="true">メールアドレスを使う</label></p>
 	<p><label><b>パスワード</b><input type="password" name="passwd"></label></p>
 	<p><label><button type="submit" name="csrf_token" value="{CSRF_TOKEN}">ログイン</button></label></p>

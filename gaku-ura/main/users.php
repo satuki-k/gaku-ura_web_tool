@@ -420,7 +420,7 @@ function main(string $from):int{
 					if ($r===0 || $r===3){
 						$m .= '<b>操作はまだ完了していません。</b>アップグレード対象のファイル一覧が更新されたので、以下のボタンを押して完了してください。';
 						if($m===3) $m.=implode(',',$d).' は廃止されました。';
-						$m .= '<form action="" method="POST"><label><button type="submit" name="submit" value="'.$submit.'">完了</button></label><input type="hidden" name="csrf_token" value="'.$conf->set_csrf_token('admin__upgrade').'"><input type="hidden" name="file" value="'.basename($a).'"><input type="hidden" name="reupgrade" value="true"></form>';
+						$m .= '<form method="POST"><label><button type="submit" name="submit" value="'.$submit.'">完了</button></label><input type="hidden" name="csrf_token" value="'.$conf->set_csrf_token('admin__upgrade').'"><input type="hidden" name="file" value="'.basename($a).'"><input type="hidden" name="reupgrade" value="true"></form>';
 					} else {
 						$m .= '失敗しました。';
 					}
