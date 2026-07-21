@@ -36,7 +36,7 @@ async function dg(e){
 		if(f.type===""&&(f.size===0||f.size===4096)){
 			const n = $QS('#form input[name="name"]');
 			if (n.value === ""){
-				await popup.alert("フォルダは作成出来ますが中身はアップロード出来ません。");
+				await popup.alert("フォルダの中身は無視されます。");
 			} else {
 				n.value += "\\";
 			}
@@ -70,7 +70,6 @@ const r = f.children;
 const dr = arg.getAttribute("d_root");
 function mclose(e){
 	g.style.display="none";
-	g.innerHTML = "";
 	$QSA('.select_row').forEach((i)=>{i.classList.remove("select_row");});
 }
 function fmc(e){
@@ -87,6 +86,7 @@ function fmd(e){
 	this.querySelector("a").click();
 }
 function fm(){
+	mclose(0);
 	let i = r.length;
 	while (i--){
 		r[i].removeEventListener("click", fmc);
@@ -104,8 +104,8 @@ function mopen(e, c){
 		return;
 	}
 	if(g.style.display!=="none") mclose();
-	const a = c.querySelector('a');
-	const a2 = c.querySelectorAll('a')[1];
+	const a = c.querySelector("a");
+	const a2 = c.querySelectorAll("a")[1];
 	g.innerHTML = '<p>'+a.textContent+'</p>';
 	const m = [];
 	m.push(['✍編集する',a2.href]);
@@ -127,7 +127,7 @@ function mopen(e, c){
 		const o = document.createElement("a");
 		o.innerHTML = i[0];
 		o.href = i[1];
-		if(i[2]) o.target = "_blank";
+		if(i[2]) o.target="_blank";
 		g.append(o);
 	});
 	const o = document.createElement("a");
