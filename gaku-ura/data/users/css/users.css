@@ -11,12 +11,6 @@ input, textarea{
 input:focus, textarea:focus{
 	outline:0;
 }
-label{
-	display:flex;
-}
-label input{
-	flex:1;
-}
 button{
 	font-size:1em;
 	padding:.2em;
