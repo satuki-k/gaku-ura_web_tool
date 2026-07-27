@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.3
+#gaku-ura9.8.5
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -568,7 +568,7 @@ function main(string $from):int{
 			$bname = basename($current_dir);
 			$replace['TITLE'] = lreplace($current_dir, $c_root);
 			$replace['EXIT'] = '?Dir='.up_to($uri_dir);
-			$replace['PATH'] = rreplace(up_to($current_dir), $c_root);
+			$replace['PATH'] = lreplace(up_to($current_dir), $c_root);
 			$replace['NAME'] = $bname;
 			$replace['PERM'] = file_perm($current_dir);
 			$replace['SUBMIT_TYPE'] = 'edit_dir';
