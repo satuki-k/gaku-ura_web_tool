@@ -1,5 +1,8 @@
 <?php
-#gaku-ura9.8.5
+#gaku-ura9.8.6
+/*
+ * TODO: ファイル移動機能を実装する。
+*/
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -88,6 +91,7 @@ function main(string $from):int{
 			} else {
 				$replace['CSRF_TOKEN'] = $conf->set_csrf_token('user_home');
 				foreach(['name','mail','profile','admin']as$k) $replace[strtoupper($k)]=$user_data[$k];
+				$replace['GROUP'] = implode(', ', $user_data['group']);
 				$a = $conf->data_dir.'/users/html/home_admin.html';
 				if ($user_data['admin']>=$user->admin_revel && is_file($a)){
 					$replace['FOR_ADMIN'] = str_replace('{NAME}',$replace['NAME'],file_get_contents($a));
@@ -119,7 +123,7 @@ function main(string $from):int{
 		if($user_data['admin']<$user->admin_revel) $conf->not_found();
 		$is_edit_mode = 0;
 		$menu = $_GET['Menu']??'';
-		$c_root = realpath($conf->d_root.$user->own_dir[$user_data['admin']]);
+		foreach($user_data['group']as$g)if(isset($user->own_dir[$g])) $c_root=realpath($conf->d_root.$user->own_dir[$g]);
 		$current_dir = $c_root;
 		$uri_dir = h(str_replace('..','',$_GET['Dir']??''));
 		$perm_list = ['no'=>0,'DIR'=>0755,'CGI'=>0745,'CGI2'=>0755,'STATIC'=>0644,'STATIC2'=>0666,'MPRIVATE'=>0604,'PRIVATE'=>0600];

@@ -1,6 +1,6 @@
 <?php
-#gaku-ura9.8.0
-#ログイン必須とは限らない機能を考慮し、ログインチェックは初期化では行わない
+#gaku-ura9.8.6
+#ユーザー登録や変更・取得等の機能
 class GakuUraUser{
 	public string $user_dir;
 	public string $user_list_file;
@@ -17,7 +17,7 @@ class GakuUraUser{
 	function __construct(object &$conf){
 		if((int)($conf->config['login.enable']??0)===0) $conf->not_found(false,'disabled');
 		$d = explode(' ', $conf->config['login.dir']??'');
-		$this->own_dir = ['/','/','/','/','/'];
+		$this->own_dir = [];
 		for ($i = 0;$i < 5;++$i){
 			$j = $conf->config['login.dir'.$i]??$d[$i]??'';
 			if(!str_ends_with($j,'/')) $j.='/';
@@ -25,7 +25,6 @@ class GakuUraUser{
 			$this->own_dir[$i] = $j;
 		}
 		$this->admin_revel = (int)($conf->config['login.admin_revel']??3);
-		if($this->admin_revel < 1) $conf->not_found(false,'初回ユーザー登録しただけで管理権限を持つような設定になっています。危険です。');
 		$this->user_dir = $conf->data_dir.'/users';
 		$this->user_list_file = $this->user_dir.'/'.self::TABLE_NAME.'.tsv';
 		$this->user_list_keys = ['id','name','mail','passwd','admin','profile','enable'];
@@ -40,9 +39,7 @@ class GakuUraUser{
 		$this->c = $conf;
 	}
 	#区切り文字エスケープ
-	public static function h(string $t):string{
-		return str_replace("\t", '', $t);
-	}
+	public static function h(string $t):string{return str_replace("\t",'',$t);}
 	#ユーザー情報の単純配列を、ユーザー一覧ファイルの1行目をキーにした連想配列に変換
 	public function user_data_convert(array $row):array{
 		$d = [];
@@ -60,10 +57,22 @@ class GakuUraUser{
 			$l = get($this->user_list_file, $s[0]+1);
 			if ($l){
 				$u = $this->user_data_convert(explode("\t", $l));
-				foreach(['id','admin','enable']as$i) $u[$i]=(int)$u[$i];
+				foreach(['id','enable']as$i) $u[$i]=(int)$u[$i];
 				if ($u['enable'] && $u['id']===$s[0] && $u['name']===$s[1] && $u['passwd']===$s[2]){
 					$r['result'] = true;
+					$a = explode(' ', $u['admin']);
+					$a[0] = (int)$a[0];
+					$u['admin'] = $a[0];
+					$u['group'] = $a;
 					$r['user_data'] = $u;
+					foreach ($a as $g){
+						$j = $this->c->config['login.dir.'.$g]??'';
+						if ($j !== ''){
+							if(!str_ends_with($j,'/')) $j.='/';
+							if(!str_starts_with($j,'/')) $j='/'.$j;
+							$this->own_dir[$g] = $j;
+						}
+					}
 				}
 			}
 		}
@@ -119,9 +128,15 @@ class GakuUraUser{
 	}
 	#ファイル権限確認
 	public function permitted(string $file, array $user_data, bool $write=false, bool $download=false):bool{
+		$p = 0;
+		foreach ($user_data['group'] as $g){
+			if(isset($this->own_dir[$g]) && str_starts_with($file,realpath($this->c->d_root.$this->own_dir[$g]))){
+				$p = 1;
+				break;
+			}
+		}
 		if(
-			$this->admin_revel>$user_data['admin']||
-			!str_starts_with($file,realpath($this->c->d_root.$this->own_dir[$user_data['admin']]))||
+			!$p||$this->admin_revel>$user_data['admin']||
 			((str_starts_with($file,$this->user_dir.'/'.self::TABLE_NAME)||($write&&$file===$this->c->config_file))&&$user_data['admin']<4)
 		) return false;
 		if (($this->c->config['login.admin_block']??0)>=$user_data['admin']){
