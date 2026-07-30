@@ -661,7 +661,7 @@ function main(string $from):int{
 					exit;
 				}
 			}
-			$replace['WARNING'] = 'ユーザー名またはパスワードが不正です。';
+			$replace['WARNING'] = 'ユーザー名またはパスワードが正しくありません。';
 		}
 		$replace['CSRF_TOKEN'] = $conf->set_csrf_token('login');
 	} elseif ($from === 'regist'){
@@ -679,16 +679,16 @@ function main(string $from):int{
 							header('Location:../../');
 							exit;
 						} else {
-							$replace['WARNING'] = 'その名前かメールアドレスは既に登録済みです。';
+							$replace['WARNING'] = 'その名前またはメールアドレスはすでに登録されています。';
 						}
 					} else {
-						$replace['WARNING'] = 'メールアドレスの形式が不正です。';
+						$replace['WARNING'] = 'メールアドレスの形式が正しくありません。';
 					}
 				} else {
-					$replace['WARNING'] = '名前が長過ぎです。';
+					$replace['WARNING'] = '名前が長すぎます。';
 				}
 			} else {
-				$replace['WARNING'] = '名前またはパスワードが未入力です。';
+				$replace['WARNING'] = '名前またはパスワードが入力されていません。';
 			}
 		}
 		$replace['CSRF_TOKEN'] = $conf->set_csrf_token('regist');
