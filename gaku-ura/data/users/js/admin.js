@@ -118,6 +118,7 @@ function mopen(e, c){
 			if(!(~u.indexOf("Menu="))) u+="&Menu=edit_db";
 			m.push(['📗SQLで編集',u]);
 		}
+		m.push(["👁ダウンロードせずに閲覧",a.href+"&download",1]);
 	}
 	const u = a.getAttribute("url");
 	if(u.length) m.push(["🔗WEBページとして開く",u,1]);
@@ -127,6 +128,7 @@ function mopen(e, c){
 		const o = document.createElement("a");
 		o.innerHTML = i[0];
 		o.href = i[1];
+		if(~i[1].indexOf("&download")&&!i[2]) o.download=1;
 		if(i[2]) o.target="_blank";
 		g.append(o);
 	});
@@ -152,7 +154,7 @@ function mopen(e, c){
 				const l = s[i].querySelectorAll("a")[1].href+"&async";
 				const r = await fetch(l);
 				const t = await r.json();
-				const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"remove":"yes","submit":t["SUBMIT_TYPE"],"new_name":"","perm":"no"};
+				const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"remove":"yes","submit":t["SUBMIT_TYPE"],"new_name":"","new_path":"","perm":"no"};
 				const p = await new URLSearchParams(j);
 				await fetch(l,{
 					referrer:l,
@@ -187,7 +189,7 @@ function mopen(e, c){
 					const l = s[i].querySelectorAll("a")[1].href+"&async";
 					const r = await fetch(l);
 					const t = await r.json();
-					const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"remove":"","submit":t["SUBMIT_TYPE"],"new_name":"","perm":"no","extract":"yes"};
+					const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"remove":"","submit":t["SUBMIT_TYPE"],"new_name":"","new_path":"","perm":"no","extract":"yes"};
 					const p = await new URLSearchParams(j);
 					await fetch(l,{
 						referrer:l,

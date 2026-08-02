@@ -1,8 +1,5 @@
 <?php
 #gaku-ura9.8.6
-/*
- * TODO: ファイル移動機能を実装する。
-*/
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -163,7 +160,7 @@ function main(string $from):int{
 		}
 		#投稿
 		if ($submit && $conf->check_csrf_token('admin__'.$submit,$csrf_token,true)){
-			if ($submit==='edit_file' && list_isset($_POST,['name','new_name','perm']) && strpos($_POST['name'],'..')===false && strpos($_POST['name'], '/')===false && is_file($current_dir.'/'.h($_POST['name'])) && isset($perm_list[$_POST['perm']])){
+			if ($submit==='edit_file' && list_isset($_POST,['name','new_name','new_path','perm']) && strpos($_POST['name'],'..')===false && strpos($_POST['name'], '/')===false && is_file($current_dir.'/'.h($_POST['name'])) && isset($perm_list[$_POST['perm']])){
 				$path = $current_dir.'/'.h($_POST['name']);
 				if (!$user->permitted($path,$user_data,true)){
 					if ($is_async){
@@ -181,34 +178,43 @@ function main(string $from):int{
 					exit;
 				} else {
 					if($_POST['perm']!=='no') chmod($path,$perm_list[$_POST['perm']]);
-					if (not_empty($_POST['new_name']) && !file_exists($current_dir.'/'.h($_POST['new_name']))){
+					if (not_empty($_POST['new_name'])){
 						$n = h($_POST['new_name']);
 						$p = $current_dir.'/'.$n;
-						rename($path, $p);
-						$path = $p;
-						$_GET['File'] = $n;
+						$d = h($_POST['new_path']);
+						if (not_empty($d)){
+							if(!str_starts_with($d,'/')) $d='/'.$d;
+							if(!str_ends_with($d,'/')) $d.='/';
+							if(!file_exists($c_root.$d)) mkdir($c_root.$d,0777,true);
+							$p = $c_root.$d.$n;
+						}
+						if (!file_exists($p) && $user->permitted($p,$user_data,true) && rename($path,$p)){
+							$path = $p;
+							$uri_dir = lreplace(lreplace(rreplace($path,$n),$c_root),'/');
+							$_GET['File'] = $n;
+						}
 					}
 					if(isset($_POST['content'])) file_put_contents($path,$_POST['content'],LOCK_EX);
 				}
 				header('Location:?Dir='.$uri_dir.'&File='.$_GET['File'].'&Menu=edit');
 				exit;
-			} elseif ($submit==='edit_dir' && list_isset($_POST,['new_name','perm']) && isset($perm_list[$_POST['perm']])){
-				$path = $current_dir;
-				$up_to_dir = up_to($path);
-				if(!$user->permitted($path,$user_data,true)) $conf->not_found(false,'権限がありません。');
+			} elseif ($submit==='edit_dir' && list_isset($_POST,['new_name','new_path','perm']) && isset($perm_list[$_POST['perm']])){
+				if(!$user->permitted($current_dir,$user_data,true)) $conf->not_found(false,'権限がありません。');
 				if (($_POST['remove']??'')==='yes'){
-					rmdir_all($path);
+					rmdir_all($current_dir);
 				} else {
-					if ($_POST['perm'] !== 'no'){
-						try{
-							chmod($path, $perm_list[$_POST['perm']]);
-						}catch(Exception $e){}
-					}
+					if($_POST['perm']!=='no') chmod($current_dir,$perm_list[$_POST['perm']]);
 					$n = h($_POST['new_name']);
-					if (not_empty($n) && !file_exists($up_to_dir.'/'.$n)){
-						try{
-							rename($path, $up_to_dir.'/'.$n);
-						}catch(Exception $e){}
+					$d = h($_POST['new_path']);
+					$p = up_to($current_dir).'/'.$n;
+					if (not_empty($d)){
+						if(!str_starts_with($d,'/')) $d='/'.$d;
+						if(!str_ends_with($d,'/')) $d.='/';
+						if(!file_exists($c_root.$d)) mkdir($c_root.$d,0777,true);
+						$p = $c_root.$d.$n;
+					}
+					if (not_empty($n) && !file_exists($p) && $user->permitted($p,$user_data,true) && rename($current_dir,$p)){
+						$uri_dir = lreplace(lreplace($p,$c_root),'/');
 					}
 				}
 				header('Location:?Dir='.up_to($uri_dir));
@@ -465,7 +471,7 @@ function main(string $from):int{
 			if (isset($_GET['download']) || (!$editable&&!str_starts_with($menu,'edit'))){
 				header('Content-Description:File Transfer');
 				$conf->content_type(mime_content_type($current_file));
-				header('Content-Disposition:attachment;filename="'.$bname.'"');
+				header('Content-Disposition:inline;filename="'.$bname.'"');
 				header('Expires:0');
 				header('Cache-Control:must-revalidate');
 				header('Pragma:public');
