@@ -74,7 +74,7 @@ function mclose(e){
 }
 function fmc(e){
 	if(g.style.display==="none") e.stopPropagation();
-	if(!isCtrlKey(e)) mclose();
+	if(!isCtrlKey(e)) mclose(e);
 	this.classList.toggle("select_row");
 }
 function fmo(e){
@@ -103,21 +103,23 @@ function mopen(e, c){
 		popup.alert("別の操作を実行中です。");
 		return;
 	}
-	if(g.style.display!=="none") mclose();
+	if(g.style.display!=="none") mclose(e);
 	const a = c.querySelector("a");
 	const a2 = c.querySelectorAll("a")[1];
 	g.innerHTML = '<p>'+a.textContent+'</p>';
 	const m = [];
-	m.push(['✍編集する',a2.href]);
 	const isdir = a.getAttribute("class") === "dir";
 	if (isdir){
-		m.unshift(['📂開く',a.href]);
+		m.push(['📂開く',a.href]);
+		m.push(['✍編集する',a2.href]);
 	} else {
+		m.push(['✍開く',a2.href]);
 		if(a.textContent.endsWith(".db")){
 			let u = a.href.replace(/(Menu=[^&]*)/, "Menu=edit_db");
 			if(!(~u.indexOf("Menu="))) u+="&Menu=edit_db";
 			m.push(['📗SQLで編集',u]);
 		}
+		m.push(["👁ブラウザで見る",a.href+"&download",1]);
 	}
 	const u = a.getAttribute("url");
 	if(u.length) m.push(["🔗WEBページとして開く",u,1]);
@@ -127,14 +129,17 @@ function mopen(e, c){
 		const o = document.createElement("a");
 		o.innerHTML = i[0];
 		o.href = i[1];
+		if(~i[1].indexOf("&download")&&!i[2]) o.download=1;
 		if(i[2]) o.target="_blank";
 		g.append(o);
+		o.addEventListener("click", mclose);
 	});
 	const o = document.createElement("a");
 	o.innerHTML = "🔥削除";
 	o.href = "#";
 	o.addEventListener("click", async (e)=>{
 		e.preventDefault();
+		g.style.display="none";
 		move_file = 1;
 		const s = f.querySelectorAll(".select_row");
 		const n = [];
@@ -152,7 +157,7 @@ function mopen(e, c){
 				const l = s[i].querySelectorAll("a")[1].href+"&async";
 				const r = await fetch(l);
 				const t = await r.json();
-				const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"remove":"yes","submit":t["SUBMIT_TYPE"],"new_name":"","perm":"no"};
+				const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"remove":"yes","submit":t["SUBMIT_TYPE"],"new_name":"","new_path":"","perm":"no"};
 				const p = await new URLSearchParams(j);
 				await fetch(l,{
 					referrer:l,
@@ -170,6 +175,7 @@ function mopen(e, c){
 	});
 	const x = document.createElement("a");
 	if (!isdir && a.textContent.endsWith(".tar.gz")){
+		mclose(e);
 		x.innerHTML = "📂すべて展開";
 		x.href = "#";
 		x.addEventListener("click", async (e)=>{
@@ -187,7 +193,7 @@ function mopen(e, c){
 					const l = s[i].querySelectorAll("a")[1].href+"&async";
 					const r = await fetch(l);
 					const t = await r.json();
-					const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"remove":"","submit":t["SUBMIT_TYPE"],"new_name":"","perm":"no","extract":"yes"};
+					const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"remove":"","submit":t["SUBMIT_TYPE"],"new_name":"","new_path":"","perm":"no","extract":"yes"};
 					const p = await new URLSearchParams(j);
 					await fetch(l,{
 						referrer:l,
@@ -211,6 +217,8 @@ function mopen(e, c){
 	g.style.top = Math.min(e.pageY-scrollY,innerHeight-g.offsetHeight)+"px";
 	c.classList.add("select_row");
 }
+g.addEventListener("click", (e)=>{e.stopPropagation();});
+$ID("POPUP").addEventListener("click", (e)=>{e.stopPropagation();});
 f.addEventListener("contextmenu", (e)=>{e.preventDefault();});
 window.addEventListener("click", mclose);
 window.addEventListener("keydown", (e)=>{

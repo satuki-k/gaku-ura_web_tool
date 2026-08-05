@@ -29,6 +29,9 @@ tbody input[type="text"]{
 h1 input[type="text"]{
 	flex:1;
 }
+input[name="new_path"]{
+	text-align:right;
+}
 
 table{
 	width:100%;

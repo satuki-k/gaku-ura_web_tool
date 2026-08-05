@@ -414,7 +414,7 @@ $ID("form").addEventListener("submit", async (e)=>{
 		const c = $QS('[name="remove"]:checked');
 		if (c && c.value==="yes"){
 			if(await popup.confirm("一度削除すると復元出来ません。<br>本当に削除しますか?")) $ID("form").submit();
-		} else if ($QS('[name="name"]').value!==$QS('[name="new_name"]').value || $QS('[name="perm"]').value!=="no"){
+		} else if (q.get("Dir")!==$QS('[name="new_path"]') || $QS('[name="name"]').value!==$QS('[name="new_name"]').value || $QS('[name="perm"]').value!=="no"){
 			$ID("form").submit();
 		} else {
 			const f = new FormData($ID("form"));
