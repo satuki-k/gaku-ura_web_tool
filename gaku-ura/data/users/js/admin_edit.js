@@ -10,6 +10,7 @@ const key_f = "gaku-ura_editor_fontSize";
 const cdn_a = "https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.3/ace.js";
 const q = (new URL(document.location)).searchParams;
 const popup = new POPUP();
+const mem_p = $QS('[name="new_path"]').value;
 //submitメソッドを使えるようにする
 $ID("form").innerHTML += '<input type="hidden" name="submit_type" value="'+$QS('#form [type="submit"]').value+'">';
 function table_editor(f){
@@ -414,7 +415,7 @@ $ID("form").addEventListener("submit", async (e)=>{
 		const c = $QS('[name="remove"]:checked');
 		if (c && c.value==="yes"){
 			if(await popup.confirm("一度削除すると復元出来ません。<br>本当に削除しますか?")) $ID("form").submit();
-		} else if (q.get("Dir")!==$QS('[name="new_path"]') || $QS('[name="name"]').value!==$QS('[name="new_name"]').value || $QS('[name="perm"]').value!=="no"){
+		} else if (($QS('[name="new_path"]').value!==""&&mem_p!==$QS('[name="new_path"]').value) || $QS('[name="name"]').value!==$QS('[name="new_name"]').value || $QS('[name="perm"]').value!=="no"){
 			$ID("form").submit();
 		} else {
 			const f = new FormData($ID("form"));
