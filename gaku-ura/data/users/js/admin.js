@@ -175,7 +175,6 @@ function mopen(e, c){
 	});
 	const x = document.createElement("a");
 	if (!isdir && a.textContent.endsWith(".tar.gz")){
-		mclose(e);
 		x.innerHTML = "📂すべて展開";
 		x.href = "#";
 		x.addEventListener("click", async (e)=>{
