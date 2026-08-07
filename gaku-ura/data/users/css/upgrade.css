@@ -39,37 +39,27 @@ th,td{
 
 form{
 	display:flex;
-	box-shadow:3px 1px 5px 3px #0ff;
-	margin:1em;
 	padding:1em;
-	transition:1s;
 }
 .file{
 	background:#fff;
 	color:#111;
-	width:15em;
 }
 .file:hover{
 	background:#ccc;
 }
 .file, button{
+	flex:1;
 	display:block;
 	font-size:1em;
 	padding:.2em;
 }
-form:hover{
-	box-shadow:5px 2px 10px #ff0;
-}
 button{
 	border-radius:.2em;
 	background:#F73;
-	width:8em;
 	color:#fff;
 }
 button:hover{
 	color:#0f0;
-}
-button:before{
-	content:"📤";
 }
 
