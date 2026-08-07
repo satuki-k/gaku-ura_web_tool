@@ -51,10 +51,10 @@ h1, form h2, .c{
 
 /* ナビゲーション */
 nav label:after{
-	content:'≡';
+	content:"Menu";
 }
 .n label:after{
-	content:'X';
+	content:"Close";
 }
 .n, nav label{
 	position:fixed;
