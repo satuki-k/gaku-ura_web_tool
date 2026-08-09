@@ -30,18 +30,21 @@ async function dg(e){
 	}
 	const l = e.dataTransfer.files;
 	if(l.length) prs("uploading files...");
+	let n = 0;
 	for (let c=0,i=0;i < l.length;++i,++c){
 		move_file = 1;
 		const f = l[i];
 		if(f.type===""&&(f.size===0||f.size===4096)){
-			const n = $QS('#form input[name="name"]');
-			if (n.value === ""){
-				await popup.alert("フォルダの中身は無視されます。");
+			await popup.alert("フォルダを検出しました。手動入力してください。");
+			if (!n || (await popup.confirm("複数のフォルダはアップロード出来ません。すでに添付したフォルダを破棄しますか。"))){
+				$ID("folder").click();
+				n++;
 			} else {
-				n.value += "\\";
+				const j = $QS('#form input[name="name"]');
+				$QS('#form select[name="new"]').value = "folder";
+				if(j.value!=="") j.value+="\\";
+				j.value += f.name;
 			}
-			n.value += f.name;
-			$QS('#form select[name="new"]').value = "folder";
 			continue;
 		}
 		if (c === maxfc){
@@ -58,6 +61,7 @@ async function dg(e){
 		p.files = d.files;
 		$ID("files").appendChild(p);
 	}
+	if(n) await popup.alert("確認");
 	if((await reload_csrf("csrf_token"))&&l.length>0) $QS('[type="submit"]').click();
 }
 ["dragover","dragleave","drop"].forEach((i)=>{d.addEventListener(i,dg);});

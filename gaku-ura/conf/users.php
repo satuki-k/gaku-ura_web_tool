@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.6
+#gaku-ura9.8.8
 #ユーザー登録や変更・取得等の機能
 class GakuUraUser{
 	public string $user_dir;
@@ -97,6 +97,7 @@ class GakuUraUser{
 	public function change_user_data(array $user_data):void{
 		$this->c->file_lock(self::TABLE_NAME);
 		$rows = get_rows($this->user_list_file, 1);
+		if(isset($user_data['group'])) $user_data['admin']=implode(' ',$user_data['group']);
 		$row = '';
 		foreach ($this->user_list_keys as $k){
 			if(isset($user_data[$k])) $row.=trim(self::h($user_data[$k]));
