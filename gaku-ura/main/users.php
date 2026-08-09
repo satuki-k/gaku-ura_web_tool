@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.6
+#gaku-ura9.8.8
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -72,7 +72,7 @@ function main(string $from):int{
 				unset($_SESSION[GakuUraUser::SKEY_PASSWD]);
 				header('Location:./');
 				exit;
-			} elseif (list_isset($_POST,['user_name','mail','new_passwd','profile']) && $conf->check_csrf_token('user_home',$csrf_token,true)){
+			} elseif (list_isset($_POST,['user_name','mail','new_passwd','profile','group']) && $conf->check_csrf_token('user_home',$csrf_token,true)){
 				$_POST['profile'] = str_replace("\n", '&#10;', $_POST['profile']);
 				$p = [];
 				foreach(['user_name','mail','new_passwd','profile']as$k) $p[$k]=row(h(GakuUraUser::h($_POST[$k])));
@@ -80,6 +80,9 @@ function main(string $from):int{
 				if(not_empty($p['new_passwd'])) $user_data['passwd']=password_hash($p['new_passwd'],PASSWORD_BCRYPT);
 				if(filter_var($p['mail'],FILTER_VALIDATE_EMAIL)&&$user->user_exists('',$p['mail'])===0) $user_data['mail']=$p['mail'];
 				$user_data['profile'] = $p['profile'];
+				$g = array_slice($user_data['group'],1);
+				$a = $_POST['group'];
+				if(in_array($a,$g,true)) $user_data['group']=array_unique(array_merge([$user_data['admin'],$a],$g));
 				$_SESSION[GakuUraUser::SKEY_NAME] = $user_data['name'];
 				$_SESSION[GakuUraUser::SKEY_PASSWD] = $user_data['passwd'];
 				$user->change_user_data($user_data);
@@ -88,10 +91,20 @@ function main(string $from):int{
 			} else {
 				$replace['CSRF_TOKEN'] = $conf->set_csrf_token('user_home');
 				foreach(['name','mail','profile','admin']as$k) $replace[strtoupper($k)]=$user_data[$k];
-				$replace['GROUP'] = implode(', ', $user_data['group']);
+				$replace['GROUP'] = '';
+				foreach(array_slice($user_data['group'],1)as$i) $replace['GROUP'].='<option value="'.$i.'">'.$i.'</option>';
 				$a = $conf->data_dir.'/users/html/home_admin.html';
+				$replace['PERMIT'] = 'guest user';
 				if ($user_data['admin']>=$user->admin_revel && is_file($a)){
 					$replace['FOR_ADMIN'] = str_replace('{NAME}',$replace['NAME'],file_get_contents($a));
+					$d = $user->own_dir[$user_data['admin']];
+					if(isset($user_data['group'][1])) $d=$user->own_dir[$user_data['group'][1]]??$d;
+					$replace['PERMIT'] = 'ファイル管理機能が利用可能(以下のディレクトリがアクセス可能:'.$d.')<br>';
+					if (($conf->config['login.admin_block']??0)>=$user_data['admin']){
+						$replace['PERMIT'] .= 'アクセス制限されています。<br>';
+						foreach(['block_readonly','block_dir_download','deny_ftype','allow_ftype']as$t) $replace['PERMIT'].= $t.'='.($conf->config['login.'.$t]??'empty').'<br>';
+					}
+					$replace['PERMIT'] .= '*別のグループを有効化することで、権限が変わる場合があります。';
 				}
 			}
 		} else {
@@ -135,7 +148,7 @@ function main(string $from):int{
 		}
 		#shortcut dir
 		foreach ([$conf->data_dir=>'data dir',__DIR__=>'main files',$conf->data_dir.'/default'=>'templates',$conf->data_dir.'/home'=>'homeages'] as $k=>$v){
-			if($user->permitted($k,$user_data)) $scut[$v]='<a href="?Dir='.lreplace($c_root===$k?'':lreplace($k,$c_root),'/').'">'.$v.'</a>';
+			if($user->permitted(realpath($k),$user_data)) $scut[$v]='<a href="?Dir='.lreplace($c_root===$k?'':lreplace($k,$c_root),'/').'">'.$v.'</a>';
 		}
 		#shortcut file admin
 		if ($user_data['admin'] >= 4){
