@@ -133,7 +133,9 @@ function main(string $from):int{
 		if($user_data['admin']<$user->admin_revel) $conf->not_found();
 		$is_edit_mode = 0;
 		$menu = $_GET['Menu']??'';
-		foreach($user_data['group']as$g)if(isset($user->own_dir[$g])) $c_root=realpath($conf->d_root.$user->own_dir[$g]);
+		$d = $user->own_dir[$user_data['admin']];
+		if(isset($user_data['group'][1])) $d=$user->own_dir[$user_data['group'][1]]??$d;
+		$c_root = realpath($conf->d_root.$d);
 		$current_dir = $c_root;
 		$uri_dir = h(str_replace('..','',$_GET['Dir']??''));
 		$perm_list = ['no'=>0,'DIR'=>0755,'CGI'=>0745,'CGI2'=>0755,'STATIC'=>0644,'STATIC2'=>0666,'MPRIVATE'=>0604,'PRIVATE'=>0600];
