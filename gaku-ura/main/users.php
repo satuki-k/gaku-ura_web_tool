@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.8
+#gaku-ura9.8.9
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -93,13 +93,11 @@ function main(string $from):int{
 				foreach(['name','mail','profile','admin']as$k) $replace[strtoupper($k)]=$user_data[$k];
 				$replace['GROUP'] = '';
 				foreach(array_slice($user_data['group'],1)as$i) $replace['GROUP'].='<option value="'.$i.'">'.$i.'</option>';
-				$a = $conf->data_dir.'/users/html/home_admin.html';
+				$a = $user->user_dir.'/html/home_admin.html';
 				$replace['PERMIT'] = 'guest user';
 				if ($user_data['admin']>=$user->admin_revel && is_file($a)){
-					$replace['FOR_ADMIN'] = str_replace('{NAME}',$replace['NAME'],file_get_contents($a));
-					$d = $user->own_dir[$user_data['admin']];
-					if(isset($user_data['group'][1])) $d=$user->own_dir[$user_data['group'][1]]??$d;
-					$replace['PERMIT'] = 'ファイル管理機能が利用可能(以下のディレクトリがアクセス可能:'.$d.')<br>';
+					$replace['FOR_ADMIN'] = str_replace('{NAME}',$replace['NAME'],is_file($a)?file_get_contents($a):'');
+					$replace['PERMIT'] = 'ファイル管理機能が利用可能(以下のディレクトリがアクセス可能:'.$user_data['own_dir'].')<br>';
 					if (($conf->config['login.admin_block']??0)>=$user_data['admin']){
 						$replace['PERMIT'] .= 'アクセス制限されています。<br>';
 						foreach(['block_readonly','block_dir_download','deny_ftype','allow_ftype']as$t) $replace['PERMIT'].= $t.'='.($conf->config['login.'.$t]??'empty').'<br>';
@@ -133,9 +131,7 @@ function main(string $from):int{
 		if($user_data['admin']<$user->admin_revel) $conf->not_found();
 		$is_edit_mode = 0;
 		$menu = $_GET['Menu']??'';
-		$d = $user->own_dir[$user_data['admin']];
-		if(isset($user_data['group'][1])) $d=$user->own_dir[$user_data['group'][1]]??$d;
-		$c_root = realpath($conf->d_root.$d);
+		$c_root = $user_data['own_path'];
 		$current_dir = $c_root;
 		$uri_dir = h(str_replace('..','',$_GET['Dir']??''));
 		$perm_list = ['no'=>0,'DIR'=>0755,'CGI'=>0745,'CGI2'=>0755,'STATIC'=>0644,'STATIC2'=>0666,'MPRIVATE'=>0604,'PRIVATE'=>0600];
@@ -149,7 +145,7 @@ function main(string $from):int{
 			$scut[] = '<a href="?Dir='.$api_args['d_root'].'">TOP</a>';
 		}
 		#shortcut dir
-		foreach ([$conf->data_dir=>'data dir',__DIR__=>'main files',$conf->data_dir.'/default'=>'templates',$conf->data_dir.'/home'=>'homeages'] as $k=>$v){
+		foreach ([$conf->data_dir=>'data dir',__DIR__=>'main files',$conf->data_dir.'/default'=>'templates',$conf->data_dir.'/home'=>'homeages',$user->user_dir.'/html/custom'=>'custom'] as $k=>$v){
 			if($user->permitted(realpath($k),$user_data)) $scut[$v]='<a href="?Dir='.lreplace($c_root===$k?'':lreplace($k,$c_root),'/').'">'.$v.'</a>';
 		}
 		#shortcut file admin
@@ -417,7 +413,7 @@ function main(string $from):int{
 				}
 			} elseif ($submit==='upgrade' && $user_data['admin']>=4 && str_starts_with($conf->d_root,$c_root) && isset($_POST['reupgrade'])){
 				#upgrade
-				$replace['CSRF_TOKEN'] = '';
+				$replace['FORM'] = '<a href="../">戻る</a>';
 				$replace['GAKU_URA_FILES'] = implode('&#10;', GakuUra::GAKU_URA_FILES);
 				$replace['UPGRADE_IGNORE'] = implode('&#10;',GakuUra::UPGRADE_IGNORE).'&#10;'.($conf->config['upgrade.ignore']??'');
 				if (isset($_POST['file']) && $_POST['reupgrade']==='true' && is_file($conf->data_dir.'/'.$_POST['file'])){
@@ -462,12 +458,13 @@ function main(string $from):int{
 		if ($menu === 'upgrade'){
 			$from = 'upgrade';
 			$replace['ERROR_MSG'] = '権限が不足しています。';
-			$replace['CSRF_TOKEN'] = '';
+			$replace['FORM'] = '';
 			$replace['GAKU_URA_FILES'] = implode('&#10;', GakuUra::GAKU_URA_FILES);
 			$replace['UPGRADE_IGNORE'] = implode('&#10;',GakuUra::UPGRADE_IGNORE).'&#10;'.($conf->config['upgrade.ignore']??'');
 			if ($user_data['admin']>=4 && str_starts_with($conf->d_root,$c_root)){
 				$replace['ERROR_MSG'] = '';
-				$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__upgrade');
+				$f = $user->user_dir.'/html/upgrade_form.html';
+				if(is_file($f)) $replace['FORM']=nreplace(file_get_contents($f),'{CSRF_TOKEN}',$conf->set_csrf_token('admin__upgrade'),1);
 			}
 		} elseif (($_GET['File']??'')!=='' && strpos($_GET['File'],'..')===false && strpos($_GET['File'], '/')===false){
 			#ファイルがある

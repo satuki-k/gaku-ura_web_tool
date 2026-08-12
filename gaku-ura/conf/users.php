@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.8
+#gaku-ura9.8.9
 #ユーザー登録や変更・取得等の機能
 class GakuUraUser{
 	public string $user_dir;
@@ -64,7 +64,6 @@ class GakuUraUser{
 					$a[0] = (int)$a[0];
 					$u['admin'] = $a[0];
 					$u['group'] = $a;
-					$r['user_data'] = $u;
 					foreach ($a as $g){
 						$j = $this->c->config['login.dir.'.$g]??'';
 						if ($j !== ''){
@@ -73,6 +72,10 @@ class GakuUraUser{
 							$this->own_dir[$g] = $j;
 						}
 					}
+					$u['own_dir'] = $this->own_dir[$a[0]];
+					if(isset($a[1])) $u['own_dir']=$this->own_dir[$a[1]]??$u['own_dir'];
+					$u['own_path'] = realpath($this->c->d_root.$u['own_dir']);
+					$r['user_data'] = $u;
 				}
 			}
 		}
@@ -129,15 +132,9 @@ class GakuUraUser{
 	}
 	#ファイル権限確認
 	public function permitted(string $file, array $user_data, bool $write=false, bool $download=false):bool{
-		$p = 0;
-		foreach ($user_data['group'] as $g){
-			if(isset($this->own_dir[$g]) && str_starts_with($file,realpath($this->c->d_root.$this->own_dir[$g]))){
-				$p = 1;
-				break;
-			}
-		}
 		if(
-			!$p||$this->admin_revel>$user_data['admin']||
+			!str_starts_with($file,$user_data['own_path'])||
+			$this->admin_revel>$user_data['admin']||
 			((str_starts_with($file,$this->user_dir.'/'.self::TABLE_NAME)||($write&&$file===$this->c->config_file))&&$user_data['admin']<4)
 		) return false;
 		if (($this->c->config['login.admin_block']??0)>=$user_data['admin']){

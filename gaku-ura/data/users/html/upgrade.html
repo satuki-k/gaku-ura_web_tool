@@ -7,12 +7,7 @@
 	<h1>学裏アップグレード</h1>
 	<p id="error">{ERROR_MSG}</p>
 	<p><b>現在のバージョンは、gaku-ura{GAKU_URA_VERSION}です。</b></p>
-	<form method="POST" id="form" enctype="multipart/form-data">
-		<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
-		<input type="hidden" name="reupgrade" value="false">
-		<label id="file"><input type="file" name="file" accept=".tar.gz" required></label>
-		<label><button type="submit" name="submit" value="upgrade">upgrade</button></label>
-	</form>
+	{FORM}
 	<p class="warning">注意: 途中で失敗しても完全に指し戻し出来るとは限りません。</p>
 	<h2>手順</h2>
 	<ol>
