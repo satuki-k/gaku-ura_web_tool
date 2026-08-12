@@ -27,7 +27,7 @@ a:visited{
 	color:#a5c;
 }
 a[target]:after{
-	content:' >';
+	content:" >";
 	color:red;
 }
 rt{
@@ -58,6 +58,7 @@ nav label:after{
 }
 .n label:after{
 	content:"Close";
+	color:#fff;
 }
 .n, nav label{
 	position:fixed;

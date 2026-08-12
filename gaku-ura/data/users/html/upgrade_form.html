@@ -1,0 +1,6 @@
+<form method="POST" id="form" enctype="multipart/form-data">
+	<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
+	<input type="hidden" name="reupgrade" value="false">
+	<label id="file"><input type="file" name="file" accept=".tar.gz" required></label>
+	<label><button type="submit" name="submit" value="upgrade">upgrade</button></label>
+</form>

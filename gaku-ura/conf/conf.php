@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.8.8';
+const GAKU_URA_VERSION = '9.8.9';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
@@ -380,6 +380,7 @@ class GakuUra{
 		$this->here = $this->domain.($_SERVER['REQUEST_URI']??'');
 		$this->domain .= '/';
 		$this->url_param = urldecode($_SERVER['QUERY_STRING']??'');
+		if(($this->config['localhost']??0)&&!str_starts_with($this->domain,'http://localhost')) exit((int)http_response_code(403));
 		$c = $this->here;
 		$n = ini_get('session.name');
 		if (isset($_GET[$n])){
