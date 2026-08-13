@@ -135,7 +135,14 @@ class GakuUraUser{
 		if(
 			!str_starts_with($file,$user_data['own_path'])||
 			$this->admin_revel>$user_data['admin']||
-			((str_starts_with($file,$this->user_dir.'/'.self::TABLE_NAME)||($write&&$file===$this->c->config_file))&&$user_data['admin']<4)
+			(
+				(
+					str_starts_with($file,$this->user_dir.'/'.self::TABLE_NAME)||
+					(str_starts_with($file,$this->user_dir)&&str_ends_with($file,'.log'))||
+					($write&&$file===$this->c->config_file)
+				)
+				&&$user_data['admin']<4
+			)
 		) return false;
 		if (($this->c->config['login.admin_block']??0)>=$user_data['admin']){
 			if((($this->c->config['login.block_readonly']??0)&&$write)||($download&&($this->c->config['login.block_dir_download']??0))) return false;
@@ -152,6 +159,13 @@ class GakuUraUser{
 			}
 		}
 		return true;
+	}
+	public function log_report(string $label, array $user_data):void{
+		$f = $this->user_dir.'/'.$label.'.log';
+		if(is_file($f)&&filesize($f)>(1024*10)) rename($f,$f.date('Y-m-d-H-i.log'));
+		$msg = [date('Y-m/d H:i'), get_ip(), $user_data['id']??'0', $user_data['name']??'unknown', $this->c->here];
+		foreach($_POST as $k=>$v)if(strpos($k,'pass')===false) $msg[]=$k.'='.$v;
+		file_put_contents($f, implode("\t",$msg)."\n", LOCK_EX|FILE_APPEND);
 	}
 }
 

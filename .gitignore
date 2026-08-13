@@ -2,4 +2,4 @@
 /gaku-ura/data/*.gz
 /gaku-ura/flock/*
 /google*.html
-
+*.log

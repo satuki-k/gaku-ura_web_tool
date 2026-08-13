@@ -55,6 +55,7 @@ nav label:after{
 }
 .n label:after{
 	content:"Close";
+	color:#fff;
 }
 .n, nav label{
 	position:fixed;

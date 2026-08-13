@@ -171,6 +171,7 @@ function main(string $from):int{
 		}
 		#投稿
 		if ($submit && $conf->check_csrf_token('admin__'.$submit,$csrf_token,true)){
+			if($user_data['admin']<($conf->config['login.admin_block']??0)) $user->log_report('fm_post',$user_data);
 			if ($submit==='edit_file' && list_isset($_POST,['name','new_name','new_path','perm']) && strpos($_POST['name'],'..')===false && strpos($_POST['name'], '/')===false && is_file($current_dir.'/'.h($_POST['name'])) && isset($perm_list[$_POST['perm']])){
 				$path = $current_dir.'/'.h($_POST['name']);
 				if (!$user->permitted($path,$user_data,true)){
@@ -236,7 +237,7 @@ function main(string $from):int{
 				$nw = $_POST['new'];
 				if (in_array($nw,['/sitemap.xml','/robots.txt'],true)){
 					if(!$user->permitted($conf->d_root.$nw,$user_data,true,false,$template_dir.$nw)) $conf->not_found(false,'権限がありません。');
-					if(!is_file($template_dir.$nw)) $conf->not_found(false,$nw.'の作成テンプレートがありません。');
+					if(!file_exists($template_dir.$nw)) touch($template_dir.$nw);
 				}
 				if ($nw === '.htaccess'){
 					touch($current_dir.$nw);
@@ -481,6 +482,7 @@ function main(string $from):int{
 			if(!$user->permitted($current_file,$user_data)) $conf->not_found(false,'権限がありません。');
 			$editable = is_editable($current_file);
 			if (isset($_GET['download']) || (!$editable&&!str_starts_with($menu,'edit'))){
+				if($user_data['admin']<($conf->config['login.admin_block']??0)) $user->log_report('fm_get',$user_data);
 				header('Content-Description:File Transfer');
 				$conf->content_type(mime_content_type($current_file));
 				header('Content-Disposition:inline;filename="'.$bname.'"');
@@ -602,6 +604,7 @@ function main(string $from):int{
 			$m = tempnam(sys_get_temp_dir(),'_');
 			$t = $m.'.tar';
 			if($m){
+				if($user_data['admin']<($conf->config['login.admin_block']??0)) $user->log_report('fm_get',$user_data);
 				$p = new PharData($t);
 				$p->buildFromDirectory($current_dir);
 				$p->compress(Phar::GZ);
@@ -672,6 +675,7 @@ function main(string $from):int{
 			if (not_empty($name) && not_empty($passwd) && $i){
 				$d = $user->user_data_convert(explode("\t", get($user->user_list_file,$i+1)));
 				if (password_verify($passwd, $d['passwd'])){
+					$user->log_report('login',$user_data);
 					$_SESSION[GakuUraUser::SKEY_ID] = $d['id'];
 					$_SESSION[GakuUraUser::SKEY_NAME] = $d['name'];
 					$_SESSION[GakuUraUser::SKEY_PASSWD] = $d['passwd'];
@@ -680,6 +684,7 @@ function main(string $from):int{
 				}
 			}
 			$replace['WARNING'] = 'ユーザー名またはパスワードが正しくありません。';
+			$user->log_report('login_failed',$user_data);
 		}
 		$replace['CSRF_TOKEN'] = $conf->set_csrf_token('login');
 	} elseif ($from === 'regist'){
