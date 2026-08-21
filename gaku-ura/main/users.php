@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.9
+#gaku-ura9.8.11
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -30,8 +30,8 @@ function file_perm(string $f):string{return substr(sprintf('%o',fileperms($f)),-
 function fsz(string $f):string{
 	$s = filesize($f);
 	foreach (['','K','M','G','T'] as $k=>$v){
-		$b = 1024**$k;
-		if($s/1024<$b) return round(100*$s/$b)/100 .$v.'B';
+		$b = round(100*$s/1024**$k)/100;
+		if($b<1000) return $b.$v.'B';
 	}
 	return $s;
 }
@@ -61,17 +61,13 @@ function main(string $from):int{
 	$replace = ['GAKU_URA_VERSION'=>GAKU_URA_VERSION,'CONFIG'=>'','WARNING'=>'','FOR_ADMIN'=>'','API_ARGS'=>'','WEB_OPEN'=>''];
 	if ($from === 'home'){
 		/* ユーザーホーム */
-		if (!$is_login){
-			header('Location:./login/');
-			exit;
-		}
+		if(!$is_login) exit_mv('./login/');
 		if ($conf->url_param === ''){
 			if ($submit && $submit==='logout' && $conf->check_csrf_token('user_home',$csrf_token,true)){
 				unset($_SESSION[GakuUraUser::SKEY_ID]);
 				unset($_SESSION[GakuUraUser::SKEY_NAME]);
 				unset($_SESSION[GakuUraUser::SKEY_PASSWD]);
-				header('Location:./');
-				exit;
+				exit_mv('./');
 			} elseif (list_isset($_POST,['user_name','mail','new_passwd','profile','group']) && $conf->check_csrf_token('user_home',$csrf_token,true)){
 				$_POST['profile'] = str_replace("\n", '&#10;', $_POST['profile']);
 				$p = [];
@@ -86,8 +82,7 @@ function main(string $from):int{
 				$_SESSION[GakuUraUser::SKEY_NAME] = $user_data['name'];
 				$_SESSION[GakuUraUser::SKEY_PASSWD] = $user_data['passwd'];
 				$user->change_user_data($user_data);
-				header('Location:./');
-				exit;
+				exit_mv('./');
 			} else {
 				$replace['CSRF_TOKEN'] = $conf->set_csrf_token('user_home');
 				foreach(['name','mail','profile','admin']as$k) $replace[strtoupper($k)]=$user_data[$k];
@@ -125,8 +120,7 @@ function main(string $from):int{
 				if(isset($_GET['download'])) $_SESSION[GakuUraUser::SKEY_FROM]=str_replace(['&download','&async'],'',$_SERVER['REQUEST_URI']??'');
 				return -1;
 			}
-			header('Location:../login/');
-			exit;
+			exit_mv('../login/');
 		}
 		if($user_data['admin']<$user->admin_revel) $conf->not_found();
 		$is_edit_mode = 0;
@@ -186,8 +180,7 @@ function main(string $from):int{
 				}
 				if (($_POST['remove']??'')==='yes'){
 					unlink($path);
-					header('Location:./?Dir='.$uri_dir);
-					exit;
+					exit_mv('./?Dir='.$uri_dir);
 				} else {
 					if($_POST['perm']!=='no') chmod($path,$perm_list[$_POST['perm']]);
 					if (not_empty($_POST['new_name'])){
@@ -208,8 +201,7 @@ function main(string $from):int{
 					}
 					if(isset($_POST['content'])) file_put_contents($path,$_POST['content'],LOCK_EX);
 				}
-				header('Location:?Dir='.$uri_dir.'&File='.$_GET['File'].'&Menu=edit');
-				exit;
+				exit_mv('?Dir='.$uri_dir.'&File='.$_GET['File'].'&Menu=edit');
 			} elseif ($submit==='edit_dir' && list_isset($_POST,['new_name','new_path','perm']) && isset($perm_list[$_POST['perm']])){
 				if(!$user->permitted($current_dir,$user_data,true)) $conf->not_found(false,'権限がありません。');
 				if (($_POST['remove']??'')==='yes'){
@@ -229,8 +221,7 @@ function main(string $from):int{
 						$uri_dir = lreplace(lreplace($p,$c_root),'/');
 					}
 				}
-				header('Location:?Dir='.up_to($uri_dir));
-				exit;
+				exit_mv('?Dir='.up_to($uri_dir));
 			} elseif ($submit==='new' && list_isset($_POST,['new','name'])){
 				$template_dir = $conf->data_dir.'/default/file';
 				$name = h(str_replace(['/','..'],'',$_POST['name']));
@@ -255,14 +246,12 @@ function main(string $from):int{
 					foreach(array_unique($url_list)as$i) $t.='<url><loc>'.$conf->domain.$i.'</loc></url>'."\n";
 					$s = str_replace('{URL_LIST}', $t, file_get_contents($f));
 					file_put_contents($conf->d_root.$nw, $s, LOCK_EX);
-					header('Location:?Dir='.lreplace($c_root,$conf->d_root.'/').'&File='.basename($f).'&Menu=edit');
-					exit;
+					exit_mv('?Dir='.lreplace($c_root,$conf->d_root.'/').'&File='.basename($f).'&Menu=edit');
 				} elseif ($nw==='/robots.txt'){
 					$s = file_get_contents($template_dir.$nw);
 					$s = str_replace('{DOMAIN}', $conf->domain, $s);
 					file_put_contents($conf->d_root.$nw, $s, LOCK_EX);
-					header('Location:?Dir='.lreplace($c_root,$conf->d_root.'/').'&File=robots.txt&Menu=edit');
-					exit;
+					exit_mv('?Dir='.lreplace($c_root,$conf->d_root.'/').'&File=robots.txt&Menu=edit');
 				} elseif (not_empty($name)){
 					if ($nw === 'folder'){
 						foreach(explode('\\',$name)as$n)if(!file_exists($current_dir.'/'.$n)) mkdir($current_dir.'/'.$n,0777,true);
@@ -283,8 +272,7 @@ function main(string $from):int{
 						file_put_contents($new_path, $s, LOCK_EX);
 						if(in_array($nw,['pl','py'],true)) chmod($new_path, 0745);
 						if ($nw === 'db'){
-							header('Location:./?Dir='.$uri_dir.'&File='.$name.'&Menu=edit_db');
-							exit;
+							exit_mv('./?Dir='.$uri_dir.'&File='.$name.'&Menu=edit_db');
 						}
 					}
 				}
@@ -305,8 +293,7 @@ function main(string $from):int{
 						upload($_FILES[$k], $current_dir.'/'.$n, $user, $user_data, $perm_list);
 					}
 				}
-				header('Location:./?Dir='.$uri_dir);
-				exit;
+				exit_mv('./?Dir='.$uri_dir);
 			} elseif ($submit==='edit_db'&&list_isset($_POST,['dbtype','dbname','query','table','import_name'])){
 				#SQLite
 				$current_table = h($_POST['table']??'');
@@ -330,8 +317,7 @@ function main(string $from):int{
 					}
 					#削除とtable切替を同時に行うと切替の優先で意図しない削除を防止
 					if ($g->table_exists($table)){
-						header('Location:./?Dir='.$uri_dir.'&File='.$dbname.'&Menu='.$submit.'&table='.$table);
-						exit;
+						exit_mv('./?Dir='.$uri_dir.'&File='.$dbname.'&Menu='.$submit.'&table='.$table);
 					}
 					if ($current_table === ''){
 						$tl = $g->get_tables();
@@ -340,8 +326,7 @@ function main(string $from):int{
 					#table削除
 					if (($_POST['remove_table']??'')==='true' && not_empty($current_table)){
 						$g->remove_table($current_table);
-						header('Location:./?Dir='.$uri_dir.'&File='.$dbname.'&Menu='.$menu);
-						exit;
+						exit_mv('./?Dir='.$uri_dir.'&File='.$dbname.'&Menu='.$menu);
 					}
 					#SQL文実行
 					$sql = $_POST['query'];
@@ -409,8 +394,7 @@ function main(string $from):int{
 						}
 					}
 					if($is_add) $g->append_row($current_table,$add);
-					header('Location:./?Dir='.$uri_dir.'&File='.basename($dbname).'&Menu='.$submit.'&table='.$current_table);
-					exit;
+					exit_mv('./?Dir='.$uri_dir.'&File='.basename($dbname).'&Menu='.$submit.'&table='.$current_table);
 				}
 			} elseif ($submit==='upgrade' && $user_data['admin']>=4 && str_starts_with($conf->d_root,$c_root) && isset($_POST['reupgrade'])){
 				#upgrade
@@ -452,8 +436,7 @@ function main(string $from):int{
 			} else {
 				$conf->form_die();
 			}
-			header('Location:'.$conf->here);
-			exit;
+			exit_mv($conf->here);
 		}
 		#upgrade menu
 		if ($menu === 'upgrade'){
@@ -476,8 +459,7 @@ function main(string $from):int{
 					echo 2;
 					return 2;
 				}
-				header('Location:?Dir='.$uri_dir);
-				exit;
+				exit_mv('?Dir='.$uri_dir);
 			}
 			if(!$user->permitted($current_file,$user_data)) $conf->not_found(false,'権限がありません。');
 			$editable = is_editable($current_file);
@@ -663,10 +645,7 @@ function main(string $from):int{
 		}
 	} elseif ($from === 'login'){
 		/* ログイン */
-		if ($is_login){
-			header('Location:../');
-			exit;
-		}
+		if($is_login) exit_mv('../');
 		if (list_isset($_POST,['user_name','passwd']) && $conf->check_csrf_token('login',$csrf_token,true)){
 			$name = h($_POST['user_name']);
 			$passwd = h($_POST['passwd']);
@@ -675,12 +654,10 @@ function main(string $from):int{
 			if (not_empty($name) && not_empty($passwd) && $i){
 				$d = $user->user_data_convert(explode("\t", get($user->user_list_file,$i+1)));
 				if (password_verify($passwd, $d['passwd'])){
-					$user->log_report('login',$user_data);
 					$_SESSION[GakuUraUser::SKEY_ID] = $d['id'];
 					$_SESSION[GakuUraUser::SKEY_NAME] = $d['name'];
 					$_SESSION[GakuUraUser::SKEY_PASSWD] = $d['passwd'];
-					header('Location:'.($_SESSION[GakuUraUser::SKEY_FROM]??'../'));
-					exit;
+					exit_mv($_SESSION[GakuUraUser::SKEY_FROM]??'../');
 				}
 			}
 			$replace['WARNING'] = 'ユーザー名またはパスワードが正しくありません。';
@@ -699,8 +676,7 @@ function main(string $from):int{
 						if ($user->user_exists($p['name'],$p['mail']) === 0){
 							$p['passwd'] = password_hash($p['passwd'], PASSWORD_BCRYPT);
 							$user->change_user_data($p);
-							header('Location:../../');
-							exit;
+							exit_mv('../../');
 						} else {
 							$replace['WARNING'] = 'その名前またはメールアドレスはすでに登録されています。';
 						}
