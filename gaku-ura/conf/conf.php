@@ -612,7 +612,10 @@ class GakuUra{
 		foreach(self::GAKU_URA_FILES as $f)if(file_exists($this->d_root.'/'.$f)) copy_path($this->d_root.'/'.$f,$b.$f,$ub);
 		$a = $m.'/upgrade.tar.gz';
 		copy($tar_gz, $a);
-		if(!file_extract($a,$t)) return 2;
+		if (!file_extract($a,$t)){
+			this->file_unlock($l);
+			return 2;
+		}
 		$r = 0;
 		foreach (self::GAKU_URA_FILES as $f){
 			$s = $t.$f;
