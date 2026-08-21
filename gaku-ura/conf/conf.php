@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.8.10';
+const GAKU_URA_VERSION = '9.8.11';
 #mbstringの代替関数を使うときは以下のコメントを外す
 //include __DIR__ .'/alt-mbstring.php';
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
@@ -342,6 +342,11 @@ function get_ip():string{
 	}
 	foreach(['HTTP_CLIENT_IP','HTTP_X_REAL_IP']as$k) if(isset($_SERVER[$k]))return $_SERVER[$k];
 	return $_SERVER['REMOTE_ADDR'];
+}
+#転送
+function exit_mv(string $to):void{
+	header('Location:'.$to);
+	exit;
 }
 class GakuUra{
 	public string $d_root;
