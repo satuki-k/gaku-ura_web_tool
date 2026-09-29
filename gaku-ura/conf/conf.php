@@ -1,8 +1,12 @@
 <?php
+/*
+ * TODO
+ * 編集機能にて保存メッセージの表示
+ * ファイル一覧画面でグループを変更可能にする
+ * 404ページのデザイン改善
+*/
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.8.11';
-#mbstringの代替関数を使うときは以下のコメントを外す
-//include __DIR__ .'/alt-mbstring.php';
+const GAKU_URA_VERSION = '9.8.12';
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
 #UTF-8/LFにする
 function lf(string $s):string{return str_replace(["\r\n","\r"],"\n",$s);}
@@ -127,20 +131,28 @@ function copy_path(string $dir, string $to, array $skip=[]):bool{
 function file_extract(string $file, string $to):bool{
 	$f = strtolower($file);
 	if(!file_exists($to)) mkdir($to,0777,true);
-	if (str_ends_with($f,'.tar.gz')){
-		try{
+	try{
+		if (str_ends_with($f,'.tar.gz')){
 			$p = new PharData($file);
 			$p->decompress();
 			$p = new PharData(rreplace($file,'.gz'));
-			if (!$p->extractTo($to)){
-				return false;
-			}
+			if(!$p->extractTo($to)) return false;
 			unlink(rreplace($file,'.gz'));
 			return true;
-		}catch(Exception $e){
-			return false;
+		} elseif (str_ends_with($f,'.tar')){
+			$p = new PharData($file);
+			return $p->extractTo($to);
+		} elseif (str_ends_with($f,'.gz')){
+			if(is_dir($to)) $to=rreplace($to,'/').'/'.rreplace(basename($f),'.gz');
+			if(is_file($to)) unlink($to);
+			$p = fopen($to, 'a');
+			$r = gzopen($file, 'r');
+			while(($i=fgets($r))!==false) fwrite($p,$i);
+			gzclose($r);
+			fclose($p);
+			return true;
 		}
-	}
+	}catch(Exception$e){return false;}
 	return false;
 }
 #ディレクトリ再帰削除
@@ -377,7 +389,7 @@ class GakuUra{
 			session_start();
 		}
 		$this->d_root = realpath(__DIR__ .'/../..');
-		$this->system_dir = realpath(__DIR__ .'/..');
+		$this->system_dir = $this->d_root.'/gaku-ura';
 		$this->data_dir = $this->system_dir.'/data';
 		$this->config_file = __DIR__ .'/gaku-ura.conf';
 		$this->config = read_conf($this->config_file);

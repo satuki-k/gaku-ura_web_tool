@@ -544,7 +544,7 @@ function main(string $from):int{
 				$cfl = strtolower($current_file);
 				if (str_ends_with($cfl,'.db')){
 					$f = '<p><a href="?Dir='.$uri_dir.'&File='.$bname.'&Menu=edit_db">tableを編集</a></p>';
-				} elseif (str_ends_with($cfl,'.tar.gz')){
+				} elseif (preg_match('/(\.tar\.gz|\.tar|\.gz)$/',$cfl)===1){
 					$f = '<p><label><input type="checkbox" name="extract" value="yes">展開する</label></p>';
 				}
 				if ($editable){
