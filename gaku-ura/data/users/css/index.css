@@ -8,6 +8,12 @@ h1{
 h1 label{
 	display:flex;
 }
+#fparea{
+	z-index:99999;
+	position:fixed;
+	top:0;
+	left:0;
+}
 #exit{
 	color:#fff;
 }
