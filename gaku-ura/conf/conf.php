@@ -1,10 +1,4 @@
 <?php
-/*
- * TODO
- * 編集機能にて保存メッセージの表示
- * ファイル一覧画面でグループを変更可能にする
- * 404ページのデザイン改善
-*/
 #gaku-ura標準lib
 const GAKU_URA_VERSION = '9.8.12';
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
@@ -510,7 +504,7 @@ class GakuUra{
 		'CSS_URL'=>$this->u_root.'css/?'.lreplace($css,$this->data_dir).($css_default?'':'&STANDALONE'),
 		'JS_URL'=>$this->u_root.'js/?'.lreplace($js,$this->data_dir).($minify?'':'&NOTMINIFY'),
 		'NONCE'=>$this->nonce,'DESCRIPTION'=>self::h(($robots&&not_empty($summary))?$summary:'?'),'TITLE'=>self::h($title),
-		'CONTENT'=>self::h($content),'SITE_TITLE'=>self::h($this->config['title']??'?'),'U_ROOT'=>$this->u_root];
+		'CONTENT'=>self::h($content),'SITE_TITLE'=>self::h($this->config['title']??'?'),'U_ROOT'=>$this->u_root,'GAKU_URA_VERSION'=>GAKU_URA_VERSION];
 		if ($this->here !== $this->canonical){
 			$h = nreplace($h, '</head>', '<link rel="canonical" href="'.$this->canonical.'"></head>', 1);
 			$robots = false;

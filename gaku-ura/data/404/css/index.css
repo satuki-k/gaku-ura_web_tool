@@ -1,6 +1,7 @@
 /* 標準エラーページ */
 .msg{
 	padding:.2em;
+	border:solid 1px;
 }
 .reason{
 	background:#ffe;
