@@ -223,6 +223,13 @@ function main(string $from):int{
 				}
 				exit_mv('?Dir='.up_to($uri_dir));
 			} elseif ($submit==='new' && list_isset($_POST,['new','name'])){
+				if (($_POST['chgroup']??'') === 'yes'){
+					$g = array_slice($user_data['group'],1);
+					$a = $_POST['group'];
+					if(in_array($a,$g,true)) $user_data['group']=array_unique(array_merge([$user_data['admin'],$a],$g));
+					$user->change_user_data($user_data);
+					exit_mv('./?Dir='.$uri_dir);
+				}
 				$template_dir = $conf->data_dir.'/default/file';
 				$name = h(str_replace(['/','..'],'',$_POST['name']));
 				$nw = $_POST['new'];
@@ -544,7 +551,7 @@ function main(string $from):int{
 				$cfl = strtolower($current_file);
 				if (str_ends_with($cfl,'.db')){
 					$f = '<p><a href="?Dir='.$uri_dir.'&File='.$bname.'&Menu=edit_db">tableを編集</a></p>';
-				} elseif (str_ends_with($cfl,'.tar.gz')){
+				} elseif (preg_match('/(\.tar\.gz|\.tar|\.gz)$/',$cfl)===1){
 					$f = '<p><label><input type="checkbox" name="extract" value="yes">展開する</label></p>';
 				}
 				if ($editable){
@@ -629,6 +636,8 @@ function main(string $from):int{
 				}
 			}
 			$replace['FILE_LIST'] = $p;
+			$replace['GROUP'] = '';
+			foreach(array_slice($user_data['group'],1)as$i) $replace['GROUP'].='<option value="'.$i.'">'.$i.'</option>';
 		}
 		if ($is_edit_mode){
 			if ($is_async){

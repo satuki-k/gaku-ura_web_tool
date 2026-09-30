@@ -178,7 +178,7 @@ function mopen(e, c){
 		prs(0);
 	});
 	const x = document.createElement("a");
-	if (!isdir && a.textContent.endsWith(".tar.gz")){
+	if (!isdir && /(\.tar\.gz|\.tar|\.gz)$/.test(a.textContent.toLowerCase())){
 		x.innerHTML = "📂すべて展開";
 		x.href = "#";
 		x.addEventListener("click", async (e)=>{

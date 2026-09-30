@@ -10,7 +10,7 @@
 			<th colspan="5">
 				<form method="POST" enctype="multipart/form-data" id="form">
 					<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
-					<label>
+					<label>+
 						<select name="new">
 							<option value="folder">新規フォルダ</option>
 							<option value="file">新規ファイル</option>
@@ -31,9 +31,14 @@
 					<label id="files"><input type="file" name="file0"></label>
 					<label><button type="submit" name="submit" value="new">O K</button></label>
 					<details>
-						<summary>フォルダ選択</summary>
-						<label id="folder"><input type="file" name="folder[]" webkitdirectory multiple></label>
-						<p>環境によっては階層構造を無視してアップロードしてしまう場合があります。また、フォルダアップロードにブラウザが対応していないこともあります。</p>
+						<summary>オプション</summary>
+						<p>
+							<label id="folder">フォルダ選択<input type="file" name="folder[]" webkitdirectory multiple></label>
+							環境やファイル数・サイズが大きいと失敗や動作不良が起こります。
+						</p>
+						<p>
+							<label>有効化するグループ<select name="group">{GROUP}</select></label> <label><input type="checkbox" name="chgroup" value="yes">変更する</label>
+						</p>
 					</details>
 				</form>
 			</th>
