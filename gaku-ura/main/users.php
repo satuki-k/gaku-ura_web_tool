@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.11
+#gaku-ura9.8.13
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -222,10 +222,10 @@ function main(string $from):int{
 					}
 				}
 				exit_mv('?Dir='.up_to($uri_dir));
-			} elseif ($submit==='new' && list_isset($_POST,['new','name'])){
-				if (($_POST['chgroup']??'') === 'yes'){
+			} elseif ($submit==='new' && list_isset($_POST,['new','name','group'])){
+				$a = $_POST['group'];
+				if (isset($user_data['group'][1]) && $user_data['group'][1] !== $a){
 					$g = array_slice($user_data['group'],1);
-					$a = $_POST['group'];
 					if(in_array($a,$g,true)) $user_data['group']=array_unique(array_merge([$user_data['admin'],$a],$g));
 					$user->change_user_data($user_data);
 					exit_mv('./?Dir='.$uri_dir);
@@ -265,10 +265,10 @@ function main(string $from):int{
 					} elseif ($nw === 'file'){
 						foreach(explode('\\',$name)as$n)if(!file_exists($current_dir.'/'.$n)&&$user->permitted($current_dir.'/'.$n,$user_data,true)) touch($current_dir.'/'.$n);
 					} elseif (!file_exists($current_dir.'/'.$name)){
-						if(!$user->permitted($current_dir.'/'.$name,$user_data,true)) $conf->not_found(false,'この拡張子は編集権限がありません。');
 						if (!str_ends_with($name,'.'.$nw) && in_array($nw,['php','html','css','js','pl','py','db'],true)){
 							$name .= '.'.$nw;
 						}
+						if(!$user->permitted($current_dir.'/'.$name,$user_data,true)) $conf->not_found(false,'この拡張子は編集権限がありません。');
 						$new_path = $current_dir.'/'.$name;
 						$t = $template_dir.'/index.'.$nw;
 						if($nw==='php'&&$current_dir===__DIR__) $t=$template_dir.'/main.php';

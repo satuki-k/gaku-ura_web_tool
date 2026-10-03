@@ -77,16 +77,6 @@ button{
 button:hover{
 	background:#fff;
 }
-details{
-	font-weight:500;
-}
-summary{
-	text-decoration:underline;
-}
-summary:hover{
-	text-decoration:none;
-}
-
 .table{
 	overflow-x:scroll;
 }
@@ -107,6 +97,19 @@ summary:hover{
 #my, #my input{
 	background:#555;
 	font-weight:bold;
+}
+#file, #folder{
+	display:none;
+}
+#files, #folders{
+	background:#eee;
+	border:solid 1px;
+	padding:.3em .2em 0 .2em;
+	font-weight:normal;
+	display:inline-block;
+}
+#files:hover, #folders:hover{
+	background:#fefefe;
 }
 /* ディレクトリだけ見分けをつける */
 .dir:before{

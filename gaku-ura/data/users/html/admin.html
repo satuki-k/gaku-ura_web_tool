@@ -10,10 +10,10 @@
 			<th colspan="5">
 				<form method="POST" enctype="multipart/form-data" id="form">
 					<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
-					<label>+
-						<select name="new">
-							<option value="folder">新規フォルダ</option>
-							<option value="file">新規ファイル</option>
+					<label><ruby><rb>新規</rb><rt>new</rt></ruby>
+						<select name="new" id="new">
+							<option value="folder">フォルダ</option>
+							<option value="file">ファイル</option>
 							<option value="php">PHP</option>
 							<option value="html">html</option>
 							<option value="css">css</option>
@@ -26,26 +26,21 @@
 							<option value="/robots.txt">/robots.txt</option>
 						</select>
 					</label>
-					<label>名前<input type="text" name="name"></label>
-					または
-					<label id="files"><input type="file" name="file0"></label>
+					<label id="new_name"><ruby><rb>名前</rb><rt>name</rt></ruby><input type="text" name="name" id="name"></label>
+					<span>　</span>
+					<label id="files"><ruby><rb>ﾌｧｲﾙをｱｯﾌﾟﾛｰﾄﾞ</rb><rt>upload file</rt></ruby><input type="file" name="file0" id="file"></label>
+					<span> </span>
+					<label id="folders"><ruby><rb>ﾌｫﾙﾀﾞをｱｯﾌﾟﾛｰﾄﾞ</rb><rt>upload folder</rt></ruby><input type="file" name="folder[]" id="folder" webkitdirectory multiple></label>
+					<span> </span>
+					<label><ruby><rb>グループ</rb><rt>group</rt></ruby><select name="group" id="group">{GROUP}</select></label>
+					<span> </span>
 					<label><button type="submit" name="submit" value="new">O K</button></label>
-					<details>
-						<summary>オプション</summary>
-						<p>
-							<label id="folder">フォルダ選択<input type="file" name="folder[]" webkitdirectory multiple></label>
-							環境やファイル数・サイズが大きいと失敗や動作不良が起こります。
-						</p>
-						<p>
-							<label>有効化するグループ<select name="group">{GROUP}</select></label> <label><input type="checkbox" name="chgroup" value="yes">変更する</label>
-						</p>
-					</details>
 				</form>
 			</th>
 		</tr>
 		<tr><td colspan="4">{SHORTCUT}</td></tr>
 		<tr><td colspan="4">{PATH}</td></tr>
-		<tr><th>名 前</th><th>編 集</th><th>詳 細</th><th>更 新</th></tr>
+		<tr><th><ruby><rb>名 前</rb><rt>name</rt></ruby></th><th><ruby><rb>編 集</rb><rt>edit</rt></ruby></th><th><ruby><rb>詳 細</rb><rt>detail</rt></ruby></th><th><ruby><rb>更 新</rb><rt>time</rt></ruby></th></tr>
 	</thead>
 	<tbody>
 		{FILE_LIST}
