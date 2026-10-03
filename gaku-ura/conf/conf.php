@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.8.12';
+const GAKU_URA_VERSION = '9.8.13';
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
 #UTF-8/LFにする
 function lf(string $s):string{return str_replace(["\r\n","\r"],"\n",$s);}

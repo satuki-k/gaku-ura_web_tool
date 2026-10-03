@@ -40,8 +40,8 @@ async function dg(e){
 				$ID("folder").click();
 				n++;
 			} else {
-				const j = $QS('#form input[name="name"]');
-				$QS('#form select[name="new"]').value = "folder";
+				const j = $ID("name");
+				$ID("new").value = "folder";
 				if(j.value!=="") j.value+="\\";
 				j.value += f.name;
 			}
@@ -65,6 +65,16 @@ async function dg(e){
 	if((await reload_csrf("csrf_token"))&&l.length>0) $QS('[type="submit"]').click();
 }
 ["dragover","dragleave","drop"].forEach((i)=>{d.addEventListener(i,dg);});
+$ID("file").addEventListener("change", ()=>{
+	$QS('[type="submit"]').click();
+});
+$ID("folder").addEventListener("change", ()=>{
+	$QS('[type="submit"]').click();
+});
+/* group */
+$ID("group").addEventListener("change", ()=>{
+	$QS('[type="submit"]').click();
+});
 /* 操作メニュー */
 const g = document.createElement("pre");//クリックメニュー
 g.classList.add("cmenu");
