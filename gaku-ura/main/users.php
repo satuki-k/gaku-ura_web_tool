@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.13
+#gaku-ura9.8.14
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -222,8 +222,8 @@ function main(string $from):int{
 					}
 				}
 				exit_mv('?Dir='.up_to($uri_dir));
-			} elseif ($submit==='new' && list_isset($_POST,['new','name','group'])){
-				$a = $_POST['group'];
+			} elseif ($submit==='new' && list_isset($_POST,['new','name'])){
+				$a = $_POST['group']??'';
 				if (isset($user_data['group'][1]) && $user_data['group'][1] !== $a){
 					$g = array_slice($user_data['group'],1);
 					if(in_array($a,$g,true)) $user_data['group']=array_unique(array_merge([$user_data['admin'],$a],$g));
@@ -551,7 +551,7 @@ function main(string $from):int{
 				$cfl = strtolower($current_file);
 				if (str_ends_with($cfl,'.db')){
 					$f = '<p><a href="?Dir='.$uri_dir.'&File='.$bname.'&Menu=edit_db">tableを編集</a></p>';
-				} elseif (preg_match('/(\.tar\.gz|\.tar|\.gz)$/',$cfl)===1){
+				} elseif (preg_match('/(\.tar\.gz|\.tar|\.gz|\.tgz)$/',$cfl)===1){
 					$f = '<p><label><input type="checkbox" name="extract" value="yes">展開する</label></p>';
 				}
 				if ($editable){

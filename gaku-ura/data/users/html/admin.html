@@ -10,6 +10,7 @@
 			<th colspan="5">
 				<form method="POST" enctype="multipart/form-data" id="form">
 					<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
+					<span id="fparea"></span>
 					<label><ruby><rb>新規</rb><rt>new</rt></ruby>
 						<select name="new" id="new">
 							<option value="folder">フォルダ</option>
@@ -47,6 +48,6 @@
 	</tbody>
 </table>
 <p>一度にアップロードできるファイル数や合計サイズは、php.iniの設定に依存します。</p>
-<p>右クリックメニューの「全てダウンロード」は、選択したファイルではなく<b>現在のディレクトリ</b>をダウンロードします。</p>
+<p>ダウンロード機能は、<b>最後に選択したファイルを一つ、または全てのファイル、の二通りのみ可能です。</b></p>
 <p style="display:none;" {API_ARGS}id="gaku-ura_args"></p>
 
