@@ -7,12 +7,10 @@
 const q = (new URL(window.location)).searchParams;
 const popup = new POPUP();
 let move_file = 0;
-const prs_msg = document.createElement("p");
-prs_msg.classList.add("note");
-$ID("form").before(prs_msg);
 function prs(m){
-	prs_msg.innerHTML = m;
-	prs_msg.style.display = m?"block":"none";
+	const f = $ID("fparea");
+	f.innerHTML = m?m:"";
+	m?f.classList.add("note"):f.classList.remove("note");
 }
 //ini_get
 const arg = $ID("gaku-ura_args");
@@ -188,7 +186,7 @@ function mopen(e, c){
 		prs(0);
 	});
 	const x = document.createElement("a");
-	if (!isdir && /(\.tar\.gz|\.tar|\.gz)$/.test(a.textContent.toLowerCase())){
+	if (!isdir && /(\.tar\.gz|\.tar|\.gz|\.tgz)$/.test(a.textContent.toLowerCase())){
 		x.innerHTML = "📂すべて展開";
 		x.href = "#";
 		x.addEventListener("click", async (e)=>{

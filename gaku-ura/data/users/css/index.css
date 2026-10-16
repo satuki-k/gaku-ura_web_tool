@@ -129,6 +129,7 @@ button:hover{
 	position:fixed;
 	display:none;
 	border:solid 1px #ccc;
+	max-width:100vw;
 }
 .cmenu a, .cmenu p{
 	color:#111;
