@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.8.14';
+const GAKU_URA_VERSION = '9.8.15';
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
 #UTF-8/LFにする
 function lf(string $s):string{return str_replace(["\r\n","\r"],"\n",$s);}
@@ -77,7 +77,7 @@ function get_rows(string $f, int $l):array|false{
 }
 #任意時間以上更新ないファイル削除
 function unlink_by_date(string $dir, int $ds):void{
-	if(is_dir($dir)) return;
+	if(!is_dir($dir)) return;
 	foreach (scandir($dir)as$i){
 		$f = $dir.'/'.$i;
 		if(is_file($f)&&time()-filemtime($f)>$ds) unlink($f);
@@ -99,22 +99,24 @@ function path_list(string $dir):array{
 #ディレクトリ再帰コピー (from,to,[上書きしないパス]) 引数は絶対パスで正規化すること
 #ファイルでコピー先が無い場合: to全体をディレクトリとして作成
 function copy_path(string $dir, string $to, array $skip=[]):bool{
-	if(!file_exists($dir)||(is_dir($dir)&&is_file($to))) return true;
-	if (is_file($dir)){
-		if(in_array($to,$skip,true)) return true;
-		if(!file_exists($to)) mkdir($to,0777,true);
-		if(is_dir($to)) $to=rreplace($to,'/').'/'.basename($dir);
-		return copy($dir,$to);
+	$d = $dir;
+	$t = rreplace($to, '/');
+	if(!file_exists($d)||(is_dir($d)&&is_file($t))) return true;
+	if (is_file($d)){
+		if(in_array($t,$skip,true)) return true;
+		if(!file_exists($t)) mkdir($t,0777,true);
+		if(is_dir($t)) $t.='/'.basename($d);
+		return copy($d,$t);
 	}
-	if(!is_dir($to)) mkdir($to,0777,true);
-	foreach (scandir($dir) as $i){
+	if(!is_dir($t)) mkdir($t,0777,true);
+	foreach (scandir($d) as $i){
 		if ($i!=='.' && $i!=='..'){
-			$f = $dir.'/'.$i;
-			$t = $to.'/'.$i;
-			foreach($skip as $s)if($t===$s) continue 2;
+			$f = $d.'/'.$i;
+			$o = $t.'/'.$i;
+			foreach($skip as $s)if($o===$s) continue 2;
 			if(is_dir($f)){
-				if(!copy_path($f,$t,$skip)) return false;
-			} elseif (!copy($f,$t)){
+				if(!copy_path($f,$o,$skip)) return false;
+			} elseif (!copy($f,$o)){
 				return false;
 			}
 		}
@@ -436,7 +438,7 @@ class GakuUra{
 	public function file_lock(string $label):void{
 		$s = $this->system_dir.'/flock';
 		if(!is_dir($s)) mkdir($s);
-		for($f=$s.'/.'.$label;is_file($f);unlink_by_date($s,60)) usleep(100);
+		for($f=$s.'/.'.$label;is_file($f);unlink_by_date($s,60)) sleep(1);
 		touch($f);
 	}
 	public function file_unlock(string $label):void{
@@ -615,11 +617,15 @@ class GakuUra{
 		}
 		if(is_dir($m)) rmdir_all($m);
 		mkdir($b, 0777, true);
-		foreach(self::GAKU_URA_FILES as $f)if(file_exists($this->d_root.'/'.$f)) copy_path($this->d_root.'/'.$f,$b.$f,$ub);
+		foreach (self::GAKU_URA_FILES as $f){
+			$i = $this->d_root.'/'.$f;
+			if(is_file($i)) $f=rreplace($f,basename($f));
+			copy_path($i, $b.$f, $ub);
+		}
 		$a = $m.'/upgrade.tar.gz';
 		copy($tar_gz, $a);
 		if (!file_extract($a,$t)){
-			this->file_unlock($l);
+			$this->file_unlock($l);
 			return 2;
 		}
 		$r = 0;

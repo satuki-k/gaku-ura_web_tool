@@ -448,14 +448,16 @@ function main(string $from):int{
 		#upgrade menu
 		if ($menu === 'upgrade'){
 			$from = 'upgrade';
-			$replace['ERROR_MSG'] = '権限が不足しています。';
+			$replace['ERROR_MSG'] = '権限が不足しています。管理者は<a href="../">ユーザーページ</a>に戻ってグループを変更してください。';
 			$replace['FORM'] = '';
 			$replace['GAKU_URA_FILES'] = implode('&#10;', GakuUra::GAKU_URA_FILES);
 			$replace['UPGRADE_IGNORE'] = implode('&#10;',GakuUra::UPGRADE_IGNORE).'&#10;'.($conf->config['upgrade.ignore']??'');
 			if ($user_data['admin']>=4 && str_starts_with($conf->d_root,$c_root)){
 				$replace['ERROR_MSG'] = '';
 				$f = $user->user_dir.'/html/upgrade_form.html';
-				if(is_file($f)) $replace['FORM']=nreplace(file_get_contents($f),'{CSRF_TOKEN}',$conf->set_csrf_token('admin__upgrade'),1);
+				$replace['FORM'] = is_file($f)?file_get_contents($f):'';
+				remove_comment_rows($replace['FORM'], '<!--','-->');
+				$replace['FORM'] = nreplace($replace['FORM'], '{CSRF_TOKEN}', $conf->set_csrf_token('admin__upgrade'), 1);
 			}
 		} elseif (($_GET['File']??'')!=='' && strpos($_GET['File'],'..')===false && strpos($_GET['File'], '/')===false){
 			#ファイルがある
