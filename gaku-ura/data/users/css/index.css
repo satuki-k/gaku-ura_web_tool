@@ -77,26 +77,12 @@ button{
 button:hover{
 	background:#fff;
 }
-.table{
-	overflow-x:scroll;
-}
-.table td{
-	min-width:5em;
-}
-.table th, .table td{
-	border:solid 1px #aaa;
-}
-#f{
-	text-align:left;
-}
+
+/* file一覧 */
 #exit{
 	border:solid 1px #fff;
 	background:#f0b;
 	padding:.2em;
-}
-#my, #my input{
-	background:#555;
-	font-weight:bold;
 }
 #file, #folder{
 	display:none;
@@ -116,6 +102,17 @@ button:hover{
 	content:"📁";
 	color:#000;
 	padding:.2em;
+}
+
+/* 行列 */
+.table{
+	overflow-x:scroll;
+}
+.table td{
+	min-width:5em;
+}
+.table th, .table td{
+	border:solid 1px #aaa;
 }
 
 

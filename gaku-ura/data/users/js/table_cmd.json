@@ -1,0 +1,11 @@
+/* (){}は制御文字。()内文字でアクションを区別。{TABLE}がテーブル名に置換。 */
+{
+	"操作・命令>":"",
+	"エクスポート(export)":"",
+	"インポート(import)":"",
+	"列を削除":"ALTER TABLE {TABLE} DROP COLUMN 列;",
+	"列を追加":"ALTER TABLE {TABLE} ADD COLUMN 列 型;",
+	"カウント":"SELECT COUNT(列)FROM {TABLE};",
+	"合計":"SELECT SUM(列)FROM {TABLE};"
+}
+

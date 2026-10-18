@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.14
+#gaku-ura9.8.15
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -68,7 +68,7 @@ function main(string $from):int{
 				unset($_SESSION[GakuUraUser::SKEY_NAME]);
 				unset($_SESSION[GakuUraUser::SKEY_PASSWD]);
 				exit_mv('./');
-			} elseif (list_isset($_POST,['user_name','mail','new_passwd','profile','group']) && $conf->check_csrf_token('user_home',$csrf_token,true)){
+			} elseif (list_isset($_POST,['user_name','mail','new_passwd','profile']) && $conf->check_csrf_token('user_home',$csrf_token,true)){
 				$_POST['profile'] = str_replace("\n", '&#10;', $_POST['profile']);
 				$p = [];
 				foreach(['user_name','mail','new_passwd','profile']as$k) $p[$k]=row(h(GakuUraUser::h($_POST[$k])));
@@ -77,7 +77,7 @@ function main(string $from):int{
 				if(filter_var($p['mail'],FILTER_VALIDATE_EMAIL)&&$user->user_exists('',$p['mail'])===0) $user_data['mail']=$p['mail'];
 				$user_data['profile'] = $p['profile'];
 				$g = array_slice($user_data['group'],1);
-				$a = $_POST['group'];
+				$a = $_POST['group']??'';
 				if(in_array($a,$g,true)) $user_data['group']=array_unique(array_merge([$user_data['admin'],$a],$g));
 				$_SESSION[GakuUraUser::SKEY_NAME] = $user_data['name'];
 				$_SESSION[GakuUraUser::SKEY_PASSWD] = $user_data['passwd'];
@@ -87,7 +87,7 @@ function main(string $from):int{
 				$replace['CSRF_TOKEN'] = $conf->set_csrf_token('user_home');
 				foreach(['name','mail','profile','admin']as$k) $replace[strtoupper($k)]=$user_data[$k];
 				$replace['GROUP'] = '';
-				foreach(array_slice($user_data['group'],1)as$i) $replace['GROUP'].='<option value="'.$i.'">'.$i.'</option>';
+				foreach(array_slice($user_data['group'],1)as$i) $replace['GROUP'].='<option>'.$i.'</option>';
 				$a = $user->user_dir.'/html/home_admin.html';
 				$replace['PERMIT'] = 'guest user';
 				if ($user_data['admin']>=$user->admin_revel && is_file($a)){
@@ -494,14 +494,12 @@ function main(string $from):int{
 				$replace['DBNAME'] = $bname;
 				$replace['COLS'] = '';
 				$replace['ROWS'] = '';
-				$replace['TTITLE'] = '';
 				$replace['TABLE_LIST'] = '';
 				$g = new GakuUraSQL('sqlite', $current_file);
 				$tl = $g->get_tables();
 				$t = $_GET['table']??'';
 				if($t==='') $t=$tl[0]??'';
 				if ($tl!==[] && $g->table_exists($t)){
-					$replace['TTITLE'] = '<b><input type="text" name="table_name" value="'.h($t).'"></b>';
 					$c = $g->get_cols($t);
 					$ci = $g->get_cols_type($t);
 					$replace['COLS'] = '<th style="width:3em;"></th>';
@@ -537,9 +535,8 @@ function main(string $from):int{
 				} else {
 					$t = '';
 				}
-				$replace['TTITLE'] .= ($t===''||$tl===[])?'tableがありません':' <label><input type="checkbox" name="remove_table" value="true">このtableを削除</label>';
 				$replace['TABLE'] = h($t);
-				foreach($tl as $i) $replace['TABLE_LIST'].='<option value="'.$i.'">'.$i.'</option>';
+				foreach($tl as $i) if($i!==$t)$replace['TABLE_LIST'].='<option>'.h($i).'</option>';
 			} else {
 				#編集
 				$is_edit_mode = 1;
@@ -639,7 +636,7 @@ function main(string $from):int{
 			}
 			$replace['FILE_LIST'] = $p;
 			$replace['GROUP'] = '';
-			foreach(array_slice($user_data['group'],1)as$i) $replace['GROUP'].='<option value="'.$i.'">'.$i.'</option>';
+			foreach(array_slice($user_data['group'],1)as$i) $replace['GROUP'].='<option>'.$i.'</option>';
 		}
 		if ($is_edit_mode){
 			if ($is_async){
