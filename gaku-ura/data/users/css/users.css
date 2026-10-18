@@ -3,6 +3,8 @@
 
 body{
 	min-height:100vh;
+	background:#ffc;
+	color:#111;
 }
 input, textarea{
 	border:0;
