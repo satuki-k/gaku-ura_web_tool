@@ -2,11 +2,16 @@
 #!include element.js;
 #!include string.js;
 #!include reload_csrf.js;
+#!include popup.js;
 #!include keyboard.js;
 const q = (new URL(document.location)).searchParams;
+const popup = new POPUP();
 //submitメソッドを使えるようにする
 $ID("form").innerHTML += '<input type="hidden" name="submit_type" value="'+$QS('#form [type="submit"]').value+'">';
 const dbtype = $QS('input[name="dbtype"]').value;
+function ok(){
+	return $QS('[type="submit"]').click();
+}
 function mkt(e){
 	e.preventDefault();
 	const mem_s = document.body.style.overflowY;
@@ -161,14 +166,7 @@ const p = document.createElement("p");
 const mt = document.createElement("button");
 const mf = document.createElement("select");
 const tn = $QS('input[name="table"]').value;
-const fn = {
-	"操作・命令>":"",
-	"エクスポート(export)":"",
-	"インポート(import)":"",
-	"列を削除":"ALTER TABLE "+tn+" DROP COLUMN 列;",
-	"列を追加":"ALTER TABLE "+tn+" ADD COLUMN 列 型;",
-	"カウント":"SELECT COUNT(列)FROM "+tn+";",
-	"合計":"SELECT SUM(列)FROM "+tn+";"};
+const fn = #!include users/js/table_cmd.json;;//json埋め込み
 const rs = document.createElement("pre");
 $ID("form").after(rs);
 mf.name = "sql_fn";
@@ -188,14 +186,30 @@ mf.addEventListener("change", ()=>{
 	mf.selectedIndex = 0;
 	const i = $QS('[name="query"]');
 	const s = subrpos("(",")", v);
-	if(tn&&($QS('input[name="export"]').checked=(s==="export"))) return $QS('[type="submit"]').click();
+	if(tn&&($QS('input[name="export"]').checked=(s==="export"))) return ok();
 	if(s==="import") return $QS('input[type="file"]').click();
 	if (tn){
-		i.value = fn[v];
+		i.value = fn[v].replace("{TABLE}", " "+tn+" ");
 		i.focus();
 	}
 });
-$QS('select[name="ctable"]').addEventListener("change", ()=>{$QS('[type="submit"]').click();});
+$QS('select[name="ctable"]').addEventListener("change", ok);
+
+$ID("file").addEventListener("change", async ()=>{
+	const c = await popup.confirm($ID("fstrtl").textContent+"?", "YES", "NO");
+	const l = document.createElement("label");
+	const i = document.createElement("input");
+	$ID("fstrt").checked = c;
+	l.textContent = $ID("import").textContent;
+	i.type = "text";
+	i.placeholder = $ID("import_name").placeholder;
+	l.append(i);
+	i.addEventListener("input", ()=>{
+		$ID("import_name").value = i.value;
+	});
+	await popup.alert(l, "OK");
+	ok();
+});
 $ID("form").addEventListener("submit", async (e)=>{
 	e.preventDefault();
 	if (await reload_csrf("csrf_token")){
@@ -219,7 +233,7 @@ $ID("form").addEventListener("submit", async (e)=>{
 window.addEventListener("keydown", (e)=>{
 	if (isCtrlKey(e) && e.key==="s"){
 		e.preventDefault();
-		$QS('[type="submit"]').click();
+		ok();
 	}
 });
 

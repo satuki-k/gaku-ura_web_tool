@@ -1,8 +1,30 @@
 <!option robots 0>
 <!include users.css>
 <h1>ようこそ、{NAME} さん</h1>
-<div class="panel">
-	<div class="user_info">
+<div class="menu tabs">
+	<input type="radio" name="name" id="home" class="tab_in" checked>
+	<label for="home" accesskey="h">Home(H)</label>
+	<div class="tab">
+		<h2>登録情報</h2>
+		<p>ユーザー名: <a href="?{NAME}">{NAME}</a></p>
+		<p>Activated group: {GROUP} (権限レベル:{ADMIN})</p>
+		<p><br></p>
+		<h2>権限の詳細</h2>
+		<p>{PERMIT}</p>
+		{FOR_ADMIN}
+		<form method="POST" class="logout">
+			<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
+			<label><button type="submit" name="submit" value="logout">ログアウト</button></label>
+		</form>
+	</div>
+	<input type="radio" name="name" id="message" class="tab_in">
+	<label for="message" accesskey="m">メッセージ(M)</label>
+	<div class="tab">
+		<!include custom/custom.html>
+	</div>
+	<input type="radio" name="name" id="reginfo" class="tab_in">
+	<label for="reginfo" accesskey="r">登録情報変更(R)</label>
+	<div class="tab">
 		<h2>登録情報</h2>
 		<form method="POST" id="form">
 			<p><label>名前<input type="text" name="user_name" value="{NAME}" placeholder="変更なし"></label></p>
@@ -13,15 +35,13 @@
 			<p><label><button type="submit" name="csrf_token" value="{CSRF_TOKEN}">変更</button></label></p>
 		</form>
 	</div>
-	<div class="side">
-		<h2>その他の情報</h2>
-		<p><a href="?{NAME}">自分のユーザーページ</a></p>
-		<p>権限の詳細:{PERMIT}</p>
-		<form method="POST">
-			<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
-			<label><button type="submit" name="submit" value="logout">ログアウト</button></label>
-		</form>
-		{FOR_ADMIN}
-		<!include custom/custom.html>
+	<input type="radio" name="name" id="help" class="tab_in">
+	<label for="help" accesskey="t">ヘルプ(T)</label>
+	<div class="tab">
+		<p>キーボード操作支援: Alt+(Shift)+アルファベットでタブを切り替えられます。 </p>
+		<p>例: Alt+Shift+hでHomeに移動します。</p>
+		<p><br></p>
+		<p>gaku-ura libのバージョン: <a href="http://bq.f5.si/?Page=code" target="_blank">gaku-ura{GAKU_URA_VERSION}</a></p>
+		<p>gaku-ura libは、サイト管理ツールおよびサイト作成ツールセット(ライブラリ)です。</p>
 	</div>
 </div>

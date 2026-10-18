@@ -1,7 +1,8 @@
 /* マイページ,ログイン・登録,プロフィール */
-form{
-	padding:1em;
-	max-width:30em;
+#!include tabs.css;
+
+body{
+	min-height:100vh;
 }
 input, textarea{
 	border:0;
@@ -20,23 +21,31 @@ button{
 button:hover{
 	background:#938;
 }
-#form button{
+#form{
+	padding:2em;
+}
+#form button, .tabs #form input, textarea{
 	width:100%;
 }
 #form p{
 	padding:.2em;
 }
+#warning{
+	font-weight:bold;
+	text-decoration:underline wavy #f00;
+}
 
-.panel{
-	display:flex;
+.menu{
+	border:double 4px;
 }
-.panel .user_info{
-	width:50%;
+.tabs label[accesskey]{
+	border-bottom:solid 1px;
 }
-.panel .side{
-	width:50%;
+.tab{
+	min-height:calc(100vh - 8em);
+	padding:1em;
 }
-.panel input, textarea{
-	width:100%;
+.logout{
+	text-align:right;
 }
 

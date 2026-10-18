@@ -22,9 +22,15 @@ class POPUP{
 	/* 通常の警告 */
 	async alert(msg, ok="はーい( ´ ▽ ` )ﾉ"){
 		this.apear();
-		this.#w.innerHTML = "<p>"+msg+"</p>";
 		const p = document.createElement("p");
 		const b = document.createElement("button");
+		if (typeof(msg) === typeof("")){
+			this.#w.innerHTML = "<p>"+msg+"</p>";
+		} else {
+			const m = document.createElement("p");
+			m.append(msg);
+			this.#w.append(m);
+		}
 		p.style = "text-align:center;";
 		b.style = "color:#000;";
 		b.id = "POPUP_OK";
@@ -47,10 +53,16 @@ class POPUP{
 	/* 質問 */
 	async confirm(msg, yes="うん分かった", no="い、、、嫌じゃ"){
 		this.apear();
-		this.#w.innerHTML = "<p>"+msg+"</p>";
 		const p = document.createElement("p");
 		const y = document.createElement("button");
 		const n = document.createElement("button");
+		if (typeof(msg) === typeof("")){
+			this.#w.innerHTML = "<p>"+msg+"</p>";
+		} else {
+			const m = document.createElement("p");
+			m.append(msg);
+			this.#w.append(m);
+		}
 		p.style = "text-align:center;display:flex;";
 		y.style = "color:#e27;";
 		n.style = "color:#0b0;";
