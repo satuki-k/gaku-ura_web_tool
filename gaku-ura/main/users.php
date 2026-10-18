@@ -86,6 +86,7 @@ function main(string $from):int{
 			} else {
 				$replace['CSRF_TOKEN'] = $conf->set_csrf_token('user_home');
 				foreach(['name','mail','profile','admin']as$k) $replace[strtoupper($k)]=$user_data[$k];
+				$replace['GROUP0'] = $user_data['group'][1]??'';
 				$replace['GROUP'] = '';
 				foreach(array_slice($user_data['group'],1)as$i) $replace['GROUP'].='<option>'.$i.'</option>';
 				$a = $user->user_dir.'/html/home_admin.html';
