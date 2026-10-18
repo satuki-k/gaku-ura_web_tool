@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.15
+#gaku-ura9.8.16
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
