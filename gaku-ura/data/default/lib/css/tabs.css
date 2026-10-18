@@ -34,11 +34,12 @@ html例: input,label,タブ要素で1セット。inputにはtab_in,タブ要素�
 	flex-grow:1;
 	order:-1;
 	background:#eff;
+	color:#000;
 	padding:.4em;
 }
 .tab_in:checked+label{
 	font-weight:bold;
-	background:transparent;
+	background:#fff;
 }
 
 /********** メニュー **********/
