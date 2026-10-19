@@ -48,6 +48,22 @@ function upload(array $fk, string $to, object &$user, array &$user_data, array &
 		}
 	}
 }
+function get_msg(string $file, object &$user):string{
+	$r = '';
+	if(!is_file($file)) return $r;
+	foreach (get_rows($file, 1) as $row){
+		$d = explode("\t", $row);
+		if(count($d)<3) continue;
+		$from = get($user->user_list_file, $d[1]+1);
+		if ($from){
+			$d[1] = $user->user_data_convert(explode("\t",$from))['name'];
+		} else {
+			$d[1] = 'Unknown';
+		}
+		$r .= '<dl><dt><a href="?'.$d[1].'">'.$d[1].'</a> ('.date('Y/m/d H:i',$d[2]).')</dt><dd>'.$d[3].'</dd></dl>';
+	}
+	return $r;
+}
 function main(string $from):int{
 	$conf = new GakuUra();
 	$user = new GakuUraUser($conf);
@@ -63,12 +79,12 @@ function main(string $from):int{
 		/* ユーザーホーム */
 		if(!$is_login) exit_mv('./login/');
 		if ($conf->url_param === ''){
-			if ($submit && $submit==='logout' && $conf->check_csrf_token('user_home',$csrf_token,true)){
+			if ($submit==='logout' && $conf->check_csrf_token('user_home',$csrf_token,true)){
 				unset($_SESSION[GakuUraUser::SKEY_ID]);
 				unset($_SESSION[GakuUraUser::SKEY_NAME]);
 				unset($_SESSION[GakuUraUser::SKEY_PASSWD]);
 				exit_mv('./');
-			} elseif (list_isset($_POST,['user_name','mail','new_passwd','profile']) && $conf->check_csrf_token('user_home',$csrf_token,true)){
+			} elseif ($submit==='user_info' && list_isset($_POST,['user_name','mail','new_passwd','profile']) && $conf->check_csrf_token('user_home',$csrf_token,true)){
 				$_POST['profile'] = str_replace("\n", '&#10;', $_POST['profile']);
 				$p = [];
 				foreach(['user_name','mail','new_passwd','profile']as$k) $p[$k]=row(h(GakuUraUser::h($_POST[$k])));
@@ -83,24 +99,46 @@ function main(string $from):int{
 				$_SESSION[GakuUraUser::SKEY_PASSWD] = $user_data['passwd'];
 				$user->change_user_data($user_data);
 				exit_mv('./');
-			} else {
-				$replace['CSRF_TOKEN'] = $conf->set_csrf_token('user_home');
-				foreach(['name','mail','profile','admin']as$k) $replace[strtoupper($k)]=$user_data[$k];
-				$replace['GROUP0'] = $user_data['group'][1]??'';
-				$replace['GROUP'] = '';
-				foreach(array_slice($user_data['group'],1)as$i) $replace['GROUP'].='<option>'.$i.'</option>';
-				$a = $user->user_dir.'/html/home_admin.html';
-				$replace['PERMIT'] = 'guest user';
-				if ($user_data['admin']>=$user->admin_revel && is_file($a)){
-					$replace['FOR_ADMIN'] = str_replace('{NAME}',$replace['NAME'],is_file($a)?file_get_contents($a):'');
-					$replace['PERMIT'] = 'ファイル管理機能が利用可能(以下のディレクトリがアクセス可能:'.$user_data['own_dir'].')<br>';
-					if (($conf->config['login.admin_block']??0)>=$user_data['admin']){
-						$replace['PERMIT'] .= 'アクセス制限されています。<br>';
-						foreach(['block_readonly','block_dir_download','deny_ftype','allow_ftype']as$t) $replace['PERMIT'].= $t.'='.($conf->config['login.'.$t]??'empty').'<br>';
+			} elseif (
+				str_ends_with($submit,'_message') &&
+				isset($_POST['message']) &&
+				$conf->check_csrf_token('user_home',$csrf_token,true)
+			){
+				$stype = rreplace($submit, '_message');
+				$to = null;
+				$msg = nl2br(h($_POST['message']), false);
+				if (not_empty($msg) || ($stype==='session'&&not_empty($_POST['to']??''))){
+					if($stype==='session') $to=h($_POST['to']);
+					$r = $user->send_message($to, $msg, $user_data['id']);
+					if ($r === -1){
+						$replace['WARNING'] = 'そのようなユーザーは存在しません。';
+					} elseif ($r === 1){
+						$replace['WARNING'] = '送信失敗';
+					} else {
+						$replace['WARNING'] = '送信成功';
 					}
-					$replace['PERMIT'] .= '*別のグループを有効化することで、権限が変わる場合があります。';
+				} else {
+					$replace['WARNING'] = 'メッセージまたは宛先が空です。';
 				}
 			}
+			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('user_home');
+			foreach(['name','mail','profile','admin']as$k) $replace[strtoupper($k)]=$user_data[$k];
+			$replace['GROUP0'] = $user_data['group'][1]??'';
+			$replace['GROUP'] = '';
+			foreach(array_slice($user_data['group'],1)as$i) $replace['GROUP'].='<option>'.$i.'</option>';
+			$a = $user->user_dir.'/html/home_admin.html';
+			$replace['PERMIT'] = 'guest user';
+			if ($user_data['admin']>=$user->admin_revel && is_file($a)){
+				$replace['FOR_ADMIN'] = str_replace('{NAME}',$replace['NAME'],is_file($a)?file_get_contents($a):'');
+				$replace['PERMIT'] = 'ファイル管理機能が利用可能(以下のディレクトリがアクセス可能:'.$user_data['own_dir'].')<br>';
+				if (($conf->config['login.admin_block']??0)>=$user_data['admin']){
+					$replace['PERMIT'] .= 'アクセス制限されています。<br>';
+					foreach(['block_readonly','block_dir_download','deny_ftype','allow_ftype']as$t) $replace['PERMIT'].= $t.'='.($conf->config['login.'.$t]??'empty').'<br>';
+				}
+				$replace['PERMIT'] .= '*別のグループを有効化することで、権限が変わる場合があります。';
+			}
+			$replace['SESSION_MSG'] = get_msg($user->message_dir.'/to_'.$user_data['id'].'.tsv', $user);
+			$replace['THREAD_MSG'] = get_msg($user->message_dir.'/1.tsv', $user);
 		} else {
 			$from = 'user_page';
 			$i = $user->user_exists(h(GakuUraUser::h($conf->url_param)));
@@ -109,6 +147,11 @@ function main(string $from):int{
 			$replace['NAME'] = $u['name'];
 			$replace['ADMIN'] = $u['admin'];
 			$replace['PROFILE'] = to_html(str_replace('&#10;',"\n",$u['profile']??''));
+		}
+		if ($is_async){
+			$conf->content_type('application/json;charset=UTF-8');
+			echo json_encode($replace, JSON_UNESCAPED_UNICODE);
+			return 0;
 		}
 	} elseif ($from === 'admin'){
 		/* 管理機能 */

@@ -4,6 +4,7 @@
 class GakuUraUser{
 	public string $user_dir;
 	public string $user_list_file;
+	public string $message_dir;
 	public array $user_list_keys;
 	public array $own_dir;
 	public int $admin_revel;
@@ -13,6 +14,7 @@ class GakuUraUser{
 	public const SKEY_NAME = 'gaku-ura_login:name';
 	public const SKEY_FROM = 'gaku-ura_login:from';
 	public const TABLE_NAME = 'user_list';
+	public const MESSAGE_LABEL = 'gaku-ura_message_';
 	#GakuUraオブジェクトが引数
 	function __construct(object &$conf){
 		if((int)($conf->config['login.enable']??0)===0) $conf->not_found(false,'disabled');
@@ -26,8 +28,10 @@ class GakuUraUser{
 		}
 		$this->admin_revel = (int)($conf->config['login.admin_revel']??3);
 		$this->user_dir = $conf->data_dir.'/users';
+		$this->message_dir = $this->user_dir.'/message';
 		$this->user_list_file = $this->user_dir.'/'.self::TABLE_NAME.'.tsv';
 		$this->user_list_keys = ['id','name','mail','passwd','admin','profile','enable'];
+		if(!file_exists($this->message_dir)) mkdir($this->message_dir);
 		$rows = get_rows($this->user_list_file, 1);
 		if ($rows && count($rows)>1){
 			$f = explode("\t", $rows[0]);
@@ -159,6 +163,40 @@ class GakuUraUser{
 			}
 		}
 		return true;
+	}
+	#message
+	public function send_message(?string $to, string $msg, int $from):int{
+		$msg_w = row(implode("\t",[$from,time(),self::h($msg)]))."\n";
+		$file = $this->message_dir.'/';
+		$lb = '';
+		if ($to === null){
+			$lb .= '1';
+			$file .= $lb;
+		} else {
+			$snd = $this->user_exists($to);
+			if(!$snd) $snd=$this->user_exists('', $to);
+			if(!$snd) return -1;
+			$lb .= 'to_'.$snd;
+			$file .= $lb;
+		}
+		$lb = self::MESSAGE_LABEL.$lb;
+		$file .= '.tsv';
+		try{
+			$this->c->file_lock($lb);
+			$old = '';
+			if (is_file($file)){
+				$old = file_get_contents($file);
+				$msg_w = (explode("\t",get($file,1))[0]+1)."\t".$msg_w;
+			} else {
+				$msg_w = "1\t".$msg_w;
+			}
+			file_put_contents($file, $msg_w.$old, LOCK_EX);
+			$this->c->file_unlock($lb);
+		}catch(Exception $e){
+			$this->c->file_unlock($lb);
+			return 1;
+		}
+		return 0;
 	}
 	public function log_report(string $label, array $user_data):void{
 		$f = $this->user_dir.'/'.$label.'.log';

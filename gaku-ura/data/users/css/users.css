@@ -1,9 +1,9 @@
 /* マイページ,ログイン・登録,プロフィール */
+#!include ../../../users/template.css;
 #!include tabs.css;
 
 body{
 	min-height:100vh;
-	background-image:none;
 }
 input, textarea{
 	border:0;
@@ -23,9 +23,9 @@ button:hover{
 	background:#938;
 }
 #form{
-	padding:2em;
+	padding:0 2em;
 }
-#form button, .tabs #form input, textarea{
+#form button, .menu #form input, textarea{
 	width:100%;
 }
 #form p{
@@ -38,9 +38,15 @@ button:hover{
 
 .menu{
 	border:double 4px;
+	position:relative;
 }
-.tabs label[accesskey]{
-	border-bottom:solid 1px;
+.menu .nav{
+	display:flex;
+}
+.menu .nav a{
+	display:block;
+	flex-grow:1;
+	text-align:center;
 }
 .tab{
 	min-height:calc(100vh - 8em);
@@ -49,4 +55,50 @@ button:hover{
 .logout{
 	text-align:right;
 }
+.menu #warning{
+	position:absolute;
+	bottom:0;
+	left:0;
+	background:#000;
+	color:#ff0;
+}
 
+/* tab in tab */
+#message{
+	padding:0;
+}
+#message .tabs{
+	flex-direction:column;
+	height:calc(100vh - 8em);
+}
+#message .tab{
+	overflow-y:scroll;
+	width:calc(100% - 4em);
+	padding-top:0;
+}
+#message .tab_in + label{
+	width:4em;
+	padding:.5em;
+	margin:1px 0;
+	flex-grow:0;
+}
+#message textarea{
+	width:90%;
+	height:5em;
+}
+#message button[type="submit"]{
+	width:10%;
+}
+
+/* bbs */
+#message form{
+	position:sticky;
+	top:0;
+	left:0;
+	background:#ffc;
+}
+#message dl{
+	box-shadow:1px 1px 1px 1px #ccc;
+	padding:.2em;
+	margin:.4em;
+}

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{TITLE}{SITE_TITLE}</title>
+<link rel="stylesheet" href="{CSS_URL}">
+<link rel="icon" href="/favicon.ico">
+</head>
+<body>
+<!--
+ユーザーページ用テンプレート
+-->
+{CONTENT}
+<footer>
+<nav>
+<label for="SW"></label>
+<input type="checkbox" id="SW" style="display:none;">
+<p class="n">
+<label for="SW"></label>
+　<a href="{U_ROOT}">{SITE_TITLE}</a>
+　<a href="{U_ROOT}users/">🏚マイページ</a>
+　<a href="{U_ROOT}users/#message">✉メッセージ</a>
+　<a href="{U_ROOT}users/#reginfo">🖊登録情報変更</a>
+　<a href="{U_ROOT}users/#help">❓ヘルプ</a>
+</p>
+</nav>
+<p class="c">&copy; gaku-ura project {GAKU_URA_VERSION} SINCE2023</p>
+</footer>
+<script src="{JS_URL}" nonce="{NONCE}"></script>
+</body>
+</html>
