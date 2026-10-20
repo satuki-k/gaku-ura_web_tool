@@ -198,6 +198,31 @@ class GakuUraUser{
 		}
 		return 0;
 	}
+	public function delete_message(string $msg_label, int $eid, int $uid):int{
+		$message_file = $this->message_dir.'/'.$msg_label.'.tsv';
+		if(!is_file($message_file)) return -1;
+		$lb = self::MESSAGE_LABEL.$msg_label;
+		$this->c->file_lock($lb);
+		$rows = get_rows($message_file, 1);
+		$lid = bisect_search($rows, count($rows), $eid, true);
+		if (
+			$lid === -1 ||
+			(str_starts_with($msg_label,'to_') && $msg_label !== 'to_'.$uid) ||
+			(!str_starts_with($msg_label,'to_') && (int)explode("\t",$rows[$lid])[1] !== $uid)
+		){
+			$this->c->file_unlock($lb);
+			return 1;
+		}
+		unset($rows[$lid]);
+		$new_rows = implode("\n", $rows);
+		if ($new_rows === ''){
+			unlink($message_file);
+		} else {
+			file_put_contents($message_file, $new_rows);
+		}
+		$this->c->file_unlock($lb);
+		return 0;
+	}
 	public function log_report(string $label, array $user_data):void{
 		$f = $this->user_dir.'/'.$label.'.log';
 		if(is_file($f)&&filesize($f)>(1024*10)) rename($f,$f.date('Y-m-d-H-i.log'));

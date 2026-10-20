@@ -3,6 +3,7 @@
 <!include home.js>
 <!option css_standalone 1>
 <!option template users/template_home.html>
+<!option title マイページ>
 <h1><ruby><rb>ようこそ</rb><rt>Welcome</rt></ruby>、{NAME} さん</h1>
 <div class="menu tabs_link">
 	<p class="nav">
@@ -37,7 +38,7 @@
 				<form method="POST" id="session_form">
 					<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
 					<input type="hidden" name="submit" value="session_message">
-					<p><label>TO<input type="text" name="to" placeholder="{NAME}"></label></p>
+					<p><label><input type="text" name="to" placeholder="To"></label></p>
 					<p>
 						<label>
 							<textarea name="message" placeholder="Message"></textarea>

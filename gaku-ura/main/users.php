@@ -48,19 +48,26 @@ function upload(array $fk, string $to, object &$user, array &$user_data, array &
 		}
 	}
 }
-function get_msg(string $file, object &$user):string{
+function get_msg(string $file, object &$user, string $csrf_token, ?int $uid):string{
 	$r = '';
 	if(!is_file($file)) return $r;
 	foreach (get_rows($file, 1) as $row){
 		$d = explode("\t", $row);
 		if(count($d)<3) continue;
 		$from = get($user->user_list_file, $d[1]+1);
+		$nm = 'Unknown';
 		if ($from){
-			$d[1] = $user->user_data_convert(explode("\t",$from))['name'];
-		} else {
-			$d[1] = 'Unknown';
+			$nm = $user->user_data_convert(explode("\t",$from))['name'];
 		}
-		$r .= '<dl><dt><a href="?'.$d[1].'">'.$d[1].'</a> ('.date('Y/m/d H:i',$d[2]).')</dt><dd>'.$d[3].'</dd></dl>';
+		$r .= '<dl><dt><a href="?'.$nm.'">'.$nm.'</a> ('.date('Y/m/d H:i',$d[2]).')';
+		if ($uid===null || $uid===(int)$d[1]){
+			$eid = rreplace(basename($file),'.tsv').'-'.$d[0];
+			$r .= '<form method="POST" class="edit" id="edit_'.$eid.'">';
+			foreach(['csrf_token'=>$csrf_token,'submit'=>'edit','area'=>$eid]as$k=>$v)
+				$r .= '<input type="hidden" name="'.$k.'" value="'.$v.'">';
+			$r .= '<button type="submit">🗑Delete</button></form>';
+		}
+		$r .= '</dt><dd>'.$d[3].'</dd></dl>';
 	}
 	return $r;
 }
@@ -78,13 +85,13 @@ function main(string $from):int{
 	if ($from === 'home'){
 		/* ユーザーホーム */
 		if(!$is_login) exit_mv('./login/');
-		if ($conf->url_param === ''){
-			if ($submit==='logout' && $conf->check_csrf_token('user_home',$csrf_token,true)){
+		if ($submit && $conf->check_csrf_token('user_home', $csrf_token, true)){
+			if ($submit === 'logout'){
 				unset($_SESSION[GakuUraUser::SKEY_ID]);
 				unset($_SESSION[GakuUraUser::SKEY_NAME]);
 				unset($_SESSION[GakuUraUser::SKEY_PASSWD]);
 				exit_mv('./');
-			} elseif ($submit==='user_info' && list_isset($_POST,['user_name','mail','new_passwd','profile']) && $conf->check_csrf_token('user_home',$csrf_token,true)){
+			} elseif ($submit === 'user_info' && list_isset($_POST,['user_name','mail','new_passwd','profile'])){
 				$_POST['profile'] = str_replace("\n", '&#10;', $_POST['profile']);
 				$p = [];
 				foreach(['user_name','mail','new_passwd','profile']as$k) $p[$k]=row(h(GakuUraUser::h($_POST[$k])));
@@ -99,28 +106,33 @@ function main(string $from):int{
 				$_SESSION[GakuUraUser::SKEY_PASSWD] = $user_data['passwd'];
 				$user->change_user_data($user_data);
 				exit_mv('./');
-			} elseif (
-				str_ends_with($submit,'_message') &&
-				isset($_POST['message']) &&
-				$conf->check_csrf_token('user_home',$csrf_token,true)
-			){
+			} elseif (str_ends_with($submit,'_message') && isset($_POST['message'])){
 				$stype = rreplace($submit, '_message');
 				$to = null;
-				$msg = nl2br(h($_POST['message']), false);
-				if (not_empty($msg) || ($stype==='session'&&not_empty($_POST['to']??''))){
+				$msg = to_html(h($_POST['message']));
+				if (not_empty($msg) && ($stype!=='session'||not_empty($_POST['to']??''))){
 					if($stype==='session') $to=h($_POST['to']);
 					$r = $user->send_message($to, $msg, $user_data['id']);
 					if ($r === -1){
 						$replace['WARNING'] = 'そのようなユーザーは存在しません。';
 					} elseif ($r === 1){
 						$replace['WARNING'] = '送信失敗';
-					} else {
-						$replace['WARNING'] = '送信成功';
 					}
 				} else {
 					$replace['WARNING'] = 'メッセージまたは宛先が空です。';
 				}
+			} elseif ($submit==='edit' && sscanf($_POST['area']??'', '%[^-]-%d', $f, $eid) === 2 && $eid > 0){
+				$r = $user->delete_message($f, $eid, $user_data['id']);
+				if ($r){
+					if ($r === -1){
+						$replace['WARNING'] = 'このメッセージは存在しません。';
+					} elseif ($r === 1){
+						$replace['WARNING'] = '許可が無いなどの理由で失敗しました。';
+					}
+				}
 			}
+		}
+		if ($conf->url_param === ''){
 			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('user_home');
 			foreach(['name','mail','profile','admin']as$k) $replace[strtoupper($k)]=$user_data[$k];
 			$replace['GROUP0'] = $user_data['group'][1]??'';
@@ -137,8 +149,8 @@ function main(string $from):int{
 				}
 				$replace['PERMIT'] .= '*別のグループを有効化することで、権限が変わる場合があります。';
 			}
-			$replace['SESSION_MSG'] = get_msg($user->message_dir.'/to_'.$user_data['id'].'.tsv', $user);
-			$replace['THREAD_MSG'] = get_msg($user->message_dir.'/1.tsv', $user);
+			$replace['SESSION_MSG'] = get_msg($user->message_dir.'/to_'.$user_data['id'].'.tsv', $user, $replace['CSRF_TOKEN'], null);
+			$replace['THREAD_MSG'] = get_msg($user->message_dir.'/1.tsv', $user, $replace['CSRF_TOKEN'], $user_data['id']);
 		} else {
 			$from = 'user_page';
 			$i = $user->user_exists(h(GakuUraUser::h($conf->url_param)));
