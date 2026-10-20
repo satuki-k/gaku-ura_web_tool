@@ -1,7 +1,7 @@
 <!option robots 0>
 <!include users.css>
 <h1>新規登録</h1>
-<p>アカウントを新規登録します。登録後はログインして利用できます。</p>
+<p>アカウントを新規登録します。</p>
 <form method="POST" id="form">
 	<p><label><b>名前(必須)</b><input type="text" name="user_name"></label></p>
 	<p><label><b>パスワード(必須)</b><input type="password" name="passwd"></label></p>
@@ -9,4 +9,4 @@
 	<p><button type="submit" name="csrf_token" value="{CSRF_TOKEN}">登 録</button></p>
 	<p id="warning">{WARNING}</p>
 </form>
-<p>パスワードは最大<b>72バイト</b>までに切り詰められます。</p>
+<p>パスワードは上限<b>72バイト</b>以下に切り詰められます。</p>

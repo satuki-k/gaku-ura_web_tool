@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.8.16';
+const GAKU_URA_VERSION = '9.8.17';
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
 #UTF-8/LFにする
 function lf(string $s):string{return str_replace(["\r\n","\r"],"\n",$s);}
@@ -59,6 +59,23 @@ function subrpos(string $l, string $r, string $t):string{
 	return '';
 }
 function innerHTML(string $t,string $h):string{return subrpos('<'.$t.'>','</'.$t.'>',$h);}
+#配列探索(一元・二元配列, 行数, 探す主キー, 逆順か)
+function bisect_search(array &$rows, int $rows_n, int $search, bool $reversed=false):int{
+	$left = 0;
+	$right = $rows_n;
+	while ($left < $right){
+		$mid = $left + intdiv($right - $left, 2);
+		$m = (int)((is_array($rows[$mid]))?$rows[$mid][0]:$rows[$mid]);
+		if ($m === $search){
+			return $mid;
+		} elseif (($reversed&&$m>$search) || (!$reversed&&$m<$search)){
+			$left = $mid + 1;
+		} else {
+			$right = $mid;
+		}
+	}
+	return -1;
+}
 #任意の一つの行
 function get(string $file, int $l):string|false{
 	if (is_file($file)){
@@ -649,4 +666,3 @@ class GakuUra{
 		return $r;
 	}
 }
-

@@ -1,13 +1,21 @@
 <!option robots 0>
 <!include users.css>
-<h1>ようこそ、{NAME} さん</h1>
-<div class="menu tabs">
-	<input type="radio" name="name" id="home" class="tab_in" checked>
-	<label for="home" accesskey="h">Home(H)</label>
-	<div class="tab">
+<!include home.js>
+<!option css_standalone 1>
+<!option template users/template_home.html>
+<!option title マイページ>
+<h1><ruby><rb>ようこそ</rb><rt>Welcome</rt></ruby>、{NAME} さん</h1>
+<div class="menu tabs_link">
+	<p class="nav">
+		<a href="#home">🏚Home</a>
+		<a href="#message">✉<ruby><rb>メッセージ</rb><rt>Message</rt></ruby></a>
+		<a href="#reginfo">🖊<ruby><rb>登録情報変更</rb><rt>Edit userinfo</rt></ruby></a>
+		<a href="#help">❓<ruby><rb>ヘルプ</rb><rt>Help</rt></ruby></a>
+	</p>
+	<div class="tab tab_default" id="home">
 		<h2>登録情報</h2>
-		<p>ユーザー名: <a href="?{NAME}">{NAME}</a></p>
-		<p>Activated group: {GROUP0} (権限レベル:{ADMIN})</p>
+		<p>User name: <a href="?{NAME}">{NAME}</a></p>
+		<p>Enabled group: {GROUP0}, 権限レベル: {ADMIN}</p>
 		<p><br></p>
 		<h2>権限の詳細</h2>
 		<p>{PERMIT}</p>
@@ -17,31 +25,72 @@
 			<label><button type="submit" name="submit" value="logout">ログアウト</button></label>
 		</form>
 	</div>
-	<input type="radio" name="name" id="message" class="tab_in">
-	<label for="message" accesskey="m">メッセージ(M)</label>
-	<div class="tab">
-		<!include custom/custom.html>
+	<div class="tab" id="message">
+		<div class="tabs">
+			<input type="radio" name="msg" id="msg_pin" class="tab_in" checked>
+			<label for="msg_pin"><ruby><rb>全員へ</rb><rt>To everyone</rt></ruby></label>
+			<div class="tab" id="pin_msg">
+				<!include custom/custom.html>
+			</div>
+			<input type="radio" name="msg" id="msg_you" class="tab_in">
+			<label for="msg_you"><ruby><rb>貴方へ</rb><rt>For you</rt></ruby></label>
+			<div class="tab">
+				<form method="POST" id="session_form">
+					<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
+					<input type="hidden" name="submit" value="session_message">
+					<p><label><input type="text" name="to" placeholder="To"></label></p>
+					<p>
+						<label>
+							<textarea name="message" placeholder="Message"></textarea>
+						</label>
+						<label>
+							<button type="submit" id="submit_session_form">
+								<ruby><rb>送信</rb><rt>send</rt></ruby>
+							</button>
+						</label>
+					</p>
+				</form>
+				<div id="session_msg">{SESSION_MSG}</div>
+			</div>
+			<input type="radio" name="msg" id="msg_bbs" class="tab_in">
+			<label for="msg_bbs"><ruby><rb>掲示板</rb><rt>Chat</rt></ruby></label>
+			<div class="tab">
+				<form method="POST" id="thread_form">
+					<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
+					<input type="hidden" name="submit" value="thread_message">
+					<p>
+						<label>
+							<textarea name="message" placeholder="Message"></textarea>
+						</label>
+						<label>
+							<button type="submit" id="submit_thread_form">
+								<ruby><rb>送信</rb><rt>send</rt></ruby>
+							</button>
+						</label>
+					</p>
+				</form>
+				<div id="thread_msg">{THREAD_MSG}</div>
+			</div>
+		</div>
+	<p class="warning" id="warning">{WARNING}</p>
 	</div>
-	<input type="radio" name="name" id="reginfo" class="tab_in">
-	<label for="reginfo" accesskey="r">登録情報変更(R)</label>
-	<div class="tab">
+	<div class="tab" id="reginfo">
 		<h2>登録情報</h2>
 		<form method="POST" id="form">
+			<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
 			<p><label>名前<input type="text" name="user_name" value="{NAME}" placeholder="変更なし"></label></p>
 			<p><label>新しいパスワード<input type="password" name="new_passwd" placeholder="変更なし"></label></p>
 			<p><label>メールアドレス<input type="email" name="mail" value="{MAIL}"></label></p>
 			<p><label>自己紹介<textarea name="profile" rows="5" placeholder="こんにちは">{PROFILE}</textarea></label></p>
 			<p><label>有効化するグループ:<select name="group">{GROUP}</select></label> (管理レベル:{ADMIN})</p>
-			<p><label><button type="submit" name="csrf_token" value="{CSRF_TOKEN}">変更</button></label></p>
+			<p><label><button type="submit" name="submit" value="user_info">変更</button></label></p>
 		</form>
 	</div>
-	<input type="radio" name="name" id="help" class="tab_in">
-	<label for="help" accesskey="t">ヘルプ(T)</label>
-	<div class="tab">
-		<p>キーボード操作支援: Alt+(Shift)+アルファベットでタブを切り替えられます。 </p>
-		<p>例: Alt+Shift+hでHomeに移動します。</p>
+	<div class="tab" id="help">
+		<p>ブラウザによっては、表示に異常がある場合があります。</p>
 		<p><br></p>
 		<p>gaku-ura libのバージョン: <a href="http://bq.f5.si/?Page=code" target="_blank">gaku-ura{GAKU_URA_VERSION}</a></p>
 		<p>gaku-ura libは、サイト管理ツールおよびサイト作成ツールセット(ライブラリ)です。</p>
 	</div>
 </div>
+

@@ -7,19 +7,33 @@
 const q = (new URL(window.location)).searchParams;
 const popup = new POPUP();
 let move_file = 0;
+//ini_get
+const arg = $ID("gaku-ura_args");
+const maxfc = parseInt(arg.getAttribute("max_file_uploads")??20);
+const d = document.body;
+const b = d.style.background;
+const g = document.createElement("pre");//クリックメニュー
+g.classList.add("cmenu");
+document.body.append(g);
+const f = $QS('tbody');
+const r = f.children;
+const dr = arg.getAttribute("d_root");
 function prs(m){
 	const f = $ID("fparea");
 	f.innerHTML = m?m:"";
 	m?f.classList.add("note"):f.classList.remove("note");
 }
-//ini_get
-const arg = $ID("gaku-ura_args");
-const maxfc = parseInt(arg.getAttribute("max_file_uploads")??20);
-/* ファイル一覧 */
-const d = document.body;
-const b = d.style.background;
+function sp(e){
+	e.stopPropagation();
+}
+function pd(e){
+	e.preventDefault();
+}
+function sc(){
+	$QS('[type="submit"]').click();
+}
 async function dg(e){
-	if(e.type!=="dragleave") e.preventDefault();
+	if(e.type!=="dragleave") pd(e);
 	d.style.background = e.type==="dragover"?"#eef":b;
 	if(!e.type==="drop") return;
 	if (move_file){
@@ -60,32 +74,14 @@ async function dg(e){
 		$ID("files").appendChild(p);
 	}
 	if(n) await popup.alert("確認");
-	if((await reload_csrf("csrf_token"))&&l.length>0) $QS('[type="submit"]').click();
+	if((await reload_csrf("csrf_token"))&&l.length>0) sc();
 }
-["dragover","dragleave","drop"].forEach((i)=>{d.addEventListener(i,dg);});
-$ID("file").addEventListener("change", ()=>{
-	$QS('[type="submit"]').click();
-});
-$ID("folder").addEventListener("change", ()=>{
-	$QS('[type="submit"]').click();
-});
-/* group */
-$ID("group").addEventListener("change", ()=>{
-	$QS('[type="submit"]').click();
-});
-/* 操作メニュー */
-const g = document.createElement("pre");//クリックメニュー
-g.classList.add("cmenu");
-document.body.append(g);
-const f = $QS('tbody');
-const r = f.children;
-const dr = arg.getAttribute("d_root");
 function mclose(e){
 	g.style.display="none";
 	$QSA('.select_row').forEach((i)=>{i.classList.remove("select_row");});
 }
 function fmc(e){
-	if(g.style.display==="none") e.stopPropagation();
+	if(g.style.display==="none") sp(e);
 	if(!isCtrlKey(e)) mclose(e);
 	this.classList.toggle("select_row");
 }
@@ -94,7 +90,7 @@ function fmo(e){
 	mopen(e, this);
 }
 function fmd(e){
-	e.preventDefault();
+	pd(e);
 	this.querySelector("a").click();
 }
 function fm(){
@@ -102,6 +98,7 @@ function fm(){
 	let i = r.length;
 	while (i--){
 		r[i].removeEventListener("click", fmc);
+		r[i].removeEventListener("mousedown", fmc);
 		r[i].removeEventListener("contextmenu", fmo);
 		r[i].removeEventListener("dblclick", fmd);
 		r[i].addEventListener("click", fmc);
@@ -110,7 +107,7 @@ function fm(){
 	}
 }
 function mopen(e, c){
-	e.preventDefault();
+	pd(e);
 	if (move_file){
 		popup.alert("別の操作を実行中です。");
 		return;
@@ -150,7 +147,7 @@ function mopen(e, c){
 	o.innerHTML = "🔥削除";
 	o.href = "#";
 	o.addEventListener("click", async (e)=>{
-		e.preventDefault();
+		pd(e);
 		g.style.display="none";
 		move_file = 1;
 		const s = f.querySelectorAll(".select_row");
@@ -190,7 +187,7 @@ function mopen(e, c){
 		x.innerHTML = "📂すべて展開";
 		x.href = "#";
 		x.addEventListener("click", async (e)=>{
-			e.preventDefault();
+			pd(e);
 			move_file = 1;
 			const s = f.querySelectorAll(".select_row");
 			const n = [];
@@ -228,17 +225,22 @@ function mopen(e, c){
 	g.style.top = Math.min(e.pageY-scrollY,innerHeight-g.offsetHeight)+"px";
 	c.classList.add("select_row");
 }
-g.addEventListener("click", (e)=>{e.stopPropagation();});
-$ID("POPUP").addEventListener("click", (e)=>{e.stopPropagation();});
-f.addEventListener("contextmenu", (e)=>{e.preventDefault();});
-window.addEventListener("click", mclose);
-window.addEventListener("keydown", (e)=>{
+function key_action(e){
 	if (isCtrlKey(e)){
 		if (e.key === "a"){
-			e.preventDefault();
+			pd(e);
 			for(let i=0;i<r.length;++i) r[i].classList.add("select_row");
 		}
 	}
-});
+}
+["dragover","dragleave","drop"].forEach((i)=>{d.addEventListener(i,dg);});
+$ID("file").addEventListener("change", sc);
+$ID("folder").addEventListener("change", sc);
+$ID("group").addEventListener("change", sc);
+g.addEventListener("click", sp);
+$ID("POPUP").addEventListener("click", sp);
+f.addEventListener("contextmenu", pd);
+window.addEventListener("click", mclose);
+window.addEventListener("keydown", key_action);
 fm();
 
