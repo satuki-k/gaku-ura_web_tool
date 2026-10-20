@@ -394,7 +394,8 @@ class GakuUra{
 		'gaku-ura/data/404','gaku-ura/data/default','gaku-ura/data/users'];
 	public const UPGRADE_IGNORE = [
 		'gaku-ura/conf/gaku-ura.conf','gaku-ura/data/default/default.html',
-		'gaku-ura/data/default/default.css','gaku-ura/data/users/html/custom'];
+		'gaku-ura/data/default/default.css','gaku-ura/data/users/html/custom',
+		'gaku-ura/data/users/message','gaku-ura/data/users/user_list.tsv'];
 	function __construct(?bool $third=null){
 		header('Referrer-Policy:same-origin');
 		if (!isset($_SESSION)){
