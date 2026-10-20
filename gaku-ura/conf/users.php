@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.12
+#gaku-ura9.8.17
 #ユーザー登録や変更・取得等の機能
 class GakuUraUser{
 	public string $user_dir;
