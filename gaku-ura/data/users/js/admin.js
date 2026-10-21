@@ -7,6 +7,7 @@
 const q = (new URL(window.location)).searchParams;
 const popup = new POPUP();
 let move_file = 0;
+let cspan = Date.now();
 //ini_get
 const arg = $ID("gaku-ura_args");
 const maxfc = parseInt(arg.getAttribute("max_file_uploads")??20);
@@ -15,7 +16,7 @@ const b = d.style.background;
 const g = document.createElement("pre");//クリックメニュー
 g.classList.add("cmenu");
 document.body.append(g);
-const f = $QS('tbody');
+const f = $ID('file_list');
 const r = f.children;
 const dr = arg.getAttribute("d_root");
 function prs(m){
@@ -31,6 +32,22 @@ function pd(e){
 }
 function sc(){
 	$QS('[type="submit"]').click();
+}
+async function edit_s(url, key, value){
+	try{
+		const l = url+"&async";
+		const r = await fetch(l);
+		const t = await r.json();
+		const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"submit":t["SUBMIT_TYPE"],"new_name":"","new_path":"","perm":"no"};
+		j[key] = value;
+		const p = await new URLSearchParams(j);
+		await fetch(l,{
+			referrer:l,
+			method:"POST",
+			headers:{"content-type":"application/x-www-form-urlencoded"},
+			body:p.toString()
+		});
+	}catch{}
 }
 async function dg(e){
 	if(e.type!=="dragleave") pd(e);
@@ -78,12 +95,20 @@ async function dg(e){
 }
 function mclose(e){
 	g.style.display="none";
-	$QSA('.select_row').forEach((i)=>{i.classList.remove("select_row");});
+	$QSA('.select_row').forEach((i)=>{
+		i.classList.remove("select_row");
+		i.removeAttribute("id");
+	});
 }
 function fmc(e){
+	if (!isCtrlKey(e) && this.classList.contains("select_row") && Date.now()-cspan>500){
+		this.id = "selected_row";
+		return rename(e);
+	}
 	if(g.style.display==="none") sp(e);
 	if(!isCtrlKey(e)) mclose(e);
 	this.classList.toggle("select_row");
+	cspan = Date.now();
 }
 function fmo(e){
 	if(!(~(this.getAttribute("class")??"").indexOf("select_row"))) mclose(e);
@@ -105,6 +130,32 @@ function fm(){
 		r[i].addEventListener("contextmenu", fmo);
 		r[i].addEventListener("dblclick", fmd);
 	}
+}
+function rename(e){
+	pd(e);
+	const r = $ID("selected_row");
+	const a = r.querySelectorAll("a");
+	const n = document.createElement("input");
+	mclose(e);
+	n.type = "text";
+	n.value = n.placeholder = a[0].textContent;
+	a[0].after(n);
+	a[0].style.display = "none";
+	n.focus();
+	const rn = async ()=>{
+		n.onblur = null;
+		n.onkeydown = null;
+		if (a[0].textContent !== n.value && /^[^"'&?\/\\|\[\]\*=]+$/.test(n.value)){
+			await edit_s(a[1].href, "new_name", n.value);
+			a[0].textContent = n.value;
+		}
+		n.remove();
+		a[0].style.display = "inline";
+	};
+	n.onblur = rn;
+	n.onkeydown = async (e)=>{
+		if(isEnterKey(e)) await rn();
+	};
 }
 function mopen(e, c){
 	pd(e);
@@ -144,7 +195,7 @@ function mopen(e, c){
 		o.addEventListener("click", mclose);
 	});
 	const o = document.createElement("a");
-	o.innerHTML = "🔥削除";
+	o.innerHTML = "🗑削除";
 	o.href = "#";
 	o.addEventListener("click", async (e)=>{
 		pd(e);
@@ -162,28 +213,16 @@ function mopen(e, c){
 		}
 		prs("removing files...");
 		for (let i = 0;i < s.length;++i){
-			try{
-				const l = s[i].querySelectorAll("a")[1].href+"&async";
-				const r = await fetch(l);
-				const t = await r.json();
-				const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"remove":"yes","submit":t["SUBMIT_TYPE"],"new_name":"","new_path":"","perm":"no"};
-				const p = await new URLSearchParams(j);
-				await fetch(l,{
-					referrer:l,
-					method:"POST",
-					headers:{"content-type":"application/x-www-form-urlencoded"},
-					body:p.toString()
-				});
-				s[i].remove();
-				fm();
-			}catch{}
+			await edit_s(s[i].querySelectorAll("a")[1].href, "remove", "yes");
+			s[i].remove();
+			fm();
 		}
 		move_file = 0;
 		await reload_csrf("csrf_token");
 		prs(0);
 	});
-	const x = document.createElement("a");
-	if (!isdir && /(\.tar\.gz|\.tar|\.gz|\.tgz)$/.test(a.textContent.toLowerCase())){
+	if (!isdir && {EXTRACT_TYPE}.test(a.textContent)){
+		const x = document.createElement("a");
 		x.innerHTML = "📂すべて展開";
 		x.href = "#";
 		x.addEventListener("click", async (e)=>{
@@ -197,28 +236,22 @@ function mopen(e, c){
 			});
 			prs("extracting files...");
 			for (let i = 0;i < s.length;++i){
-				try{
-					const l = s[i].querySelectorAll("a")[1].href+"&async";
-					const r = await fetch(l);
-					const t = await r.json();
-					const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"remove":"","submit":t["SUBMIT_TYPE"],"new_name":"","new_path":"","perm":"no","extract":"yes"};
-					const p = await new URLSearchParams(j);
-					await fetch(l,{
-						referrer:l,
-						method:"POST",
-						headers:{"content-type":"application/x-www-form-urlencoded"},
-						body:p.toString()
-					});
-					fm();
-				}catch{}
+				await edit_s(s[i].querySelectorAll("a")[1].href, "extract", "yes");
+				fm();
 			}
 			move_file = 0;
 			await reload_csrf("csrf_token");
 			prs(0);
 			location.reload();
 		});
+		g.append(x);
 	}
-	g.append(x);
+	const n = document.createElement("a");
+	n.innerHTML = "✍名前を変更";
+	n.href = "#";
+	c.id = "selected_row";
+	n.addEventListener("click", rename);
+	g.append(n);
 	g.append(o);
 	g.style.display = "block";
 	g.style.left = Math.min(e.pageX-scrollX,innerWidth-g.offsetWidth)+"px";

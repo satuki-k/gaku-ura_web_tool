@@ -6,9 +6,7 @@
 #!include keyboard.js;
 const q = (new URL(document.location)).searchParams;
 const popup = new POPUP();
-//submitメソッドを使えるようにする
-$ID("form").innerHTML += '<input type="hidden" name="submit_type" value="'+$QS('#form [type="submit"]').value+'">';
-const dbtype = $QS('input[name="dbtype"]').value;
+const dbtype = $ID("dbtype").value;
 function ok(){
 	return $QS('[type="submit"]').click();
 }
@@ -154,7 +152,7 @@ function mkt(e){
 			d.push(c);
 		});
 		sql += d.join(", ")+");";
-		const i = $QS('[name="query"]');
+		const i = $ID("query");
 		i.value = sql;
 		back();
 		i.focus();
@@ -165,7 +163,7 @@ function mkt(e){
 const p = document.createElement("p");
 const mt = document.createElement("button");
 const mf = document.createElement("select");
-const tn = $QS('input[name="table"]').value;
+const tn = $ID("table").value;
 const fn = #!include users/js/table_cmd.json;;//json埋め込み
 const rs = document.createElement("pre");
 $ID("form").after(rs);
@@ -184,16 +182,16 @@ mt.addEventListener("click", mkt);
 mf.addEventListener("change", ()=>{
 	const v = mf.value;
 	mf.selectedIndex = 0;
-	const i = $QS('[name="query"]');
+	const i = $ID("query");
 	const s = subrpos("(",")", v);
-	if(tn&&($QS('input[name="export"]').checked=(s==="export"))) return ok();
-	if(s==="import") return $QS('input[type="file"]').click();
+	if(tn&&($ID("export").checked=(s==="export"))) return ok();
+	if(s==="import") return $ID("file").click();
 	if (tn){
 		i.value = fn[v].replace("{TABLE}", " "+tn+" ");
 		i.focus();
 	}
 });
-$QS('select[name="ctable"]').addEventListener("change", ok);
+$ID("ctable").addEventListener("change", ok);
 
 $ID("file").addEventListener("change", async ()=>{
 	const c = await popup.confirm($ID("fstrtl").textContent+"?", "YES", "NO");
@@ -213,21 +211,20 @@ $ID("file").addEventListener("change", async ()=>{
 $ID("form").addEventListener("submit", async (e)=>{
 	e.preventDefault();
 	if (await reload_csrf("csrf_token")){
-		if (not_empty($QS('[name="query"]').value)){
+		if (not_empty($ID("query").value)){
 			const f = new FormData($ID("form"));
 			const x = new XMLHttpRequest();
-			f.append("submit", $QS('[type="submit"]').value);
 			x.addEventListener("load", (e)=>{
 				const r = x.responseText;
-				r&&!r.startsWith("<")?rs.innerHTML=$QS('[name="query"]').value+"\n"+r+"\n"+rs.innerHTML:location.reload();
-				$QS('[name="query"]').value = "";
+				r&&!r.startsWith("<")?rs.innerHTML=$ID("query").value+"\n"+r+"\n"+rs.innerHTML:location.reload();
+				$ID("query").value = "";
 			});
 			x.open("POST", location.href);
 			x.send(f);
 		} else {
 			$ID("form").submit();
 		}
-		$QS('input[name="export"]').checked = false;
+		$ID("export").checked = false;
 	}
 });
 window.addEventListener("keydown", (e)=>{
