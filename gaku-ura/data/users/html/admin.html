@@ -7,7 +7,7 @@
 <table>
 	<thead>
 		<tr>
-			<th colspan="5">
+			<th colspan="4">
 				<form method="POST" enctype="multipart/form-data" id="form">
 					<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
 					<input type="hidden" name="submit" value="new">
@@ -49,6 +49,6 @@
 	</tbody>
 </table>
 <p>一度にアップロードできるファイル数や合計サイズは、php.iniの設定に依存します。</p>
-<p>ダウンロード機能は、<b>最後に選択したファイルを一つ、または全てのファイル、の二通りのみ可能です。</b></p>
+<p>zipファイルのダウンロードが失敗するときは、tar.gzをご利用ください。</p>
 <p style="display:none;" {API_ARGS}id="gaku-ura_args"></p>
 

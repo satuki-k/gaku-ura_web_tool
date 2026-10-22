@@ -186,6 +186,60 @@ function file_extract(string $file, string $to):bool{
 	}catch(Exception$e){return false;}
 	return false;
 }
+#ファイル圧縮
+function file_compress(string $file, string $type, ?string $to):bool{
+	$file = rreplace($file, '/');
+	$tp = lreplace($type, '.');
+	$t = '';
+	if ($to === null){
+		$t = tempnam(sys_get_temp_dir(),'_');
+		if(!$t) return false;
+	} else {
+		$t = $to.'/'.basename($file);
+		if (str_ends_with(strtolower($to), strtolower($tp))){
+			$d = dirname($to);
+			if(!file_exists($to)&&!file_exists($d)) mkdir($d,0777,true);
+			$t = rreplace($to, '.'.$tp);
+		} elseif (!file_exists($to)){
+			mkdir($to, 0777, true);
+		}
+	}
+	try{
+		if ($tp === 'tar.gz'){
+			$t .= '.tar';
+			$p = new PharData($t);
+			$p->buildFromDirectory($file);
+			$p->compress(Phar::GZ);
+			$t .= '.gz';
+		} elseif ($tp === 'zip'){
+			$t .= '.zip';
+			$z = new ZipArchive;
+			$r = $z->open($t, ZipArchive::CREATE|ZipArchive::OVERWRITE);
+			if (is_file($file)){
+				$z->addFile($file, basename($file));
+			} else {
+				foreach (path_list($file) as $p){
+					$d = substr($p, strlen($file));
+					is_dir($p)?$z->addEmptyDir($d):$z->addFile($p, $d);
+				}
+			}
+			if(!$z->close()) return false;
+		} else {
+			return false;
+		}
+		if ($to === null){
+			header('content-type:'.mime_content_type($t));
+			header('Content-Disposition:attachment;filename="'.basename($file).'.'.$tp.'"');
+			header('Content-Length:'.filesize($t));
+			$f = fopen($t, 'rb');
+			fpassthru($f);
+			fclose($f);
+			unlink($t);
+		}
+		return true;
+	}catch(Exception $e){}
+	return false;
+}
 #ディレクトリ再帰削除
 function rmdir_all(string $dir):void{
 	if(!is_dir($dir)) return;

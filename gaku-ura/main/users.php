@@ -615,7 +615,7 @@ function main(string $from):int{
 				$cfl = strtolower($current_file);
 				if (str_ends_with($cfl,'.db')){
 					$f = '<p><a href="?Dir='.$uri_dir.'&File='.$bname.'&Menu=edit_db">tableを編集</a></p>';
-				} elseif (preg_match('/(\.tar\.gz|\.tar|\.gz|\.tgz)$/',$cfl)===1){
+				} elseif (preg_match(EXTRACT_TYPE,$cfl)===1){
 					$f = '<p><label><input type="checkbox" name="extract" value="yes">展開する</label></p>';
 				}
 				if ($editable){
@@ -654,21 +654,8 @@ function main(string $from):int{
 			$replace['DOWNLOAD'] = '?Dir='.$uri_dir.'&download';
 		} elseif (isset($_GET['download'])){
 			if(!$user->permitted($current_dir,$user_data,false,true)) $conf->not_found(false,'権限がありません。');
-			$m = tempnam(sys_get_temp_dir(),'_');
-			$t = $m.'.tar';
-			if($m){
-				if($user_data['admin']<($conf->config['login.admin_block']??0)) $user->log_report('fm_get',$user_data);
-				$p = new PharData($t);
-				$p->buildFromDirectory($current_dir);
-				$p->compress(Phar::GZ);
-				$t .= '.gz';
-				$conf->content_type(mime_content_type($t));
-				header('Content-Disposition:attachment;filename="'.basename($current_dir).'.tar.gz"');
-				header('Content-Length:'.filesize($t));
-				$f = fopen($t, 'rb');
-				fpassthru($f);
-				fclose($f);
-				unlink($t);
+			if (!file_compress($current_dir, $_GET['type']??'tar.gz', null)){
+				$conf->not_found(false,'圧縮失敗');
 			}
 			return 0;
 		} else {

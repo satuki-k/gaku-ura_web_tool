@@ -122,8 +122,8 @@ function fm(){
 	mclose(0);
 	let i = r.length;
 	while (i--){
+		r[i].style.userSelect = "none";
 		r[i].removeEventListener("click", fmc);
-		r[i].removeEventListener("mousedown", fmc);
 		r[i].removeEventListener("contextmenu", fmo);
 		r[i].removeEventListener("dblclick", fmd);
 		r[i].addEventListener("click", fmc);
@@ -136,25 +136,32 @@ function rename(e){
 	const r = $ID("selected_row");
 	const a = r.querySelectorAll("a");
 	const n = document.createElement("input");
+	const l = document.createElement("tr");
+	const d = document.createElement("td");
 	mclose(e);
 	n.type = "text";
+	n.style.width = "100%";
 	n.value = n.placeholder = a[0].textContent;
-	a[0].after(n);
-	a[0].style.display = "none";
+	d.colSpan = 4;
+	d.append(n);
+	l.append(d);
+	r.style.display = "none";
+	r.after(l);
+	n.setSelectionRange(0, n.value.lastIndexOf("."));
 	n.focus();
-	const rn = async ()=>{
+	const rn = async (e)=>{
 		n.onblur = null;
 		n.onkeydown = null;
-		if (a[0].textContent !== n.value && /^[^"'&?\/\\|\[\]\*=]+$/.test(n.value)){
+		if (e.key!=="Escape" && a[0].textContent !== n.value && /^[^"'&?\/\\|\[\]\*=]+$/.test(n.value)){
 			await edit_s(a[1].href, "new_name", n.value);
 			a[0].textContent = n.value;
 		}
-		n.remove();
-		a[0].style.display = "inline";
+		l.remove();
+		r.style.display = "table-row";
 	};
 	n.onblur = rn;
 	n.onkeydown = async (e)=>{
-		if(isEnterKey(e)) await rn();
+		if(isEnterKey(e)||e.key==="Escape") await rn(e);
 	};
 }
 function mopen(e, c){
@@ -173,7 +180,7 @@ function mopen(e, c){
 		m.push(['📂開く',a.href]);
 		m.push(['✍編集する',a2.href]);
 	} else {
-		m.push(['✍開く',a2.href]);
+		m.push(['✍開く(編集)',a2.href]);
 		if(a.textContent.endsWith(".db")){
 			let u = a.href.replace(/(Menu=[^&]*)/, "Menu=edit_db");
 			if(!(~u.indexOf("Menu="))) u+="&Menu=edit_db";
@@ -183,8 +190,12 @@ function mopen(e, c){
 	}
 	const u = a.getAttribute("url");
 	if(u.length) m.push(["🔗WEBページとして開く",u,1]);
-	m.push(['📥ダウンロード',a.href+'&download']);
-	m.push(['📥全てダウンロード',"?Dir="+(q.get("Dir")??"")+'&download']);
+	["tar.gz","zip"].forEach((i)=>{
+		m.push(["📥ダウンロード("+i+")",a.href+"&type="+i+"&download"]);
+	});
+	["tar.gz","zip"].forEach((i)=>{
+		m.push(["この階層をﾀﾞｳﾝﾛｰﾄﾞ("+i+")","?Dir="+(q.get("Dir")??"")+"&type="+i+"&download"]);
+	});
 	m.forEach((i)=>{
 		const o = document.createElement("a");
 		o.innerHTML = i[0];
@@ -272,7 +283,6 @@ $ID("folder").addEventListener("change", sc);
 $ID("group").addEventListener("change", sc);
 g.addEventListener("click", sp);
 $ID("POPUP").addEventListener("click", sp);
-f.addEventListener("contextmenu", pd);
 window.addEventListener("click", mclose);
 window.addEventListener("keydown", key_action);
 fm();
