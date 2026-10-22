@@ -1,10 +1,7 @@
 /* 主にメッセージ送信の非同期 */
 #!include element.js;
 #!include popup.js;
-const ac = '<input type="hidden" name="async" value="1">';
 const popup = new POPUP();
-$ID("session_form").innerHTML += ac;
-$ID("thread_form").innerHTML += ac;
 let tid = 0;
 /* 非同期送信 */
 function clear_warning(){
@@ -19,6 +16,7 @@ async function send_msg(e){
 	await load_msg();
 	const f = new FormData(t);
 	const x = new XMLHttpRequest();
+	f.append("async", 1);
 	x.addEventListener("load", async (e)=>{
 		start_load(1000);
 		try{
@@ -44,6 +42,7 @@ async function edit_msg(e){
 	$ID("warning").innerHTML = "removing...";
 	const f = new FormData($ID(d));
 	const x = new XMLHttpRequest();
+	f.append("async", 1);
 	x.addEventListener("load", async (e)=>{
 		start_load(1000);
 		try{
@@ -84,7 +83,6 @@ async function load_msg(){
 			i.value = r["CSRF_TOKEN"];
 		});
 		$QSA('#message .edit').forEach((i)=>{
-			i.innerHTML += ac;
 			i.addEventListener("submit", edit_msg);
 		});
 	}catch{}

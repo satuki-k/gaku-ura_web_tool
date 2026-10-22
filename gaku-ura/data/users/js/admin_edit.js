@@ -6,15 +6,50 @@
 #!include reload_csrf.js;
 const key_m = "gaku-ura_editor_mode";
 const key_f = "gaku-ura_editor_fontSize";
+const tprefix = "gaku-ura_table_";
 /*! ace (web)ace.c9.io !*/
 const cdn_a = "https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.3/ace.js";
 const q = (new URL(document.location)).searchParams;
 const popup = new POPUP();
 const mem_p = $QS('[name="new_path"]').value;
-//submitメソッドを使えるようにする
-$ID("form").innerHTML += '<input type="hidden" name="submit_type" value="'+$QS('#form [type="submit"]').value+'">';
-function table_editor(f){
-	const tprefix = "gaku-ura_table_";
+const file_name = $QS('[name="new_name"]').value;
+const d = file_name.toLowerCase().endsWith(".csv")?",":"\t";
+let cols = 0;
+let rows = 0;
+function start_editor(){
+	if($ID("text")) return /(\.tsv|\.csv)$/i.test(file_name)?table_editor():new TextEditor();
+	if ($QS('[name="submit_type"]').value === "edit_file"){
+		const p = document.createElement("div");
+		const r = document.createElement("a");
+		p.style.margin = "1em";
+		r.classList.add("blue_btn");
+		r.href = "#";
+		r.innerHTML = "無理やり編集する";
+		p.append(r);
+		$ID("form").after(p);
+		r.addEventListener("click", (e)=>{
+			pd(e);
+			p.remove();
+			const l = document.createElement("p");
+			const b = document.createElement("label");
+			const t = document.createElement("textarea");
+			t.name = "content";
+			t.rows = 25;
+			t.id = "text";
+			b.append(t);
+			l.append(b);
+			$QS('form').append(l);
+			new TextEditor();
+		});
+	}
+}
+function pd(e){
+	e.preventDefault();
+}
+function sc(){
+	$QS('[type="submit"]').click();
+}
+function table_editor(){
 	const tw = document.createElement("div");
 	const table = document.createElement("table");
 	const tbody = document.createElement("tbody");
@@ -22,7 +57,6 @@ function table_editor(f){
 	const add_col = document.createElement("button");
 	const sort_id = document.createElement("button");
 	const del_row_btns = [];
-	const d = f.endsWith(".csv")?",":"\t";
 	table.id = tprefix;
 	tw.classList.add("table");
 	$ID("text").style.display = "none";
@@ -152,7 +186,11 @@ function table_editor(f){
 				l.push(v);
 				if(v.length) m=1;
 			}
-			if(m)$ID("text").value += l.join(d).trimEnd()+"\n";
+			if (m){
+				$ID("text").value += l.join(d).trimEnd();
+				if(d===",") $ID("text").value=$ID("text").value.replace(/,+$/,"");
+				$ID("text").value += "\n";
+			}
 		}
 		if(!$ID("text").value.endsWith("\n")) $ID("text").value+="\n";
 	};
@@ -171,6 +209,44 @@ function table_editor(f){
 		add_row.remove();
 		new TextEditor();
 	});
+}
+//削除の警告・非同期投稿
+async function save_change(e){
+	pd(e);
+	if (await reload_csrf("csrf_token")){
+		const c = $QS('[name="remove"]:checked');
+		if (c && c.value==="yes"){
+			if(await popup.confirm("一度削除すると復元出来ません。<br>本当に削除しますか?")) $ID("form").submit();
+		} else if (($QS('[name="new_path"]').value!==""&&mem_p!==$QS('[name="new_path"]').value) || $QS('[name="name"]').value!==$QS('[name="new_name"]').value || $QS('[name="perm"]').value!=="no"){
+			$ID("form").submit();
+		} else {
+			const f = new FormData($ID("form"));
+			const x = new XMLHttpRequest();
+			$ID("fparea").innerHTML = "(saving...)";
+			$ID("fparea").classList.add("note");
+			f.append("async", 1);
+			x.addEventListener("load", async (e)=>{
+				if (x.responseText == -1){
+					if(await popup.confirm("ログアウトしました。リロードしてください。")) location.reload();
+					return;
+				} else if (x.responseText==1||x.responseText==2){
+					if(await popup.confirm("ファイルまたはディレクトリが削除されました。")) location.reload();
+					return;
+				} else if (x.responseText == 4){
+					return popup.alert("編集権限がありません。");
+				}
+				$ID("fparea").innerHTML = "(saved)";
+				setTimeout(()=>{
+					$ID("fparea").innerHTML="";
+					$ID("fparea").classList.remove("note");
+				},2000);
+			});
+			x.open("POST", location.href);
+			x.send(f);
+		}
+		$QS('[name="remove"]').checked = false;
+		if($QS('[name="extract"]:checked')) $ID("exit").click();
+	}
 }
 class TextEditor{
 	#m;
@@ -226,7 +302,7 @@ class TextEditor{
 		this.#f.addEventListener("input", ()=>{this.zoom();});
 		this.#w.addEventListener("change", ()=>{this.row();});
 		this.#f.addEventListener("keydown", (e)=>{
-			if(isEnterKey(e)) e.preventDefault();
+			if(isEnterKey(e)) pd(e);
 		});
 		$ID("form").addEventListener("submit", (e)=>{
 			if(this.#m==="ace"&&this.#h) $ID("text").value=this.#h.getValue();
@@ -235,16 +311,16 @@ class TextEditor{
 		this.zoom();
 		window.addEventListener("wheel", (e)=>{
 			if (e.ctrlKey){
-				e.preventDefault();
+				pd(e);
 				e.deltaY<0?this.#f.value++:this.#f.value--;
 				this.zoom();
 			}
 		},{passive:false});
 		window.addEventListener("keydown", (e)=>{
 			if(isCtrlKey(e)){
-				if(~["s","+","-",";","="].indexOf(e.key)) e.preventDefault();
+				if(~["s","+","-",";","="].indexOf(e.key)) pd(e);
 				if (e.key === "s"){
-					$QS('[type="submit"]').click();
+					sc();
 				} else if (~["+",";","-","="].indexOf(e.key)){
 					~["+",";"].indexOf(e.key)?this.#f.value++:this.#f.value--;
 					this.zoom();
@@ -281,7 +357,7 @@ class TextEditor{
 				this.#p.remove();
 				this.#ae.remove();
 				if(this.#mf==="ace") $ID("text").value=this.#h.getValue();
-				table_editor(f);
+				table_editor();
 			} else {
 				$ID("exit").click();
 			}
@@ -320,7 +396,7 @@ class TextEditor{
 				useSoftTabs:false,
 				mode:"ace/mode/"+m,
 				theme:"ace/theme/gkur"});
-			this.#ae.addEventListener("wheel",(e)=>{e.preventDefault();},{passive:false});
+			this.#ae.addEventListener("wheel",pd,{passive:false});
 			this.zoom();
 		}
 		this.#h.setValue(t, -1);
@@ -376,75 +452,5 @@ class TextEditor{
 	}
 }
 
-//エディター
-if($ID("text")){
-	const f = $QS('input[name="new_name"]').value;
-	if (f.endsWith(".csv") || f.endsWith(".tsv")){
-		table_editor(f);
-	} else {
-		new TextEditor();
-	}
-} else if (q.get("File")&&$QS('input[name="name"]')){
-	const p = document.createElement("div");
-	const r = document.createElement("a");
-	p.style.margin = "1em";
-	r.classList.add("blue_btn");
-	r.href = "#";
-	r.innerHTML = "無理やり編集する";
-	p.append(r);
-	$ID("form").after(p);
-	r.addEventListener("click", (e)=>{
-		e.preventDefault();
-		p.remove();
-		const l = document.createElement("p");
-		const b = document.createElement("label");
-		const t = document.createElement("textarea");
-		t.name = "content";
-		t.rows = 25;
-		t.id = "text";
-		b.append(t);
-		l.append(b);
-		$QS('form').append(l);
-		new TextEditor();
-	});
-}
-//削除の警告・非同期投稿
-$ID("form").addEventListener("submit", async (e)=>{
-	e.preventDefault();
-	if (await reload_csrf("csrf_token")){
-		const c = $QS('[name="remove"]:checked');
-		if (c && c.value==="yes"){
-			if(await popup.confirm("一度削除すると復元出来ません。<br>本当に削除しますか?")) $ID("form").submit();
-		} else if (($QS('[name="new_path"]').value!==""&&mem_p!==$QS('[name="new_path"]').value) || $QS('[name="name"]').value!==$QS('[name="new_name"]').value || $QS('[name="perm"]').value!=="no"){
-			$ID("form").submit();
-		} else {
-			const f = new FormData($ID("form"));
-			const x = new XMLHttpRequest();
-			$ID("fparea").innerHTML = "(saving...)";
-			$ID("fparea").classList.add("note");
-			f.append("submit", $QS('[type="submit"]').value);
-			f.append("async", 1);
-			x.addEventListener("load", async (e)=>{
-				if (x.responseText == -1){
-					if(await popup.confirm("ログアウトしました。リロードしてください。")) location.reload();
-					return;
-				} else if (x.responseText==1||x.responseText==2){
-					if(await popup.confirm("ファイルまたはディレクトリが削除されました。")) location.reload();
-					return;
-				} else if (x.responseText == 4){
-					return popup.alert("編集権限がありません。");
-				}
-				$ID("fparea").innerHTML = "(saved)";
-				setTimeout(()=>{
-					$ID("fparea").innerHTML="";
-					$ID("fparea").classList.remove("note");
-				},2000);
-			});
-			x.open("POST", location.href);
-			x.send(f);
-		}
-		$QS('[name="remove"]').checked = false;
-		if($QS('[name="extract"]:checked')) $ID("exit").click();
-	}
-});
-
+$ID("form").addEventListener("submit", save_change);
+start_editor();

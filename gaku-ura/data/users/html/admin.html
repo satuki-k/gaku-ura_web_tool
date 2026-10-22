@@ -7,9 +7,10 @@
 <table>
 	<thead>
 		<tr>
-			<th colspan="5">
+			<th colspan="4">
 				<form method="POST" enctype="multipart/form-data" id="form">
 					<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
+					<input type="hidden" name="submit" value="new">
 					<span id="fparea"></span>
 					<label><ruby><rb>新規</rb><rt>new</rt></ruby>
 						<select name="new" id="new">
@@ -35,7 +36,7 @@
 					<span> </span>
 					<label><ruby><rb>グループ</rb><rt>group</rt></ruby><select name="group" id="group">{GROUP}</select></label>
 					<span> </span>
-					<label><button type="submit" name="submit" value="new">O K</button></label>
+					<label><button type="submit">O K</button></label>
 				</form>
 			</th>
 		</tr>
@@ -43,11 +44,11 @@
 		<tr><td colspan="4">{PATH}</td></tr>
 		<tr><th><ruby><rb>名 前</rb><rt>name</rt></ruby></th><th><ruby><rb>編 集</rb><rt>edit</rt></ruby></th><th><ruby><rb>詳 細</rb><rt>detail</rt></ruby></th><th><ruby><rb>更 新</rb><rt>time</rt></ruby></th></tr>
 	</thead>
-	<tbody>
+	<tbody id="file_list">
 		{FILE_LIST}
 	</tbody>
 </table>
 <p>一度にアップロードできるファイル数や合計サイズは、php.iniの設定に依存します。</p>
-<p>ダウンロード機能は、<b>最後に選択したファイルを一つ、または全てのファイル、の二通りのみ可能です。</b></p>
+<p>zipファイルのダウンロードが失敗するときは、tar.gzをご利用ください。</p>
 <p style="display:none;" {API_ARGS}id="gaku-ura_args"></p>
 

@@ -5,9 +5,10 @@
 <h1>{TITLE}</h1>
 <form method="POST" enctype="multipart/form-data" id="form">
 	<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
-	<input type="hidden" name="dbtype" value="{DBTYPE}">
+	<input type="hidden" name="dbtype" id="dbtype" value="{DBTYPE}">
 	<input type="hidden" name="dbname" value="{DBNAME}">
-	<input type="hidden" name="table" value="{TABLE}">
+	<input type="hidden" name="table" id="table" value="{TABLE}">
+	<input type="hidden" name="submit_type" value="{SUBMIT_TYPE}">
 	<p>
 		<a href="{EXIT}" id="exit">戻る</a>
 		<span> </span>
@@ -15,16 +16,16 @@
 		<label id="import">テーブル名<input type="text" name="import_name" placeholder="ファイル名と同じ" id="import_name"></label>
 		<span> </span>
 		<label id="fstrtl"><input type="checkbox" name="first_is_col" value="true" id="fstrt">一行目をタイトルにする</label>
-		<button type="submit" name="submit_type" value="{SUBMIT_TYPE}">O K</button>
+		<button type="submit">O K</button>
 	</p>
 	<p><a href="{EXIT}&File={DBNAME}&Menu=edit">ファイルを編集</a></p>
 	<p>
 		<label><input type="text" name="table_name" value="{TABLE}"></label>
 		<label><input type="checkbox" name="remove_table" value="true">を削除</label>
 		<span>|</span>
-		<label>表示テーブル<select name="ctable"><option value="">{TABLE}</option>{TABLE_LIST}</select></label>
+		<label>表示テーブル<select name="ctable" id="ctable"><option value="">{TABLE}</option>{TABLE_LIST}</select></label>
 		<label>
-			<button type="submit" name="submit_type" value="{SUBMIT_TYPE}">変 更</button>
+			<button type="submit">変 更</button>
 		</label>
 	</p>
 	<p class="note">インポートするファイルの、タイトル行は自動エスケープされません。また、UTF8以外は受付ません。</p>
@@ -38,9 +39,9 @@
 			</tbody>
 		</table>
 	</div>
-	<p><label><input type="checkbox" name="export" value="true">export CSV</label></p>
+	<p><label><input type="checkbox" name="export" id="export" value="true">export CSV</label></p>
 	<p>
-		<label>SQL実行<br><textarea name="query" rows="5"></textarea></label>
-		<button type="submit" name="submit_type" value="{SUBMIT_TYPE}" id="exec">実行</button>
+		<label>SQL実行<br><textarea name="query" id="query" rows="5"></textarea></label>
+		<button type="submit" id="exec">実行</button>
 	</p>
 </form>

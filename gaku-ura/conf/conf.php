@@ -1,6 +1,14 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.8.17';
+const GAKU_URA_VERSION = '9.8.18';
+const WEEK_LIST = [
+	'ja'=>['日','月','火','水','木','金','土'],
+	'en'=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+];
+const MONTH_LIST = [
+	'ja'=>['睦月','如月','弥生','卯月','早月','水無月','文月','葉月','長月','神無月','霜月','師走'],
+	'en'=>['January','February','March','April','May','June','July','August','September','October','November','December']
+];
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
 #UTF-8/LFにする
 function lf(string $s):string{return str_replace(["\r\n","\r"],"\n",$s);}
@@ -140,23 +148,26 @@ function copy_path(string $dir, string $to, array $skip=[]):bool{
 	}
 	return true;
 }
-#ファイル展開(zipは非対応)
+#ファイル展開
+define('EXTRACT_TYPE', '/(\.tar\.gz|\.tar|\.gz|\.tgz|\.zip)$/i');
 function file_extract(string $file, string $to):bool{
-	$f = strtolower($file);
+	$f = strtolower(basename($file));
+	$x = '';
+	if(strpos($f,'.')!==false) $x=substr($f,strrpos($f,'.'));
 	if(!file_exists($to)) mkdir($to,0777,true);
 	try{
-		if (str_ends_with($f,'.tar.gz') || str_ends_with($f,'.tgz')){
+		if (str_ends_with($f,'.tar.gz') || $x==='.tgz'){
 			$p = new PharData($file);
 			$p->decompress();
-			$p = new PharData(rreplace($file,'.gz'));
+			$p = new PharData(rreplace(rreplace($file,'.tgz','.tar'),'.gz'));
 			if(!$p->extractTo($to)) return false;
-			unlink(rreplace($file,'.gz'));
+			unlink(rreplace(rreplace($file,'.tgz','.tar'),'.gz'));
 			return true;
-		} elseif (str_ends_with($f,'.tar')){
+		} elseif ($x === '.tar'){
 			$p = new PharData($file);
 			return $p->extractTo($to);
-		} elseif (str_ends_with($f,'.gz')){
-			if(is_dir($to)) $to=rreplace($to,'/').'/'.rreplace(basename($f),'.gz');
+		} elseif ($x === '.gz'){
+			if(is_dir($to)) $to=rreplace($to,'/').'/'.rreplace($f,'.gz');
 			if(is_file($to)) unlink($to);
 			$p = fopen($to, 'a');
 			$r = gzopen($file, 'r');
@@ -164,8 +175,69 @@ function file_extract(string $file, string $to):bool{
 			gzclose($r);
 			fclose($p);
 			return true;
+		} elseif ($x === 'zip'){
+			$z = new ZipArchive;
+			if ($z->open($file)){
+				$z->extractTo($to);
+				$z->close();
+				return true;
+			}
 		}
 	}catch(Exception$e){return false;}
+	return false;
+}
+#ファイル圧縮
+function file_compress(string $file, string $type, ?string $to):bool{
+	$file = rreplace($file, '/');
+	$tp = lreplace($type, '.');
+	$t = '';
+	if ($to === null){
+		$t = tempnam(sys_get_temp_dir(),'_');
+		if(!$t) return false;
+	} else {
+		$t = $to.'/'.basename($file);
+		if (str_ends_with(strtolower($to), strtolower($tp))){
+			$d = dirname($to);
+			if(!file_exists($to)&&!file_exists($d)) mkdir($d,0777,true);
+			$t = rreplace($to, '.'.$tp);
+		} elseif (!file_exists($to)){
+			mkdir($to, 0777, true);
+		}
+	}
+	try{
+		if ($tp === 'tar.gz'){
+			$t .= '.tar';
+			$p = new PharData($t);
+			$p->buildFromDirectory($file);
+			$p->compress(Phar::GZ);
+			$t .= '.gz';
+		} elseif ($tp === 'zip'){
+			$t .= '.zip';
+			$z = new ZipArchive;
+			$r = $z->open($t, ZipArchive::CREATE|ZipArchive::OVERWRITE);
+			if (is_file($file)){
+				$z->addFile($file, basename($file));
+			} else {
+				foreach (path_list($file) as $p){
+					$d = substr($p, strlen($file));
+					is_dir($p)?$z->addEmptyDir($d):$z->addFile($p, $d);
+				}
+			}
+			if(!$z->close()) return false;
+		} else {
+			return false;
+		}
+		if ($to === null){
+			header('content-type:'.mime_content_type($t));
+			header('Content-Disposition:attachment;filename="'.basename($file).'.'.$tp.'"');
+			header('Content-Length:'.filesize($t));
+			$f = fopen($t, 'rb');
+			fpassthru($f);
+			fclose($f);
+			unlink($t);
+		}
+		return true;
+	}catch(Exception $e){}
 	return false;
 }
 #ディレクトリ再帰削除
@@ -203,7 +275,7 @@ function read_conf(string $file):array{
 }
 #ハッシュ化
 function pass(string $pw):string{return $pw===''?'':hash('sha256',$pw);}
-#複数行コメントアウト破壊削除
+#複数行コメントアウト除去
 function remove_comment_rows(string &$t, string $s='/*', string $g='*/'):string{
 	while(($p=subrpos($s,$g,$t))!=='') $t=str_replace($s.$p.$g,'',$t);
 	return $t;
@@ -267,6 +339,7 @@ function list_isset(array $dict, array $keys):bool{
 }
 #html互換md 内部処理用。ユーザー入力で使用する場合は事前にエスケープしてください
 function to_html(string $text):string{
+	if($text==='') return '';
 	remove_comment_rows($text,'<!--','-->');
 	foreach(['|'=>124,'《'=>12298,'》'=>12299,'*'=>42,'#'=>35,'"'=>34,"'"=>39,'`'=>96,'~'=>126,'\\'=>92]as$k=>$v) $text=str_replace("\\$k","&#$v;",$text);
 	$rows = explode("\n", str_replace("\\\n",'',lf($text)));
@@ -501,6 +574,7 @@ class GakuUra{
 			}
 			$code = str_replace($b.$p.$e, $r, $code);
 		}
+		foreach(['GAKU_URA_VERSION','EXTRACT_TYPE']as$k) $code=str_replace('{'.$k.'}',constant($k),$code);
 		if($mode!=='css') return $code;
 		$b = '@import';
 		$l = '';
@@ -621,7 +695,7 @@ class GakuUra{
 	public function form_die():void{exit($this->htmlf('404','form_die',[]));}
 	#学裏ライブラリの上書き展開
 	public function upgrade(string $tar_gz, ?array &$reduced=null):int{
-		if(!is_file($tar_gz)) return 1;
+		if(!is_file($tar_gz)||mime_content_type($tar_gz)!=='application/gzip') return 1;
 		$l = 'gaku-ura_upgrade';
 		$this->file_lock($l);
 		$m = $this->system_dir.'/tmp';
@@ -642,7 +716,7 @@ class GakuUra{
 		}
 		$a = $m.'/upgrade.tar.gz';
 		copy($tar_gz, $a);
-		if (!file_extract($a,$t)){
+		if (!file_extract($a,$t) || !is_dir($t.'gaku-ura')){
 			$this->file_unlock($l);
 			return 2;
 		}

@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.17
+#gaku-ura9.8.18
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -59,7 +59,16 @@ function get_msg(string $file, object &$user, string $csrf_token, ?int $uid):str
 		if ($from){
 			$nm = $user->user_data_convert(explode("\t",$from))['name'];
 		}
-		$r .= '<dl><dt><a href="?'.$nm.'">'.$nm.'</a> ('.date('Y/m/d H:i',$d[2]).')';
+		$r .= '<dl><dt><a href="?'.$nm.'">'.$nm.'</a> <span class="date">';
+		$r .= date('Y/m/d H:i',$d[2]).'('.WEEK_LIST['ja'][date('w',$d[2])].'曜日';
+		if (date('d',$d[2]) === date('d')){
+			$r .= ', 今日';
+		} elseif (date('m',$d[2]) === date('m')){
+			$r .= ', 今月';
+		} elseif (date('Y',$d[2]) === date('Y')){
+			$r .= ', 今年';
+		}
+		$r .= ')</span>';
 		if ($uid===null || $uid===(int)$d[1]){
 			$eid = rreplace(basename($file),'.tsv').'-'.$d[0];
 			$r .= '<form method="POST" class="edit" id="edit_'.$eid.'">';
@@ -110,7 +119,7 @@ function main(string $from):int{
 				$stype = rreplace($submit, '_message');
 				$to = null;
 				$msg = to_html(h($_POST['message']));
-				if (not_empty($msg) && ($stype!=='session'||not_empty($_POST['to']??''))){
+				if (not_empty($_POST['message']) && ($stype!=='session'||not_empty($_POST['to']??''))){
 					if($stype==='session') $to=h($_POST['to']);
 					$r = $user->send_message($to, $msg, $user_data['id']);
 					if ($r === -1){
@@ -606,7 +615,7 @@ function main(string $from):int{
 				$cfl = strtolower($current_file);
 				if (str_ends_with($cfl,'.db')){
 					$f = '<p><a href="?Dir='.$uri_dir.'&File='.$bname.'&Menu=edit_db">tableを編集</a></p>';
-				} elseif (preg_match('/(\.tar\.gz|\.tar|\.gz|\.tgz)$/',$cfl)===1){
+				} elseif (preg_match(EXTRACT_TYPE,$cfl)===1){
 					$f = '<p><label><input type="checkbox" name="extract" value="yes">展開する</label></p>';
 				}
 				if ($editable){
@@ -645,21 +654,8 @@ function main(string $from):int{
 			$replace['DOWNLOAD'] = '?Dir='.$uri_dir.'&download';
 		} elseif (isset($_GET['download'])){
 			if(!$user->permitted($current_dir,$user_data,false,true)) $conf->not_found(false,'権限がありません。');
-			$m = tempnam(sys_get_temp_dir(),'_');
-			$t = $m.'.tar';
-			if($m){
-				if($user_data['admin']<($conf->config['login.admin_block']??0)) $user->log_report('fm_get',$user_data);
-				$p = new PharData($t);
-				$p->buildFromDirectory($current_dir);
-				$p->compress(Phar::GZ);
-				$t .= '.gz';
-				$conf->content_type(mime_content_type($t));
-				header('Content-Disposition:attachment;filename="'.basename($current_dir).'.tar.gz"');
-				header('Content-Length:'.filesize($t));
-				$f = fopen($t, 'rb');
-				fpassthru($f);
-				fclose($f);
-				unlink($t);
+			if (!file_compress($current_dir, $_GET['type']??'tar.gz', null)){
+				$conf->not_found(false,'圧縮失敗');
 			}
 			return 0;
 		} else {
@@ -760,4 +756,3 @@ function main(string $from):int{
 	foreach($api_args as $k=>$v) $replace['API_ARGS'].=$k.'="'.$v.'" ';
 	return $conf->htmlf('users', $from, $replace);
 }
-

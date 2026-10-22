@@ -7,6 +7,7 @@
 const q = (new URL(window.location)).searchParams;
 const popup = new POPUP();
 let move_file = 0;
+let cspan = Date.now();
 //ini_get
 const arg = $ID("gaku-ura_args");
 const maxfc = parseInt(arg.getAttribute("max_file_uploads")??20);
@@ -15,7 +16,7 @@ const b = d.style.background;
 const g = document.createElement("pre");//クリックメニュー
 g.classList.add("cmenu");
 document.body.append(g);
-const f = $QS('tbody');
+const f = $ID('file_list');
 const r = f.children;
 const dr = arg.getAttribute("d_root");
 function prs(m){
@@ -31,6 +32,22 @@ function pd(e){
 }
 function sc(){
 	$QS('[type="submit"]').click();
+}
+async function edit_s(url, key, value){
+	try{
+		const l = url+"&async";
+		const r = await fetch(l);
+		const t = await r.json();
+		const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"submit":t["SUBMIT_TYPE"],"new_name":"","new_path":"","perm":"no"};
+		j[key] = value;
+		const p = await new URLSearchParams(j);
+		await fetch(l,{
+			referrer:l,
+			method:"POST",
+			headers:{"content-type":"application/x-www-form-urlencoded"},
+			body:p.toString()
+		});
+	}catch{}
 }
 async function dg(e){
 	if(e.type!=="dragleave") pd(e);
@@ -78,12 +95,20 @@ async function dg(e){
 }
 function mclose(e){
 	g.style.display="none";
-	$QSA('.select_row').forEach((i)=>{i.classList.remove("select_row");});
+	$QSA('.select_row').forEach((i)=>{
+		i.classList.remove("select_row");
+		i.removeAttribute("id");
+	});
 }
 function fmc(e){
+	if (!isCtrlKey(e) && this.classList.contains("select_row") && Date.now()-cspan>500){
+		this.id = "selected_row";
+		return rename(e);
+	}
 	if(g.style.display==="none") sp(e);
 	if(!isCtrlKey(e)) mclose(e);
 	this.classList.toggle("select_row");
+	cspan = Date.now();
 }
 function fmo(e){
 	if(!(~(this.getAttribute("class")??"").indexOf("select_row"))) mclose(e);
@@ -97,14 +122,47 @@ function fm(){
 	mclose(0);
 	let i = r.length;
 	while (i--){
+		r[i].style.userSelect = "none";
 		r[i].removeEventListener("click", fmc);
-		r[i].removeEventListener("mousedown", fmc);
 		r[i].removeEventListener("contextmenu", fmo);
 		r[i].removeEventListener("dblclick", fmd);
 		r[i].addEventListener("click", fmc);
 		r[i].addEventListener("contextmenu", fmo);
 		r[i].addEventListener("dblclick", fmd);
 	}
+}
+function rename(e){
+	pd(e);
+	const r = $ID("selected_row");
+	const a = r.querySelectorAll("a");
+	const n = document.createElement("input");
+	const l = document.createElement("tr");
+	const d = document.createElement("td");
+	mclose(e);
+	n.type = "text";
+	n.style.width = "100%";
+	n.value = n.placeholder = a[0].textContent;
+	d.colSpan = 4;
+	d.append(n);
+	l.append(d);
+	r.style.display = "none";
+	r.after(l);
+	n.setSelectionRange(0, n.value.lastIndexOf("."));
+	n.focus();
+	const rn = async (e)=>{
+		n.onblur = null;
+		n.onkeydown = null;
+		if (e.key!=="Escape" && a[0].textContent !== n.value && /^[^"'&?\/\\|\[\]\*=]+$/.test(n.value)){
+			await edit_s(a[1].href, "new_name", n.value);
+			a[0].textContent = n.value;
+		}
+		l.remove();
+		r.style.display = "table-row";
+	};
+	n.onblur = rn;
+	n.onkeydown = async (e)=>{
+		if(isEnterKey(e)||e.key==="Escape") await rn(e);
+	};
 }
 function mopen(e, c){
 	pd(e);
@@ -122,7 +180,7 @@ function mopen(e, c){
 		m.push(['📂開く',a.href]);
 		m.push(['✍編集する',a2.href]);
 	} else {
-		m.push(['✍開く',a2.href]);
+		m.push(['✍開く(編集)',a2.href]);
 		if(a.textContent.endsWith(".db")){
 			let u = a.href.replace(/(Menu=[^&]*)/, "Menu=edit_db");
 			if(!(~u.indexOf("Menu="))) u+="&Menu=edit_db";
@@ -132,8 +190,12 @@ function mopen(e, c){
 	}
 	const u = a.getAttribute("url");
 	if(u.length) m.push(["🔗WEBページとして開く",u,1]);
-	m.push(['📥ダウンロード',a.href+'&download']);
-	m.push(['📥全てダウンロード',"?Dir="+(q.get("Dir")??"")+'&download']);
+	["tar.gz","zip"].forEach((i)=>{
+		m.push(["📥ダウンロード("+i+")",a.href+"&type="+i+"&download"]);
+	});
+	["tar.gz","zip"].forEach((i)=>{
+		m.push(["この階層をﾀﾞｳﾝﾛｰﾄﾞ("+i+")","?Dir="+(q.get("Dir")??"")+"&type="+i+"&download"]);
+	});
 	m.forEach((i)=>{
 		const o = document.createElement("a");
 		o.innerHTML = i[0];
@@ -144,7 +206,7 @@ function mopen(e, c){
 		o.addEventListener("click", mclose);
 	});
 	const o = document.createElement("a");
-	o.innerHTML = "🔥削除";
+	o.innerHTML = "🗑削除";
 	o.href = "#";
 	o.addEventListener("click", async (e)=>{
 		pd(e);
@@ -162,28 +224,16 @@ function mopen(e, c){
 		}
 		prs("removing files...");
 		for (let i = 0;i < s.length;++i){
-			try{
-				const l = s[i].querySelectorAll("a")[1].href+"&async";
-				const r = await fetch(l);
-				const t = await r.json();
-				const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"remove":"yes","submit":t["SUBMIT_TYPE"],"new_name":"","new_path":"","perm":"no"};
-				const p = await new URLSearchParams(j);
-				await fetch(l,{
-					referrer:l,
-					method:"POST",
-					headers:{"content-type":"application/x-www-form-urlencoded"},
-					body:p.toString()
-				});
-				s[i].remove();
-				fm();
-			}catch{}
+			await edit_s(s[i].querySelectorAll("a")[1].href, "remove", "yes");
+			s[i].remove();
+			fm();
 		}
 		move_file = 0;
 		await reload_csrf("csrf_token");
 		prs(0);
 	});
-	const x = document.createElement("a");
-	if (!isdir && /(\.tar\.gz|\.tar|\.gz|\.tgz)$/.test(a.textContent.toLowerCase())){
+	if (!isdir && {EXTRACT_TYPE}.test(a.textContent)){
+		const x = document.createElement("a");
 		x.innerHTML = "📂すべて展開";
 		x.href = "#";
 		x.addEventListener("click", async (e)=>{
@@ -197,28 +247,22 @@ function mopen(e, c){
 			});
 			prs("extracting files...");
 			for (let i = 0;i < s.length;++i){
-				try{
-					const l = s[i].querySelectorAll("a")[1].href+"&async";
-					const r = await fetch(l);
-					const t = await r.json();
-					const j = {"csrf_token":t["CSRF_TOKEN"],"name":t["NAME"],"remove":"","submit":t["SUBMIT_TYPE"],"new_name":"","new_path":"","perm":"no","extract":"yes"};
-					const p = await new URLSearchParams(j);
-					await fetch(l,{
-						referrer:l,
-						method:"POST",
-						headers:{"content-type":"application/x-www-form-urlencoded"},
-						body:p.toString()
-					});
-					fm();
-				}catch{}
+				await edit_s(s[i].querySelectorAll("a")[1].href, "extract", "yes");
+				fm();
 			}
 			move_file = 0;
 			await reload_csrf("csrf_token");
 			prs(0);
 			location.reload();
 		});
+		g.append(x);
 	}
-	g.append(x);
+	const n = document.createElement("a");
+	n.innerHTML = "✍名前を変更";
+	n.href = "#";
+	c.id = "selected_row";
+	n.addEventListener("click", rename);
+	g.append(n);
 	g.append(o);
 	g.style.display = "block";
 	g.style.left = Math.min(e.pageX-scrollX,innerWidth-g.offsetWidth)+"px";
@@ -239,7 +283,6 @@ $ID("folder").addEventListener("change", sc);
 $ID("group").addEventListener("change", sc);
 g.addEventListener("click", sp);
 $ID("POPUP").addEventListener("click", sp);
-f.addEventListener("contextmenu", pd);
 window.addEventListener("click", mclose);
 window.addEventListener("keydown", key_action);
 fm();

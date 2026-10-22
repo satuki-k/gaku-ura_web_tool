@@ -6,8 +6,9 @@
 <form method="POST" id="form">
 	<input type="hidden" name="csrf_token" value="{CSRF_TOKEN}">
 	<input type="hidden" name="name" value="{NAME}">
+	<input type="hidden" name="submit_type" value="{SUBMIT_TYPE}">
 	<h1><label><span id="fparea"></span><input type="text" name="new_path" value="{PATH}/" placeholder="{PATH}/"><input type="text" name="new_name" value="{NAME}" placeholder="{NAME}"></label></h1>
-	<p>
+	<p id="ui">
 		<a href="{EXIT}" id="exit">戻る</a>
 		<label>mode
 			<select name="perm">
@@ -22,7 +23,7 @@
 			</select>
 		</label>
 		<label><input type="checkbox" name="remove" value="yes">削除する</label>
-		<button type="submit" name="submit_type" value="{SUBMIT_TYPE}">O K</button>
+		<label><button type="submit">O K</button></label>
 	</p>
 	{FORM_AFTER}
 </form>

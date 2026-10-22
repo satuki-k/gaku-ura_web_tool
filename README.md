@@ -6,35 +6,34 @@ WEB開発ツールです。
 
 ## 設置・アップデート方法
 ```
-html
+
+├── 404.php (404エラーの他、見せることができない場合に表示)
+├── LICENSE 
+├── README.md (このファイル)
 ├── css
-│   └── index.php
-├── js
-│   └── index.php
-├── 404.php
-├── index.php
-├── LICENSE
-├── README.md
-├── favicon.ico
+│   └── index.php (linkタグでcssを読み込むときの参照先)
+├── favicon.ico 
 ├── favicon.png
-├── gaku-ura
-│   ├── conf
-│   │   ├── alt-mbstring.php (mbstringが使えない環境向けライブラリ)
-│   │   ├── conf.php (中核ライブラリ)
-│   │   ├── db.php (db操作ライブラリ)
+├── gaku-ura (外部に公開せず、サーバー内部だけでアクセスできるように設定してください)
+│   ├── conf (ライブラリ、設定)
+│   │   ├── alt-mbstring.php (mbstringが無い環境で適宜、conf.phpに読み込ませてください)
+│   │   ├── conf.php (gaku-ura中核ライブラリ)
+│   │   ├── db.php (データベース操作)
 │   │   ├── gaku-ura.conf (設定ファイル)
-│   │   └── users.php (ユーザー情報操作ライブラリ)
-│   ├── data (静的ファイルとデータ格納ディレクトリ)
-│   │   ├── 404
+│   │   ├── math.php (数的処理)
+│   │   └── users.php (ユーザー管理)
+│   ├── data
+│   │   ├── 404
 │   │   │   ├── css
 │   │   │   │   └── index.css
 │   │   │   └── html
-│   │   │       └── index.html
-│   │   ├── default
-│   │   │   ├── default.css (共通css)
-│   │   │   ├── default.html (テンプレート)
-│   │   │   ├── description.txt
-│   │   │   ├── file (新規作成テンプレート)
+│   │   │       ├── form_die.html (POSTリクエストで不正がある場合)
+│   │   │       └── index.html (基本的なエラーページ)
+│   │   ├── default (テンプレートファイル)
+│   │   │   ├── default.css (デフォルトでは共通して適用するCSS)
+│   │   │   ├── default.html (デフォルトで採用するテンプレートHTML)
+│   │   │   ├── description.txt 
+│   │   │   ├── file (ファイルマネージャーで「新規作成」に使い初期内容)
 │   │   │   │   ├── description.txt
 │   │   │   │   ├── index.css
 │   │   │   │   ├── index.html
@@ -45,56 +44,71 @@ html
 │   │   │   │   ├── main.php
 │   │   │   │   ├── robots.txt
 │   │   │   │   └── sitemap.xml
-│   │   │   └── lib (include命令で使えるライブラリ)
+│   │   │   └── lib (php以外のライブラリ)
 │   │   │       ├── css
-│   │   │       │   └── animation.css
+│   │   │       │   ├── animation.css (アニメーション用CSS)
+│   │   │       │   ├── popup.css (popup.jsに使うstyleデータ)
+│   │   │       │   └── tabs.css (モーダル画面用CSS)
 │   │   │       ├── description.txt
 │   │   │       └── js
-│   │   │           ├── element.js
-│   │   │           ├── keyboard.js
-│   │   │           ├── popup.js
-│   │   │           ├── reload_csrf.js
-│   │   │           └── string.js
+│   │   │           ├── element.js (document.getElement...を省略する)
+│   │   │           ├── keyboard.js (OSごとにキー名称が異なって判定が漏れるのを埋める)
+│   │   │           ├── popup.js (汎用的なダイアログ表示)
+│   │   │           ├── reload_csrf.js (csrfトークンをリロードしてセッションタイムアウトを抑止)
+│   │   │           └── string.js (文字列操作)
 │   │   ├── description.txt
-│   │   ├── home (/index.php で使うデータ)
+│   │   ├── home (/index.phpで表示するページ)
 │   │   │   ├── css
-│   │   │   │   ├── document.css
-│   │   │   │   └── index.css
+│   │   │   │   ├── document.css (トップページ以外に適用するcss, 変更可能)
+│   │   │   │   └── index.css (トップページに適用するcss, 変更可能)
 │   │   │   └── html
-│   │   │       ├── about.html
-│   │   │       └── index.md
+│   │   │       ├── about.md
+│   │   │       └── index.html (トップページ)
 │   │   └── users
 │   │       ├── css
+│   │       │   ├── editor.css
 │   │       │   ├── index.css
-│   │       │   └── upgrade.css
+│   │       │   ├── upgrade.css
+│   │       │   └── users.css
 │   │       ├── description.txt
 │   │       ├── html
-│   │       │   ├── custom (アップグレード対象外 カスタム用ファイル)
-│   │       │   │   ├── admin_shortcut.html
-│   │       │   │   └── custom.html
 │   │       │   ├── admin.html
 │   │       │   ├── admin_edit.html
 │   │       │   ├── admin_edit_table.html
+│   │       │   ├── custom (アップグレード対象外、各自でカスタムする用)
+│   │       │   │   ├── admin_shortcut.html (管理で表示するショートカット)
+│   │       │   │   └── custom.html (ユーザーページの「全員へ」メッセージ)
 │   │       │   ├── home.html
 │   │       │   ├── home_admin.html
 │   │       │   ├── login.html
 │   │       │   ├── regist.html
 │   │       │   ├── upgrade.html
+│   │       │   ├── upgrade_form.html
 │   │       │   └── user_page.html
 │   │       ├── js
 │   │       │   ├── admin.js
 │   │       │   ├── admin_edit.js
 │   │       │   ├── admin_edit_table.js
+│   │       │   ├── editor_lang.json
+│   │       │   ├── home.js
+│   │       │   ├── table_cmd.json
 │   │       │   └── upgrade.js
-│   │       └── user_list* (ユーザーデータベース)
+│   │       ├── message (個別・掲示板のメッセージデータ)
+│   │       ├── template.css 
+│   │       ├── template.html
+│   │       ├── template_home.html
+│   │       └── user_list.tsv
 │   ├── description.txt
-│   ├── flock (ファイル読み取りから書き込みまでの間を処理待ちさせるフラグ管理する場所)
-│   └── main
-│       ├── 404.php (一般エラーページ)
+│   ├── flock (ファイルの同時アクセス防止フラグ用)
+│   └── main (本体プログラム)
+│       ├── 404.php (/404.phpの本体)
 │       ├── description.txt
-│       ├── index.php (トップページ)
-│       ├── src_link.php (cssやjsを配信)
-│       └── users.php (ユーザーページや管理機能)
+│       ├── index.php (/index.phpの本体)
+│       ├── src_link.php (/css/index.php, /js/index.phpの本体)
+│       └── users.php (ユーザーページ及び狩り機能の本体)
+├── index.php
+├── js
+│   └── index.php
 └── users
     ├── admin
     │   └── index.php
@@ -109,7 +123,7 @@ html
 gaku-ura9.7.0以降は、http://bq.f5.si/?Page=code で配布されているtar.gzファイルを送信することでアップグレードできます。
 ただし、更新対象ファイルに登録されていないファイル(readmeやlicense、一部のhtmlやcssなど編集が前提のファイルなど)は、手動で上書きしない限り更新されません。
 
-/gaku-ura 以下全てのパーミッションは777にするか、所有権をphp実行者にしてください。
+/gaku-ura 以下全てを、www-dataが書き込み可能な状態にしてください。
 
 ## 設定ファイル
 gaku-ura/conf/gaku-ura.conf を編集して下さい。管理ページの「設定」リンクからも行けます。
@@ -140,19 +154,18 @@ gaku-ura/data/home は「http(s)://ドメイン/」でアクセスしたとき�
 
 PHPなどのサーバー側スクリプトは全て、gaku-ura/main にあります。
 
-index.html以外は「index.css」ではなく「document.css」が適用されます。
-
+htmlに適用するcssやjavascriptは、htmlファイル内にinclude命令やoption設定で指定します。
 
 ## javascript軽量化
 一般的なjavascriptの記法ではない。または、不完全な文法で記述している。(行末のセミコロンが抜けているなど)
 
 という場合は、軽量化を有効にしているとブラウザエラーになることがあります。
 
-htmlメソッドの$minifyをfalseにすると、無効に出来ます。すると、
+GakuUra::htmlメソッドの$minifyをfalseにすると、無効に出来ます。すると、
 
 コメントアウト除去も行われません。
 
-jsファイルの先頭に、```#!option notminify;```と記述しても同様の効果が得られます。#!include命令などの詳細は、gaku-ura/data/default/libをご覧下さい。
+jsファイルの先頭に、```#!option notminify;```と記述しても同様の効果が得られます。#!include命令などの詳細は、http://bq.f5.si/?Page=code#src　をご覧ください。
 
 
 一括で無効化する場合は、htmlfメソッド仕様時に指定ファイルで```<!option js_minify 0>```と記述すると、$minify=falseと同じ意味になります。
@@ -182,7 +195,6 @@ php.iniを編集出来る場合は、以下の値に変更が推奨されます�
 [PHP]
 default_charset = UTF-8
 display_errors = Off
-display_startup_errors = Off
 allow_url_fopen = Off
 allow_url_include = Off
 file_uploads = On
@@ -201,13 +213,8 @@ session.auto_start = 0
 session.cookie_lifetime = 999999
 session.cookie_path = /
 session.serialize_handler = php
-session.referer_check =
-session.cache_limiter = nocache
-session.cache_expire = 180
 session.use_trans_sid = 1
 session.trans_sid_tags = "form="
-session.hash_function = 1
-session.hash_bits_per_character = 5
 ;以下3つは特に重要
 session.use_strict_mode = 1
 session.cookie_httponly = 1

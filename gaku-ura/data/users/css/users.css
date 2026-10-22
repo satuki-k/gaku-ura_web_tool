@@ -73,11 +73,11 @@ button:hover{
 }
 #message .tab{
 	overflow-y:scroll;
-	width:calc(100% - 4em);
+	width:calc(100% - 5em);
 	padding-top:0;
 }
 #message .tab_in + label{
-	width:4em;
+	width:5em;
 	padding:.5em;
 	margin:1px 0;
 	flex-grow:0;
