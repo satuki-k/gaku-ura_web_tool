@@ -154,6 +154,11 @@ function rename(e){
 		n.onkeydown = null;
 		if (e.key!=="Escape" && a[0].textContent !== n.value && /^[^"'&?\/\\|\[\]\*=]+$/.test(n.value)){
 			await edit_s(a[1].href, "new_name", n.value);
+			const i = new RegExp(a[0].textContent+"$");
+			const j = a[0].href.replace(i, n.value);
+			a[1].href = a[1].href.replace(a[0].href, j);
+			a[0].href = j;
+			a[0].setAttribute("url", a[0].getAttribute("url").replace(i, n.value));
 			a[0].textContent = n.value;
 		}
 		l.remove();

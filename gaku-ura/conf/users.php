@@ -1,17 +1,20 @@
 <?php
-#gaku-ura9.8.17
+#gaku-ura9.8.19
 #ユーザー登録や変更・取得等の機能
 class GakuUraUser{
 	public string $user_dir;
 	public string $user_list_file;
 	public string $message_dir;
+	public string $mail_dir;
 	public array $user_list_keys;
 	public array $own_dir;
 	public int $admin_revel;
+	public bool $is_auth_mail;
 	private object $c;
 	public const SKEY_ID = 'gaku-ura_login:id';
 	public const SKEY_PASSWD = 'galu-ura_login:passwd';
 	public const SKEY_NAME = 'gaku-ura_login:name';
+	public const SKEY_MAIL = 'gaku-ura_login:mail';
 	public const SKEY_FROM = 'gaku-ura_login:from';
 	public const TABLE_NAME = 'user_list';
 	public const MESSAGE_LABEL = 'gaku-ura_message_';
@@ -28,10 +31,13 @@ class GakuUraUser{
 		}
 		$this->admin_revel = (int)($conf->config['login.admin_revel']??3);
 		$this->user_dir = $conf->data_dir.'/users';
+		$this->mail_dir = $this->user_dir.'/mail';
 		$this->message_dir = $this->user_dir.'/message';
+		$this->is_auth_mail = (int)($conf->config['mail.allow']??0)&&(int)($conf->config['mail.auth']??0);
 		$this->user_list_file = $this->user_dir.'/'.self::TABLE_NAME.'.tsv';
 		$this->user_list_keys = ['id','name','mail','passwd','admin','profile','enable'];
 		if(!file_exists($this->message_dir)) mkdir($this->message_dir);
+		if(!file_exists($this->mail_dir)) mkdir($this->mail_dir);
 		$rows = get_rows($this->user_list_file, 1);
 		if ($rows && count($rows)>1){
 			$f = explode("\t", $rows[0]);
@@ -89,50 +95,69 @@ class GakuUraUser{
 		return $r;
 	}
 	public function user_exists(string $name, string $mail=''):int{
+		$n = row(self::h($name));
+		$m = (string)filter_var($mail, FILTER_VALIDATE_EMAIL, FILTER_NULL_ON_FAILURE);
 		$i = 0;
 		foreach (get_rows($this->user_list_file,2) as $l){
 			++$i;
 			$d = $this->user_data_convert(explode("\t", $l));
 			if ((int)$d['enable'] === 1){
-				if($name!==''&&$d['name']===$name) return $i;
-				if($mail!==''&&$d['mail']===$mail) return $i;
+				if($n!==''&&$d['name']===$n) return $i;
+				if($m!==''&&$d['mail']===$m) return $i;
 			}
 		}
 		return 0;
 	}
 	#idが0なら新規登録になる
-	public function change_user_data(array $user_data):void{
+	public function change_user_data(array $user_data):int{
+		$id = (int)($user_data['id']??0);
+		$user_data['mail'] = (string)filter_var($user_data['mail']??'',FILTER_VALIDATE_EMAIL, FILTER_NULL_ON_FAILURE);
+		if(!not_empty($user_data['name']??'')) return 1;
+		if(strlen($user_data['name'])>32) return 2;
+		if($id<1&&$this->user_exists($user_data['name'],$user_data['mail'])) return 3;
+		$user_data['admin'] = max((int)($user_data['admin']??0), 0);
+		$user_data['enable'] = (int)($user_data['enable']??1);
+		$sm = $this->c->config['school.mail']??'';
+		$sg = $this->c->config['school.group']??'';
+		$sa = $this->c->config['school.admin_revel']??'';
+		if ($sm && ($sg||$sa) && preg_match($sm, $user_data['mail'])===1){
+			if ($sa && $id<1){
+				$user_data['admin'] = (int)$sa;
+				$user_data['group'] = array_merge([(int)$sa],array_slice($user_data['group']??[],1));
+			}
+			if ($sg){
+				$user_data['admin'] .= ' '.$sg;
+				$user_data['group'] = array_merge($user_data['group'], [$sg]);
+			}
+		}
 		$this->c->file_lock(self::TABLE_NAME);
 		$rows = get_rows($this->user_list_file, 1);
-		if(isset($user_data['group'])) $user_data['admin']=implode(' ',$user_data['group']);
+		if($id>0&&isset($user_data['group'])) $user_data['admin']=implode(' ',array_unique($user_data['group']));
 		$row = '';
 		foreach ($this->user_list_keys as $k){
 			if(isset($user_data[$k])) $row.=trim(self::h($user_data[$k]));
 			$row .= "\t";
 		}
 		$row = rtrim(row($row));
-		if (($user_data['id']??0) < 1){
+		if ($id < 1){
 			$d = explode("\t", $row);
 			$l = explode("\t", $rows[count($rows)-1]);
-			for ($i = 0;$i < count($this->user_list_keys);++$i){
-				if ($this->user_list_keys[$i] === 'id'){
-					if($l[$i]==='id') $l[$i]=0;
-					$d[$i] = (int)$l[$i] +1;
-					file_put_contents($this->user_list_file, implode("\t",$d)."\n", FILE_APPEND|LOCK_EX);
-					$_SESSION[self::SKEY_ID] = $d[$i];
-					$_SESSION[self::SKEY_NAME] = $user_data['name'];
-					$_SESSION[self::SKEY_PASSWD] = $user_data['passwd'];
-					break;
-				}
-			}
+			$i = array_search('id', $this->user_list_keys);
+			if($l[$i]==='id') $l[$i]=0;
+			$d[$i] = (int)$l[$i] +1;
+			file_put_contents($this->user_list_file, implode("\t",$d)."\n", FILE_APPEND|LOCK_EX);
+			$_SESSION[self::SKEY_ID] = $d[$i];
+			$_SESSION[self::SKEY_NAME] = $user_data['name'];
+			$_SESSION[self::SKEY_PASSWD] = $user_data['passwd'];
 		} else {
-			$l = get($this->user_list_file, $user_data['id']+1);
+			$l = get($this->user_list_file, $id+1);
 			if ($l !== $row){
-				$rows[$user_data['id']] = $row;
+				$rows[$id] = $row;
 				file_put_contents($this->user_list_file, implode("\n",$rows)."\n", LOCK_EX);
 			}
 		}
 		$this->c->file_unlock(self::TABLE_NAME);
+		return 0;
 	}
 	#ファイル権限確認
 	public function permitted(string $file, array $user_data, bool $write=false, bool $download=false):bool{

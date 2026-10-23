@@ -8,11 +8,11 @@ WEB開発ツールです。
 ```
 
 ├── 404.php (404エラーの他、見せることができない場合に表示)
-├── LICENSE 
+├── LICENSE
 ├── README.md (このファイル)
 ├── css
 │   └── index.php (linkタグでcssを読み込むときの参照先)
-├── favicon.ico 
+├── favicon.ico
 ├── favicon.png
 ├── gaku-ura (外部に公開せず、サーバー内部だけでアクセスできるように設定してください)
 │   ├── conf (ライブラリ、設定)
@@ -32,7 +32,8 @@ WEB開発ツールです。
 │   │   ├── default (テンプレートファイル)
 │   │   │   ├── default.css (デフォルトでは共通して適用するCSS)
 │   │   │   ├── default.html (デフォルトで採用するテンプレートHTML)
-│   │   │   ├── description.txt 
+│   │   │   ├── description.txt
+│   │   │   ├── mail.html
 │   │   │   ├── file (ファイルマネージャーで「新規作成」に使い初期内容)
 │   │   │   │   ├── description.txt
 │   │   │   │   ├── index.css
@@ -81,6 +82,7 @@ WEB開発ツールです。
 │   │       │   ├── home.html
 │   │       │   ├── home_admin.html
 │   │       │   ├── login.html
+│   │       │   ├── mail.html
 │   │       │   ├── regist.html
 │   │       │   ├── upgrade.html
 │   │       │   ├── upgrade_form.html
@@ -94,7 +96,8 @@ WEB開発ツールです。
 │   │       │   ├── table_cmd.json
 │   │       │   └── upgrade.js
 │   │       ├── message (個別・掲示板のメッセージデータ)
-│   │       ├── template.css 
+│   │       ├── mail (メール認証用の一時ファイル)
+│   │       ├── template.css
 │   │       ├── template.html
 │   │       ├── template_home.html
 │   │       └── user_list.tsv
@@ -111,6 +114,8 @@ WEB開発ツールです。
 │   └── index.php
 └── users
     ├── admin
+    │   └── index.php
+    ├── mail
     │   └── index.php
     ├── index.php
     └── login

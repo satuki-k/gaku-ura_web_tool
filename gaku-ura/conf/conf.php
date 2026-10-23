@@ -693,6 +693,26 @@ class GakuUra{
 		return $t&&$d[0]===$t&&(!$ref||($a&&$b&&substr($d[1],$a+3)===substr($this->referer,$b+3)));
 	}
 	public function form_die():void{exit($this->htmlf('404','form_die',[]));}
+	public function html_mail(string $to, string $title, string $msg, array $headers=[]):bool{
+		$f = $this->data_dir.'/default/mail.html';
+		if(!is_file($f)) return false;
+		$h = file_get_contents($f);
+		$from = ini_get('sendmail_from');
+		if(!$from) $from=$this->config['mail.addr']??(gethostname().'@'.get_current_user());
+		$head[] = 'Content-Type: text/html; charset=UTF-8';
+		$head[] = 'Content-Transfer-Encoding: 8bit';
+		$head[] = 'From: '.$from;
+		$head[] = 'Reply-To: '.$from;
+		$head[] = 'MIME-Version: 1.0';
+		$head[] = 'Content-type: text/html; charset=utf-8';
+		$head[] = 'X-Mailer: gaku-ura'. GAKU_URA_VERSION;
+		foreach($headers as $i) $head[]=$i;
+		$sub = '=?UTF-8?B?'.base64_encode($title).'?=';
+		$r = ['TITLE'=>$title,'MESSAGE'=>$msg,'SITE_TITLE'=>$this->config['TITLE']??'?','DOMAIN'=>$this->domain];
+		foreach($r as $k=>$v) $h=str_replace('{'.$k.'}', self::h($v), $h);
+		$h = str_replace("\n","\r\n",lf($h));
+		return mail($to, $sub, $h, implode("\r\n",$head));
+	}
 	#学裏ライブラリの上書き展開
 	public function upgrade(string $tar_gz, ?array &$reduced=null):int{
 		if(!is_file($tar_gz)||mime_content_type($tar_gz)!=='application/gzip') return 1;
