@@ -33,9 +33,9 @@ function pd(e){
 function sc(){
 	$QS('[type="submit"]').click();
 }
-function create_new(e){
+async function create_new(e){
 	pd(e);
-	if(await reload_csrf("csrf_token")) this.submit();
+	if(await reload_csrf("csrf_token")) $ID("form").submit();
 }
 async function edit_s(url, key, value){
 	try{
