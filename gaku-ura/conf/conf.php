@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.8.18';
+const GAKU_URA_VERSION = '9.8.19';
 const WEEK_LIST = [
 	'ja'=>['日','月','火','水','木','金','土'],
 	'en'=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
