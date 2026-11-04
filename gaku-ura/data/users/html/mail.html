@@ -1,0 +1,12 @@
+<!option robots 0>
+<!include users.css>
+<!option css_standalone 1>
+<!option template users/template_home.html>
+<h1>メール認証</h1>
+<p>メールの所有権を確認します。</p>
+<form method="POST" id="form">
+	<p><label><b>認証コード</b><input type="text" name="otp"></label></p>
+	<p><button type="submit" name="csrf_token" value="{CSRF_TOKEN}">確 認</button></p>
+	<p id="warning">{WARNING}</p>
+</form>
+<p>確認メールが届かない場合は、迷惑メールをご確認ください。それでも届かない場合はサーバーの設定が間違っている可能性があります。</p>

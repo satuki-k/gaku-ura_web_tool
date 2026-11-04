@@ -80,6 +80,13 @@ function get_msg(string $file, object &$user, string $csrf_token, ?int $uid):str
 	}
 	return $r;
 }
+function set_otp(string $mail, string $mail_dir, object &$conf):void{
+	$f = one_time_pass(12, 24);
+	$o = one_time_pass(10, 12);
+	$_SESSION[GakuUraUser::SKEY_MAIL] = $f;
+	file_put_contents($mail_dir.'/'.$f, $mail."\t".$o, LOCK_EX);
+	$conf->html_mail($mail, '認証コード送信', '認証コード: '.$o);
+}
 function main(string $from):int{
 	$conf = new GakuUra();
 	$user = new GakuUraUser($conf);
@@ -101,19 +108,22 @@ function main(string $from):int{
 				unset($_SESSION[GakuUraUser::SKEY_PASSWD]);
 				exit_mv('./');
 			} elseif ($submit === 'user_info' && list_isset($_POST,['user_name','mail','new_passwd','profile'])){
-				$_POST['profile'] = str_replace("\n", '&#10;', $_POST['profile']);
-				$p = [];
-				foreach(['user_name','mail','new_passwd','profile']as$k) $p[$k]=row(h(GakuUraUser::h($_POST[$k])));
-				if(not_empty($p['user_name'])&&strlen($p['user_name'])<32&&$user->user_exists($p['user_name'])===0) $user_data['name']=$p['user_name'];
-				if(not_empty($p['new_passwd'])) $user_data['passwd']=password_hash($p['new_passwd'],PASSWORD_BCRYPT);
-				if(filter_var($p['mail'],FILTER_VALIDATE_EMAIL)&&$user->user_exists('',$p['mail'])===0) $user_data['mail']=$p['mail'];
-				$user_data['profile'] = $p['profile'];
+				if(!$user->user_exists($_POST['user_name'])) $user_data['name']=$_POST['user_name'];
+				if(!$user->is_auth_mail&&!$user->user_exists('',$_POST['mail'])) $user_data['mail']=$_POST['mail'];
+				if(not_empty($_POST['new_passwd'])) $user_data['passwd']=password_hash($_POST['new_passwd'],PASSWORD_BCRYPT);
+				$user_data['profile'] = str_replace("\n", '&#10;', $_POST['profile']);
 				$g = array_slice($user_data['group'],1);
 				$a = $_POST['group']??'';
 				if(in_array($a,$g,true)) $user_data['group']=array_unique(array_merge([$user_data['admin'],$a],$g));
-				$_SESSION[GakuUraUser::SKEY_NAME] = $user_data['name'];
-				$_SESSION[GakuUraUser::SKEY_PASSWD] = $user_data['passwd'];
-				$user->change_user_data($user_data);
+				if ($user->change_user_data($user_data) === 0){
+					$_SESSION[GakuUraUser::SKEY_NAME] = $user_data['name'];
+					$_SESSION[GakuUraUser::SKEY_PASSWD] = $user_data['passwd'];
+					$f = filter_var($_POST['mail'],FILTER_VALIDATE_EMAIL);
+					if ($f&&!$user->user_exists('',$f)&&$user_data['mail']!==$f&&$user->is_auth_mail){
+						set_otp($f, $user->mail_dir, $conf);
+						exit_mv('./mail/');
+					}
+				}
 				exit_mv('./');
 			} elseif (str_ends_with($submit,'_message') && isset($_POST['message'])){
 				$stype = rreplace($submit, '_message');
@@ -708,7 +718,7 @@ function main(string $from):int{
 		if($is_login) exit_mv('../');
 		if (list_isset($_POST,['user_name','passwd']) && $conf->check_csrf_token('login',$csrf_token,true)){
 			$name = h($_POST['user_name']);
-			$passwd = h($_POST['passwd']);
+			$passwd = $_POST['passwd'];
 			$m = ($_POST['mail']??'')==='true';
 			$i = $user->user_exists($m?'':$name, $m?$name:'');
 			if (not_empty($name) && not_empty($passwd) && $i){
@@ -726,31 +736,45 @@ function main(string $from):int{
 		$replace['CSRF_TOKEN'] = $conf->set_csrf_token('login');
 	} elseif ($from === 'regist'){
 		/* 新規登録 */
-		if((int)($conf->config['login.regist']??0)===0) $conf->not_found(false,'このサイトでは、新規登録は受け付けていません。');
+		if(!(int)($conf->config['login.regist']??0)) $conf->not_found(false,'新規登録は無効に設定されています。');
 		if (list_isset($_POST,['user_name','mail','passwd']) && $conf->check_csrf_token('regist',$csrf_token,true)){
-			$p = ['admin'=>0,'enable'=>1];
-			foreach([['user_name','name'],['passwd'],['mail']]as$i) $p[$i[1]??$i[0]]=row(h(GakuUraUser::h($_POST[$i[0]])));
-			if (not_empty($p['name']) && not_empty($p['passwd'])){
-				if (strlen($p['name']) < 32){
-					if ($p['mail']==='' || filter_var($p['mail'],FILTER_VALIDATE_EMAIL)){
-						if ($user->user_exists($p['name'],$p['mail']) === 0){
-							$p['passwd'] = password_hash($p['passwd'], PASSWORD_BCRYPT);
-							$user->change_user_data($p);
-							exit_mv('../../');
-						} else {
-							$replace['WARNING'] = 'その名前またはメールアドレスはすでに登録されています。';
-						}
-					} else {
-						$replace['WARNING'] = 'メールアドレスの形式が正しくありません。';
-					}
+			$p = ['name'=>$_POST['user_name'], 'passwd'=>$_POST['passwd']];
+			if(!$user->is_auth_mail) $p['mail']=$_POST['mail'];
+			if (not_empty($p['passwd'])){
+				$p['passwd'] = password_hash($p['passwd'], PASSWORD_BCRYPT);
+				$r = $user->change_user_data($p);
+				if ($r){
+					$replace['WARNING'] = ['名前が入力されていません。','名前が長過ぎます。','このユーザーはすでに存在します。'][$r-1];
 				} else {
-					$replace['WARNING'] = '名前が長すぎます。';
+					$f = filter_var($_POST['mail'],FILTER_VALIDATE_EMAIL);
+					if ($f && $user->is_auth_mail){
+						set_otp($f, $user->mail_dir, $conf);
+						exit_mv('../../mail/');
+					}
+					exit_mv('../../');
 				}
 			} else {
-				$replace['WARNING'] = '名前またはパスワードが入力されていません。';
+				$replace['WARNING'] = 'パスワードが入力されていません。';
 			}
 		}
 		$replace['CSRF_TOKEN'] = $conf->set_csrf_token('regist');
+	} elseif ($from === 'mail'){
+		/* mail本人確認 */
+		unlink_by_date($user->mail_dir, 1800);
+		if(!$is_login||!isset($_SESSION[GakuUraUser::SKEY_MAIL])||!is_file($user->mail_dir.'/'.$_SESSION[GakuUraUser::SKEY_MAIL])) exit_mv('../');
+		$f = $user->mail_dir.'/'.$_SESSION[GakuUraUser::SKEY_MAIL];
+		list($m, $p) = explode("\t", get($f,1));
+		if (isset($_POST['otp']) && $conf->check_csrf_token('mail',$csrf_token,true)){
+			if ($p === $_POST['otp']){
+				$user_data['mail'] = $m;
+				$user->change_user_data($user_data);
+				unlink($f);
+				unset($_SESSION[GakuUraUser::SKEY_MAIL]);
+				exit_mv('../');
+			}
+			$replace['WARNING'] = 'OTPが違います。';
+		}
+		$replace['CSRF_TOKEN'] = $conf->set_csrf_token('mail');
 	}
 	$conf->content_type('text/html');
 	foreach($api_args as $k=>$v) $replace['API_ARGS'].=$k.'="'.$v.'" ';

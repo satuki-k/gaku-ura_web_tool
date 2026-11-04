@@ -1,6 +1,7 @@
 /gaku-ura/data/users/user_list.*
 /gaku-ura/data/*.gz
 /gaku-ura/data/users/message
+/gaku-ura/data/users/mail
 /gaku-ura/flock/*
 /google*.html
 *.log
