@@ -25,7 +25,7 @@ function main():int{
 		}
 	} else {
 		foreach(['md','html']as$i)if(is_file($html.'.'.$i)) $html.='.'.$i;
-		$conf->canonical = $conf->domain;
+		$conf->canonical = rreplace($conf->domain,'/').$conf->u_root;
 		$conf->ld_json['@type'] = 'WebSite';
 	}
 	$r = $conf->htmlf('home', $html, ['VERSION'=>GAKU_URA_VERSION,'TIME'=>date('Y年m月d日 H時i分')], $robots);

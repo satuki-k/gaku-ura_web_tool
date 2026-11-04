@@ -3,6 +3,7 @@
 	"md":"markdown",
 	"py":"python",
 	"pl":"perl",
+	"pm":"perl",
 	"rb":"ruby",
 	"js":"javascript",
 	"conf":"ini",

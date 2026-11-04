@@ -33,6 +33,10 @@ function pd(e){
 function sc(){
 	$QS('[type="submit"]').click();
 }
+function create_new(e){
+	pd(e);
+	if(await reload_csrf("csrf_token")) this.submit();
+}
 async function edit_s(url, key, value){
 	try{
 		const l = url+"&async";
@@ -282,6 +286,7 @@ function key_action(e){
 		}
 	}
 }
+$ID("form").addEventListener("submit", create_new);
 ["dragover","dragleave","drop"].forEach((i)=>{d.addEventListener(i,dg);});
 $ID("file").addEventListener("change", sc);
 $ID("folder").addEventListener("change", sc);

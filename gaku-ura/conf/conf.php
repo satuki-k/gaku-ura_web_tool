@@ -153,37 +153,35 @@ define('EXTRACT_TYPE', '/(\.tar\.gz|\.tar|\.gz|\.tgz|\.zip)$/i');
 function file_extract(string $file, string $to):bool{
 	$f = strtolower(basename($file));
 	$x = '';
-	if(strpos($f,'.')!==false) $x=substr($f,strrpos($f,'.'));
+	if(strpos($f,'.')!==false) $x=substr($f,strrpos($f,'.')+1);
 	if(!file_exists($to)) mkdir($to,0777,true);
 	try{
-		if (str_ends_with($f,'.tar.gz') || $x==='.tgz'){
+		if (str_ends_with($f,'.tar.gz') || $x==='tgz'){
 			$p = new PharData($file);
 			$p->decompress();
 			$p = new PharData(rreplace(rreplace($file,'.tgz','.tar'),'.gz'));
 			if(!$p->extractTo($to)) return false;
 			unlink(rreplace(rreplace($file,'.tgz','.tar'),'.gz'));
 			return true;
-		} elseif ($x === '.tar'){
+		} elseif ($x === 'tar'){
 			$p = new PharData($file);
 			return $p->extractTo($to);
-		} elseif ($x === '.gz'){
+		} elseif ($x === 'gz'){
 			if(is_dir($to)) $to=rreplace($to,'/').'/'.rreplace($f,'.gz');
 			if(is_file($to)) unlink($to);
 			$p = fopen($to, 'a');
 			$r = gzopen($file, 'r');
 			while(($i=fgets($r))!==false) fwrite($p,$i);
 			gzclose($r);
-			fclose($p);
-			return true;
+			return fclose($p);
 		} elseif ($x === 'zip'){
 			$z = new ZipArchive;
 			if ($z->open($file)){
 				$z->extractTo($to);
-				$z->close();
-				return true;
+				return $z->close();
 			}
 		}
-	}catch(Exception$e){return false;}
+	}catch(Exception$e){}
 	return false;
 }
 #ファイル圧縮
@@ -344,7 +342,6 @@ function to_html(string $text):string{
 	foreach(['|'=>124,'《'=>12298,'》'=>12299,'*'=>42,'#'=>35,'"'=>34,"'"=>39,'`'=>96,'~'=>126,'\\'=>92]as$k=>$v) $text=str_replace("\\$k","&#$v;",$text);
 	$rows = explode("\n", str_replace("\\\n",'',lf($text)));
 	$r = '';
-	$hid = [];
 	for ($ol=0,$ul=0,$len=count($rows),$j=0;$j < $len;++$j){
 		$l = trim($rows[$j]);
 		if (str_starts_with($l,'*') && substr_count($l,'*')%2){

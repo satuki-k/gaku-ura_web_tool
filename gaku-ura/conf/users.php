@@ -243,7 +243,7 @@ class GakuUraUser{
 		if ($new_rows === ''){
 			unlink($message_file);
 		} else {
-			file_put_contents($message_file, $new_rows);
+			file_put_contents($message_file, $new_rows, LOCK_EX);
 		}
 		$this->c->file_unlock($lb);
 		return 0;
