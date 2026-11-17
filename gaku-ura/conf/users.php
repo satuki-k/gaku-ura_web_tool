@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.19
+#gaku-ura9.8.20
 #ユーザー登録や変更・取得等の機能
 class GakuUraUser{
 	public string $user_dir;
@@ -94,6 +94,24 @@ class GakuUraUser{
 		}
 		return $r;
 	}
+	public function try_login(string $name, string $passwd, bool $mv=false):int{
+		if($name===''||$passwd=='') return 1;
+		foreach (get_rows($this->user_list_file,2) as $l){
+			$d = $this->user_data_convert(explode("\t", $l));
+			if ((int)$d['enable']===1&&($d['mail']===$name||$d['name']===$name)&&password_verify($passwd,$d['passwd'])){
+				if ((int)subrpos('$2y$','$',$d['passwd']) < 13){
+					$d['passwd'] = password_hash($passwd,PASSWORD_BCRYPT,['cost'=>13]);
+					$this->change_user_data($d);
+				}
+				$_SESSION[self::SKEY_ID] = $d['id'];
+				$_SESSION[self::SKEY_NAME] = $d['name'];
+				$_SESSION[self::SKEY_PASSWD] = $d['passwd'];
+				if($mv) exit_mv($_SESSION[self::SKEY_FROM]??'../');
+				return 0;
+			}
+		}
+		return 2;
+	}
 	public function user_exists(string $name, string $mail=''):int{
 		$n = row(self::h($name));
 		$m = (string)filter_var($mail, FILTER_VALIDATE_EMAIL, FILTER_NULL_ON_FAILURE);
@@ -102,8 +120,8 @@ class GakuUraUser{
 			++$i;
 			$d = $this->user_data_convert(explode("\t", $l));
 			if ((int)$d['enable'] === 1){
-				if($n!==''&&$d['name']===$n) return $i;
 				if($m!==''&&$d['mail']===$m) return $i;
+				if($n!==''&&$d['name']===$n) return $i;
 			}
 		}
 		return 0;

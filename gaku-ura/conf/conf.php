@@ -1,6 +1,6 @@
 <?php
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.8.19';
+const GAKU_URA_VERSION = '9.8.20';
 const WEEK_LIST = [
 	'ja'=>['日','月','火','水','木','金','土'],
 	'en'=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
@@ -217,7 +217,7 @@ function file_compress(string $file, string $type, ?string $to):bool{
 				$z->addFile($file, basename($file));
 			} else {
 				foreach (path_list($file) as $p){
-					$d = substr($p, strlen($file));
+					$d = lreplace(substr($p,strlen($file)),'/');
 					is_dir($p)?$z->addEmptyDir($d):$z->addFile($p, $d);
 				}
 			}
@@ -705,7 +705,7 @@ class GakuUra{
 		$head[] = 'X-Mailer: gaku-ura'. GAKU_URA_VERSION;
 		foreach($headers as $i) $head[]=$i;
 		$sub = '=?UTF-8?B?'.base64_encode($title).'?=';
-		$r = ['TITLE'=>$title,'MESSAGE'=>$msg,'SITE_TITLE'=>$this->config['TITLE']??'?','DOMAIN'=>$this->domain];
+		$r = ['TITLE'=>$title,'MESSAGE'=>$msg,'SITE_TITLE'=>$this->config['title']??'?','DOMAIN'=>$this->domain];
 		foreach($r as $k=>$v) $h=str_replace('{'.$k.'}', self::h($v), $h);
 		$h = str_replace("\n","\r\n",lf($h));
 		return mail($to, $sub, $h, implode("\r\n",$head));
