@@ -199,9 +199,13 @@ function mopen(e, c){
 	}
 	const u = a.getAttribute("url");
 	if(u.length) m.push(["🔗WEBページとして開く",u,1]);
-	["tar.gz","zip"].forEach((i)=>{
-		m.push(["📥ダウンロード("+i+")",a.href+"&type="+i+"&download"]);
-	});
+	if (isdir){
+		["tar.gz","zip"].forEach((i)=>{
+			m.push(["📥ダウンロード("+i+")",a.href+"&type="+i+"&download"]);
+		});
+	} else {
+		m.push(["📥ダウンロード",a.href+"&download"]);
+	}
 	["tar.gz","zip"].forEach((i)=>{
 		m.push(["この階層をﾀﾞｳﾝﾛｰﾄﾞ("+i+")","?Dir="+(q.get("Dir")??"")+"&type="+i+"&download"]);
 	});

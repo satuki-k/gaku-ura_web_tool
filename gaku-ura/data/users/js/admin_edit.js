@@ -226,16 +226,15 @@ async function save_change(e){
 			$ID("fparea").classList.add("note");
 			f.append("async", 1);
 			x.addEventListener("load", async (e)=>{
-				if (x.responseText == -1){
+				if (x.status == 302){
 					if(await popup.confirm("ログアウトしました。リロードしてください。")) location.reload();
-					return;
-				} else if (x.responseText==1||x.responseText==2){
+				} else if (x.status == 404){
 					if(await popup.confirm("ファイルまたはディレクトリが削除されました。")) location.reload();
-					return;
-				} else if (x.responseText == 4){
-					return popup.alert("編集権限がありません。");
+				} else if (x.status == 403){
+					popup.alert("編集権限がありません。");
+				} else {
+					$ID("fparea").innerHTML = "(saved)";
 				}
-				$ID("fparea").innerHTML = "(saved)";
 				setTimeout(()=>{
 					$ID("fparea").innerHTML="";
 					$ID("fparea").classList.remove("note");
@@ -451,6 +450,5 @@ class TextEditor{
 		}
 	}
 }
-
 $ID("form").addEventListener("submit", save_change);
 start_editor();

@@ -1,5 +1,5 @@
 <?php
-#gaku-ura9.8.18
+#gaku-ura9.8.20
 require __DIR__ .'/../conf/db.php';
 require __DIR__ .'/../conf/conf.php';
 require __DIR__ .'/../conf/users.php';
@@ -85,7 +85,7 @@ function set_otp(string $mail, string $mail_dir, object &$conf):void{
 	$o = one_time_pass(10, 12);
 	$_SESSION[GakuUraUser::SKEY_MAIL] = $f;
 	file_put_contents($mail_dir.'/'.$f, $mail."\t".$o, LOCK_EX);
-	$conf->html_mail($mail, '認証コード送信', '認証コード: '.$o);
+	$conf->html_mail($mail, '認証コードのお知らせ', '<p>認証コード(OTP): '.$o.'</p><p>このメールに心当たりが無い場合はメッセージを無視してください。</p>');
 }
 function main(string $from):int{
 	$conf = new GakuUra();
@@ -114,7 +114,7 @@ function main(string $from):int{
 				$user_data['profile'] = str_replace("\n", '&#10;', $_POST['profile']);
 				$g = array_slice($user_data['group'],1);
 				$a = $_POST['group']??'';
-				if(in_array($a,$g,true)) $user_data['group']=array_unique(array_merge([$user_data['admin'],$a],$g));
+				if(in_array($a,$g,true)) $user_data['group']=array_merge([$user_data['admin'],$a],$g);
 				if ($user->change_user_data($user_data) === 0){
 					$_SESSION[GakuUraUser::SKEY_NAME] = $user_data['name'];
 					$_SESSION[GakuUraUser::SKEY_PASSWD] = $user_data['passwd'];
@@ -187,12 +187,9 @@ function main(string $from):int{
 	} elseif ($from === 'admin'){
 		/* 管理機能 */
 		if (!$is_login){
-			if (isset($_POST['async'])){
-				echo -1;
-				return -1;
-			}
+			http_response_code(302);
 			if ($is_async){
-				if(isset($_GET['download'])) $_SESSION[GakuUraUser::SKEY_FROM]=str_replace(['&download','&async'],'',$_SERVER['REQUEST_URI']??'');
+				$_SESSION[GakuUraUser::SKEY_FROM]=str_replace(['&download','&async'],'',$_SERVER['REQUEST_URI']??'');
 				return -1;
 			}
 			exit_mv('../login/');
@@ -233,19 +230,22 @@ function main(string $from):int{
 		if (is_dir($d)){
 			$current_dir = $d;
 		} elseif ($is_async){
-			echo 1;
+			http_response_code(404);
 			return 1;
 		} else {
 			$uri_dir = '';
 		}
 		#投稿
 		if ($submit && $conf->check_csrf_token('admin__'.$submit,$csrf_token,true)){
-			if($user_data['admin']<($conf->config['login.admin_block']??0)) $user->log_report('fm_post',$user_data);
+			if ($user_data['admin']<($conf->config['login.admin_block']??0)){
+				$user->log_report('fm_post',$user_data);
+				$conf->not_found(false,'権限がありません。');
+			}
 			if ($submit==='edit_file' && list_isset($_POST,['name','new_name','new_path','perm']) && strpos($_POST['name'],'..')===false && strpos($_POST['name'], '/')===false && is_file($current_dir.'/'.h($_POST['name'])) && isset($perm_list[$_POST['perm']])){
 				$path = $current_dir.'/'.h($_POST['name']);
 				if (!$user->permitted($path,$user_data,true)){
 					if ($is_async){
-						echo 4;
+						http_response_code(403);
 						return 4;
 					}
 					$conf->not_found(false,'権限がありません。');
@@ -309,7 +309,7 @@ function main(string $from):int{
 				$name = h(str_replace(['/','..'],'',$_POST['name']));
 				$nw = $_POST['new'];
 				if (in_array($nw,['/sitemap.xml','/robots.txt'],true)){
-					if(!$user->permitted($conf->d_root.$nw,$user_data,true,false,$template_dir.$nw)) $conf->not_found(false,'権限がありません。');
+					if(!$user->permitted($conf->d_root.$nw,$user_data,true,false)) $conf->not_found(false,'権限がありません。');
 					if(!file_exists($template_dir.$nw)) touch($template_dir.$nw);
 				}
 				if ($nw === '.htaccess'){
@@ -540,7 +540,7 @@ function main(string $from):int{
 			$current_file = $current_dir.'/'.$bname;
 			if (!is_file($current_file)){
 				if ($is_async){
-					echo 2;
+					http_response_code(404);
 					return 2;
 				}
 				exit_mv('?Dir='.$uri_dir);
@@ -548,7 +548,10 @@ function main(string $from):int{
 			if(!$user->permitted($current_file,$user_data)) $conf->not_found(false,'権限がありません。');
 			$editable = is_editable($current_file);
 			if (isset($_GET['download']) || (!$editable&&!str_starts_with($menu,'edit'))){
-				if($user_data['admin']<($conf->config['login.admin_block']??0)) $user->log_report('fm_get',$user_data);
+				if (!$user->permitted($current_file,$user_data,false,true)){
+					$user->log_report('fm_get',$user_data);
+					$conf->not_found(false,'権限がありません');
+				}
 				header('Content-Description:File Transfer');
 				$conf->content_type(mime_content_type($current_file));
 				header('Content-Disposition:inline;filename="'.$bname.'"');
@@ -707,29 +710,12 @@ function main(string $from):int{
 				return 0;
 			}
 			$from = 'admin_edit';
-		} elseif ($menu === 'edit'){
-			if ($is_async){
-				echo 3;
-				return 3;
-			}
 		}
 	} elseif ($from === 'login'){
 		/* ログイン */
 		if($is_login) exit_mv('../');
 		if (list_isset($_POST,['user_name','passwd']) && $conf->check_csrf_token('login',$csrf_token,true)){
-			$name = h($_POST['user_name']);
-			$passwd = $_POST['passwd'];
-			$m = ($_POST['mail']??'')==='true';
-			$i = $user->user_exists($m?'':$name, $m?$name:'');
-			if (not_empty($name) && not_empty($passwd) && $i){
-				$d = $user->user_data_convert(explode("\t", get($user->user_list_file,$i+1)));
-				if (password_verify($passwd, $d['passwd'])){
-					$_SESSION[GakuUraUser::SKEY_ID] = $d['id'];
-					$_SESSION[GakuUraUser::SKEY_NAME] = $d['name'];
-					$_SESSION[GakuUraUser::SKEY_PASSWD] = $d['passwd'];
-					exit_mv($_SESSION[GakuUraUser::SKEY_FROM]??'../');
-				}
-			}
+			$user->try_login(h($_POST['user_name']),$_POST['passwd'],true);
 			$replace['WARNING'] = 'ユーザー名またはパスワードが正しくありません。';
 			$user->log_report('login_failed',$user_data);
 		}
@@ -741,7 +727,7 @@ function main(string $from):int{
 			$p = ['name'=>$_POST['user_name'], 'passwd'=>$_POST['passwd']];
 			if(!$user->is_auth_mail) $p['mail']=$_POST['mail'];
 			if (not_empty($p['passwd'])){
-				$p['passwd'] = password_hash($p['passwd'], PASSWORD_BCRYPT);
+				$p['passwd'] = password_hash($p['passwd'], PASSWORD_DEFAULT);
 				$r = $user->change_user_data($p);
 				if ($r){
 					$replace['WARNING'] = ['名前が入力されていません。','名前が長過ぎます。','このユーザーはすでに存在します。'][$r-1];
