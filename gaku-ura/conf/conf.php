@@ -1,6 +1,12 @@
 <?php
+/*
+ * exitの代わりにquitを使ってください。
+ * SET_FASTCGI()でquitでもプロセス終了しないようになります。
+ * 既存コードの修正は不要です。
+ * phpはfastcgi動作確認を行っていません。
+*/
 #gaku-ura標準lib
-const GAKU_URA_VERSION = '9.8.20';
+const GAKU_URA_VERSION = '9.8.21';
 const WEEK_LIST = [
 	'ja'=>['日','月','火','水','木','金','土'],
 	'en'=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
@@ -9,6 +15,28 @@ const MONTH_LIST = [
 	'ja'=>['睦月','如月','弥生','卯月','早月','水無月','文月','葉月','長月','神無月','霜月','師走'],
 	'en'=>['January','February','March','April','May','June','July','August','September','October','November','December']
 ];
+$FASTCGID = 0;
+$EXITED = 0;
+#quitでプロセス終了しなくする設定 リクエストループの毎回呼び出す
+function SET_FASTCGI():void{
+	global $FASTCGID, $EXITED;
+	$FASTCGID = 1;
+	$EXITED = 0;
+}
+function FASTCGID():bool{
+	global $FASTCGID;
+	return $FASTCGID?true:false;
+}
+function EXITED():bool{
+	global $EXITED;
+	return $EXITED?true:false;
+}
+function quit(int $s=0):int{
+	global $EXITED;
+	$EXITED = 1;
+	if(!FASTCGID()) exit($s);
+	return $s;
+}
 function h(string $s):string{return htmlspecialchars($s,ENT_QUOTES,'UTF-8');}
 #UTF-8/LFにする
 function lf(string $s):string{return str_replace(["\r\n","\r"],"\n",$s);}
@@ -129,7 +157,10 @@ function copy_path(string $dir, string $to, array $skip=[]):bool{
 	if(!file_exists($d)||(is_dir($d)&&is_file($t))) return true;
 	if (is_file($d)){
 		if(in_array($t,$skip,true)) return true;
-		if(!file_exists($t)) mkdir($t,0777,true);
+		if (!file_exists($t)){
+			if(basename($d)===basename($t)) $t=dirname($t);
+			if(!file_exists($t)) mkdir($t,0777,true);
+		}
 		if(is_dir($t)) $t.='/'.basename($d);
 		return copy($d,$t);
 	}
@@ -439,9 +470,9 @@ function get_ip():string{
 	return $_SERVER['REMOTE_ADDR'];
 }
 #転送
-function exit_mv(string $to):void{
+function exit_mv(string $to):int{
 	header('Location:'.$to);
-	exit;
+	return quit();
 }
 class GakuUra{
 	public string $d_root;
@@ -481,7 +512,7 @@ class GakuUra{
 		$this->here = $this->domain.($_SERVER['REQUEST_URI']??'');
 		$this->domain .= '/';
 		$this->url_param = urldecode($_SERVER['QUERY_STRING']??'');
-		if(($this->config['localhost']??0)&&!str_starts_with($this->domain,'http://localhost')) exit((int)http_response_code(403));
+		if(($this->config['localhost']??0)&&!str_starts_with($this->domain,'http://localhost')) return quit((int)http_response_code(403));
 		$c = $this->here;
 		$n = ini_get('session.name');
 		if (isset($_GET[$n])){
@@ -583,6 +614,7 @@ class GakuUra{
 	}
 	#タイトル,説明,bodyタグの中身,[cssファイル,jsファイル,クロール可否,共通css使うか,jsの軽量化,雛形のhtml]
 	public function html(string $title,string $summary,string $content,string $css='',string $js='',bool $robots=false,bool $css_default=true,bool $minify=true,?string $htm=null):int{
+		if(EXITED()) return 0;
 		$htm = $htm??'default/default.html';
 		$f = $this->data_dir.'/'.$htm;
 		if(!is_file($f)) return 1;
@@ -618,6 +650,7 @@ class GakuUra{
 	}
 	#data_dir以下フォルダ名,html・mdファイル名,ファイル中の「{変数}」対応表,クロール可否
 	public function htmlf(string $project_name,?string $file_name,array $replace,bool $robots=false):int{
+		if(EXITED()) return 0;
 		$pr = $this->data_dir.'/'.$project_name;
 		$fn = basename($file_name??'index');
 		$h = $pr.'/html/'.$fn;
@@ -661,7 +694,7 @@ class GakuUra{
 		return $this->html($s['title'],$s['description'],str_replace("\t",'',row($c)),$css,$js, $s['robots'],!$s['css_standalone'],$s['js_minify'],$s['template']);
 	}
 	#エラーページ
-	public function not_found(bool $is404=false, string $reason=''):void{
+	public function not_found(bool $is404=false, string $reason=''):int{
 		if($reason==='') $reason='アクセス拒否または無効なURLです。';
 		$h = $this->u_root;
 		$u = urldecode($_SERVER['REQUEST_URI']??'');
@@ -674,7 +707,7 @@ class GakuUra{
 				break;
 			}
 		}
-		exit($this->htmlf('404',null,['HERE'=>$this->here,'GAKU_URA_VERSION'=>GAKU_URA_VERSION,'PERHAPS'=>$h,'REASON'=>$reason]));
+		return quit($this->htmlf('404',null,['HERE'=>$this->here,'GAKU_URA_VERSION'=>GAKU_URA_VERSION,'PERHAPS'=>$h,'REASON'=>$reason]));
 	}
 	#csrfトークン発行
 	public function set_csrf_token(string $name, int $l=32, int $r=64):string{
@@ -689,7 +722,7 @@ class GakuUra{
 		$b = strpos($this->referer, '://');
 		return $t&&$d[0]===$t&&(!$ref||($a&&$b&&substr($d[1],$a+3)===substr($this->referer,$b+3)));
 	}
-	public function form_die():void{exit($this->htmlf('404','form_die',[]));}
+	public function form_die():int{return quit($this->htmlf('404','form_die',[]));}
 	public function html_mail(string $to, string $title, string $msg, array $headers=[]):bool{
 		$f = $this->data_dir.'/default/mail.html';
 		if(!is_file($f)) return false;

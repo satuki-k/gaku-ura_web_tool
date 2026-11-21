@@ -47,7 +47,15 @@ video{
 h1, form h2, .c{
 	text-align:center;
 }
-
+.master{
+	font:32px/0 serif;
+	font-weight:bold;
+}
+.master img{
+	width:32px;
+	height:32px;
+	display:inline;
+}
 
 /* ナビゲーション */
 nav label:after{

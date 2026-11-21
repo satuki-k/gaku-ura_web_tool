@@ -80,16 +80,17 @@ function get_msg(string $file, object &$user, string $csrf_token, ?int $uid):str
 	}
 	return $r;
 }
-function set_otp(string $mail, string $mail_dir, object &$conf):void{
+function set_otp(string $mail, string $mail_dir, object &$conf):bool{
 	$f = one_time_pass(12, 24);
 	$o = one_time_pass(10, 12);
 	$_SESSION[GakuUraUser::SKEY_MAIL] = $f;
 	file_put_contents($mail_dir.'/'.$f, $mail."\t".$o, LOCK_EX);
-	$conf->html_mail($mail, '認証コードのお知らせ', '<p>認証コード(OTP): '.$o.'</p><p>このメールに心当たりが無い場合はメッセージを無視してください。</p>');
+	return $conf->html_mail($mail, '認証コードのお知らせ', '<p>認証コード(OTP): '.$o.'</p><p>このメールに心当たりが無い場合はメッセージを無視してください。</p>');
 }
 function main(string $from):int{
 	$conf = new GakuUra();
 	$user = new GakuUraUser($conf);
+	if(EXITED()) return 0;
 	$api_args = [];
 	$submit = $_POST['submit']??$_POST['submit_type']??'';
 	$csrf_token = $_POST['csrf_token']??'';
@@ -100,13 +101,13 @@ function main(string $from):int{
 	$replace = ['GAKU_URA_VERSION'=>GAKU_URA_VERSION,'CONFIG'=>'','WARNING'=>'','FOR_ADMIN'=>'','API_ARGS'=>'','WEB_OPEN'=>''];
 	if ($from === 'home'){
 		/* ユーザーホーム */
-		if(!$is_login) exit_mv('./login/');
+		if(!$is_login) return exit_mv('./login/');
 		if ($submit && $conf->check_csrf_token('user_home', $csrf_token, true)){
 			if ($submit === 'logout'){
 				unset($_SESSION[GakuUraUser::SKEY_ID]);
 				unset($_SESSION[GakuUraUser::SKEY_NAME]);
 				unset($_SESSION[GakuUraUser::SKEY_PASSWD]);
-				exit_mv('./');
+				return exit_mv('./');
 			} elseif ($submit === 'user_info' && list_isset($_POST,['user_name','mail','new_passwd','profile'])){
 				if(!$user->user_exists($_POST['user_name'])) $user_data['name']=$_POST['user_name'];
 				if(!$user->is_auth_mail&&!$user->user_exists('',$_POST['mail'])) $user_data['mail']=$_POST['mail'];
@@ -120,11 +121,10 @@ function main(string $from):int{
 					$_SESSION[GakuUraUser::SKEY_PASSWD] = $user_data['passwd'];
 					$f = filter_var($_POST['mail'],FILTER_VALIDATE_EMAIL);
 					if ($f&&!$user->user_exists('',$f)&&$user_data['mail']!==$f&&$user->is_auth_mail){
-						set_otp($f, $user->mail_dir, $conf);
-						exit_mv('./mail/');
+						if(set_otp($f,$user->mail_dir,$conf)) return exit_mv('./mail/');
 					}
 				}
-				exit_mv('./');
+				return exit_mv('./');
 			} elseif (str_ends_with($submit,'_message') && isset($_POST['message'])){
 				$stype = rreplace($submit, '_message');
 				$to = null;
@@ -173,7 +173,7 @@ function main(string $from):int{
 		} else {
 			$from = 'user_page';
 			$i = $user->user_exists(h(GakuUraUser::h($conf->url_param)));
-			if($i===0) $conf->not_found();
+			if($i===0) return $conf->not_found();
 			$u = $user->user_data_convert(explode("\t", get($user->user_list_file, $i+1)));
 			$replace['NAME'] = $u['name'];
 			$replace['ADMIN'] = $u['admin'];
@@ -192,9 +192,9 @@ function main(string $from):int{
 				$_SESSION[GakuUraUser::SKEY_FROM]=str_replace(['&download','&async'],'',$_SERVER['REQUEST_URI']??'');
 				return -1;
 			}
-			exit_mv('../login/');
+			return exit_mv('../login/');
 		}
-		if($user_data['admin']<$user->admin_revel) $conf->not_found();
+		if($user_data['admin']<$user->admin_revel) return $conf->not_found();
 		$is_edit_mode = 0;
 		$menu = $_GET['Menu']??'';
 		$c_root = $user_data['own_path'];
@@ -239,7 +239,7 @@ function main(string $from):int{
 		if ($submit && $conf->check_csrf_token('admin__'.$submit,$csrf_token,true)){
 			if ($user_data['admin']<($conf->config['login.admin_block']??0)){
 				$user->log_report('fm_post',$user_data);
-				$conf->not_found(false,'権限がありません。');
+				return $conf->not_found(false,'権限がありません。');
 			}
 			if ($submit==='edit_file' && list_isset($_POST,['name','new_name','new_path','perm']) && strpos($_POST['name'],'..')===false && strpos($_POST['name'], '/')===false && is_file($current_dir.'/'.h($_POST['name'])) && isset($perm_list[$_POST['perm']])){
 				$path = $current_dir.'/'.h($_POST['name']);
@@ -248,14 +248,14 @@ function main(string $from):int{
 						http_response_code(403);
 						return 4;
 					}
-					$conf->not_found(false,'権限がありません。');
+					return $conf->not_found(false,'権限がありません。');
 				}
 				if (($_POST['extract']??'')==='yes'){
 					file_extract($path, $current_dir);
 				}
 				if (($_POST['remove']??'')==='yes'){
 					unlink($path);
-					exit_mv('./?Dir='.$uri_dir);
+					return exit_mv('./?Dir='.$uri_dir);
 				} else {
 					if($_POST['perm']!=='no') chmod($path,$perm_list[$_POST['perm']]);
 					if (not_empty($_POST['new_name'])){
@@ -276,9 +276,9 @@ function main(string $from):int{
 					}
 					if(isset($_POST['content'])) file_put_contents($path,$_POST['content'],LOCK_EX);
 				}
-				exit_mv('?Dir='.$uri_dir.'&File='.$_GET['File'].'&Menu=edit');
+				return exit_mv('?Dir='.$uri_dir.'&File='.$_GET['File'].'&Menu=edit');
 			} elseif ($submit==='edit_dir' && list_isset($_POST,['new_name','new_path','perm']) && isset($perm_list[$_POST['perm']])){
-				if(!$user->permitted($current_dir,$user_data,true)) $conf->not_found(false,'権限がありません。');
+				if(!$user->permitted($current_dir,$user_data,true)) return $conf->not_found(false,'権限がありません。');
 				if (($_POST['remove']??'')==='yes'){
 					rmdir_all($current_dir);
 				} else {
@@ -296,20 +296,20 @@ function main(string $from):int{
 						$uri_dir = lreplace(lreplace($p,$c_root),'/');
 					}
 				}
-				exit_mv('?Dir='.up_to($uri_dir));
+				return exit_mv('?Dir='.up_to($uri_dir));
 			} elseif ($submit==='new' && list_isset($_POST,['new','name'])){
 				$a = $_POST['group']??'';
 				if (isset($user_data['group'][1]) && $user_data['group'][1] !== $a){
 					$g = array_slice($user_data['group'],1);
 					if(in_array($a,$g,true)) $user_data['group']=array_unique(array_merge([$user_data['admin'],$a],$g));
 					$user->change_user_data($user_data);
-					exit_mv('./?Dir='.$uri_dir);
+					return exit_mv('./?Dir='.$uri_dir);
 				}
 				$template_dir = $conf->data_dir.'/default/file';
 				$name = h(str_replace(['/','..'],'',$_POST['name']));
 				$nw = $_POST['new'];
 				if (in_array($nw,['/sitemap.xml','/robots.txt'],true)){
-					if(!$user->permitted($conf->d_root.$nw,$user_data,true,false)) $conf->not_found(false,'権限がありません。');
+					if(!$user->permitted($conf->d_root.$nw,$user_data,true,false)) return $conf->not_found(false,'権限がありません。');
 					if(!file_exists($template_dir.$nw)) touch($template_dir.$nw);
 				}
 				if ($nw === '.htaccess'){
@@ -328,12 +328,12 @@ function main(string $from):int{
 					foreach(array_unique($url_list)as$i) $t.='<url><loc>'.$conf->domain.$i.'</loc></url>'."\n";
 					$s = str_replace('{URL_LIST}', $t, file_get_contents($f));
 					file_put_contents($conf->d_root.$nw, $s, LOCK_EX);
-					exit_mv('?Dir='.lreplace($c_root,$conf->d_root.'/').'&File='.basename($f).'&Menu=edit');
+					return exit_mv('?Dir='.lreplace($c_root,$conf->d_root.'/').'&File='.basename($f).'&Menu=edit');
 				} elseif ($nw==='/robots.txt'){
 					$s = file_get_contents($template_dir.$nw);
 					$s = str_replace('{DOMAIN}', $conf->domain, $s);
 					file_put_contents($conf->d_root.$nw, $s, LOCK_EX);
-					exit_mv('?Dir='.lreplace($c_root,$conf->d_root.'/').'&File=robots.txt&Menu=edit');
+					return exit_mv('?Dir='.lreplace($c_root,$conf->d_root.'/').'&File=robots.txt&Menu=edit');
 				} elseif (not_empty($name)){
 					if ($nw === 'folder'){
 						foreach(explode('\\',$name)as$n)if(!file_exists($current_dir.'/'.$n)) mkdir($current_dir.'/'.$n,0777,true);
@@ -343,7 +343,7 @@ function main(string $from):int{
 						if (!str_ends_with($name,'.'.$nw) && in_array($nw,['php','html','css','js','pl','py','db'],true)){
 							$name .= '.'.$nw;
 						}
-						if(!$user->permitted($current_dir.'/'.$name,$user_data,true)) $conf->not_found(false,'この拡張子は編集権限がありません。');
+						if(!$user->permitted($current_dir.'/'.$name,$user_data,true)) return $conf->not_found(false,'この拡張子は編集権限がありません。');
 						$new_path = $current_dir.'/'.$name;
 						$t = $template_dir.'/index.'.$nw;
 						if($nw==='php'&&$current_dir===__DIR__) $t=$template_dir.'/main.php';
@@ -354,7 +354,7 @@ function main(string $from):int{
 						file_put_contents($new_path, $s, LOCK_EX);
 						if(in_array($nw,['pl','py'],true)) chmod($new_path, 0745);
 						if ($nw === 'db'){
-							exit_mv('./?Dir='.$uri_dir.'&File='.$name.'&Menu=edit_db');
+							return exit_mv('./?Dir='.$uri_dir.'&File='.$name.'&Menu=edit_db');
 						}
 					}
 				}
@@ -375,7 +375,7 @@ function main(string $from):int{
 						upload($_FILES[$k], $current_dir.'/'.$n, $user, $user_data, $perm_list);
 					}
 				}
-				exit_mv('./?Dir='.$uri_dir);
+				return exit_mv('./?Dir='.$uri_dir);
 			} elseif ($submit==='edit_db'&&list_isset($_POST,['dbtype','dbname','query','table','import_name'])){
 				#SQLite
 				$current_table = h($_POST['table']??'');
@@ -399,7 +399,7 @@ function main(string $from):int{
 					}
 					#削除とtable切替を同時に行うと切替の優先で意図しない削除を防止
 					if ($g->table_exists($table)){
-						exit_mv('./?Dir='.$uri_dir.'&File='.$dbname.'&Menu='.$submit.'&table='.$table);
+						return exit_mv('./?Dir='.$uri_dir.'&File='.$dbname.'&Menu='.$submit.'&table='.$table);
 					}
 					if ($current_table === ''){
 						$tl = $g->get_tables();
@@ -408,7 +408,7 @@ function main(string $from):int{
 					#table削除
 					if (($_POST['remove_table']??'')==='true' && not_empty($current_table)){
 						$g->remove_table($current_table);
-						exit_mv('./?Dir='.$uri_dir.'&File='.$dbname.'&Menu='.$menu);
+						return exit_mv('./?Dir='.$uri_dir.'&File='.$dbname.'&Menu='.$menu);
 					}
 					#SQL文実行
 					$sql = $_POST['query'];
@@ -417,7 +417,7 @@ function main(string $from):int{
 						header('Content-Description:File Transfer');
 						header('Content-Disposition:attachment;filename="'.$current_table.'.csv"');
 						echo $g->export($current_table);
-						exit;
+						return 0;
 					}
 					if (not_empty($sql)){
 						$conf->content_type('text/plain');
@@ -427,11 +427,11 @@ function main(string $from):int{
 								foreach($l as $k=>$v) echo "$k:$v\n";
 								echo "\n";
 							}
-							exit;
+							return 0;
 						}
 						if ($r === false){
 							echo $g->error_msg;
-							exit;
+							return 0;
 						}
 					}
 					#table名変更
@@ -476,7 +476,7 @@ function main(string $from):int{
 						}
 					}
 					if($is_add) $g->append_row($current_table,$add);
-					exit_mv('./?Dir='.$uri_dir.'&File='.basename($dbname).'&Menu='.$submit.'&table='.$current_table);
+					return exit_mv('./?Dir='.$uri_dir.'&File='.basename($dbname).'&Menu='.$submit.'&table='.$current_table);
 				}
 			} elseif ($submit==='upgrade' && $user_data['admin']>=4 && str_starts_with($conf->d_root,$c_root) && isset($_POST['reupgrade'])){
 				#upgrade
@@ -516,9 +516,9 @@ function main(string $from):int{
 				}
 				return $conf->htmlf('users', 'upgrade', $replace);
 			} else {
-				$conf->form_die();
+				return $conf->form_die();
 			}
-			exit_mv($conf->here);
+			return exit_mv($conf->here);
 		}
 		#upgrade menu
 		if ($menu === 'upgrade'){
@@ -543,14 +543,14 @@ function main(string $from):int{
 					http_response_code(404);
 					return 2;
 				}
-				exit_mv('?Dir='.$uri_dir);
+				return exit_mv('?Dir='.$uri_dir);
 			}
-			if(!$user->permitted($current_file,$user_data)) $conf->not_found(false,'権限がありません。');
+			if(!$user->permitted($current_file,$user_data)) return $conf->not_found(false,'権限がありません。');
 			$editable = is_editable($current_file);
 			if (isset($_GET['download']) || (!$editable&&!str_starts_with($menu,'edit'))){
 				if (!$user->permitted($current_file,$user_data,false,true)){
 					$user->log_report('fm_get',$user_data);
-					$conf->not_found(false,'権限がありません');
+					return $conf->not_found(false,'権限がありません');
 				}
 				header('Content-Description:File Transfer');
 				$conf->content_type(mime_content_type($current_file));
@@ -652,7 +652,7 @@ function main(string $from):int{
 			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__'.$replace['SUBMIT_TYPE']);
 		} elseif (not_empty($uri_dir) && $menu==='edit'){
 			#ディレクトリの編集
-			if(!$user->permitted($current_dir,$user_data,true,false)) $conf->not_found(false,'権限がありません。');
+			if(!$user->permitted($current_dir,$user_data,true,false)) return $conf->not_found(false,'権限がありません。');
 			$replace['FORM_AFTER'] = '';
 			$is_edit_mode = 1;
 			$bname = basename($current_dir);
@@ -666,13 +666,13 @@ function main(string $from):int{
 			if(str_starts_with($current_dir,$conf->doc_root)) $replace['WEB_OPEN']='<a href="'.lreplace($current_dir,$conf->doc_root).'" target="_blank">WEBで開く</a>';
 			$replace['DOWNLOAD'] = '?Dir='.$uri_dir.'&download';
 		} elseif (isset($_GET['download'])){
-			if(!$user->permitted($current_dir,$user_data,false,true)) $conf->not_found(false,'権限がありません。');
+			if(!$user->permitted($current_dir,$user_data,false,true)) return $conf->not_found(false,'権限がありません。');
 			if (!file_compress($current_dir, $_GET['type']??'tar.gz', null)){
-				$conf->not_found(false,'圧縮失敗');
+				return $conf->not_found(false,'圧縮失敗');
 			}
 			return 0;
 		} else {
-			if(!$user->permitted($current_dir,$user_data)) $conf->not_found(false,'権限がありません。');
+			if(!$user->permitted($current_dir,$user_data)) return $conf->not_found(false,'権限がありません。');
 			$replace['CSRF_TOKEN'] = $conf->set_csrf_token('admin__new');
 			$l = '';
 			for($i=dirname($uri_dir);$i!==($j=dirname($i));$i=$j) $l='/<a href="?Dir='.$i.'">'.basename($i).'</a>'.$l;
@@ -713,7 +713,7 @@ function main(string $from):int{
 		}
 	} elseif ($from === 'login'){
 		/* ログイン */
-		if($is_login) exit_mv('../');
+		if($is_login) return exit_mv('../');
 		if (list_isset($_POST,['user_name','passwd']) && $conf->check_csrf_token('login',$csrf_token,true)){
 			$user->try_login(h($_POST['user_name']),$_POST['passwd'],true);
 			$replace['WARNING'] = 'ユーザー名またはパスワードが正しくありません。';
@@ -722,7 +722,7 @@ function main(string $from):int{
 		$replace['CSRF_TOKEN'] = $conf->set_csrf_token('login');
 	} elseif ($from === 'regist'){
 		/* 新規登録 */
-		if(!(int)($conf->config['login.regist']??0)) $conf->not_found(false,'新規登録は無効に設定されています。');
+		if(!(int)($conf->config['login.regist']??0)) return $conf->not_found(false,'新規登録は無効に設定されています。');
 		if (list_isset($_POST,['user_name','mail','passwd']) && $conf->check_csrf_token('regist',$csrf_token,true)){
 			$p = ['name'=>$_POST['user_name'], 'passwd'=>$_POST['passwd']];
 			if(!$user->is_auth_mail) $p['mail']=$_POST['mail'];
@@ -730,14 +730,13 @@ function main(string $from):int{
 				$p['passwd'] = password_hash($p['passwd'], PASSWORD_DEFAULT);
 				$r = $user->change_user_data($p);
 				if ($r){
-					$replace['WARNING'] = ['名前が入力されていません。','名前が長過ぎます。','このユーザーはすでに存在します。'][$r-1];
+					$replace['WARNING'] = ['名前が入力されていません。','名前が長過ぎます。','このユーザーはすでに存在します。'][$r-1]??'error';
 				} else {
 					$f = filter_var($_POST['mail'],FILTER_VALIDATE_EMAIL);
 					if ($f && $user->is_auth_mail){
-						set_otp($f, $user->mail_dir, $conf);
-						exit_mv('../../mail/');
+						if(set_otp($f, $user->mail_dir, $conf)) return exit_mv('../../mail/');
 					}
-					exit_mv('../../');
+					return exit_mv('../../');
 				}
 			} else {
 				$replace['WARNING'] = 'パスワードが入力されていません。';
@@ -747,7 +746,7 @@ function main(string $from):int{
 	} elseif ($from === 'mail'){
 		/* mail本人確認 */
 		unlink_by_date($user->mail_dir, 1800);
-		if(!$is_login||!isset($_SESSION[GakuUraUser::SKEY_MAIL])||!is_file($user->mail_dir.'/'.$_SESSION[GakuUraUser::SKEY_MAIL])) exit_mv('../');
+		if(!$is_login||!isset($_SESSION[GakuUraUser::SKEY_MAIL])||!is_file($user->mail_dir.'/'.$_SESSION[GakuUraUser::SKEY_MAIL])) return exit_mv('../');
 		$f = $user->mail_dir.'/'.$_SESSION[GakuUraUser::SKEY_MAIL];
 		list($m, $p) = explode("\t", get($f,1));
 		if (isset($_POST['otp']) && $conf->check_csrf_token('mail',$csrf_token,true)){
@@ -756,7 +755,7 @@ function main(string $from):int{
 				$user->change_user_data($user_data);
 				unlink($f);
 				unset($_SESSION[GakuUraUser::SKEY_MAIL]);
-				exit_mv('../');
+				return exit_mv('../');
 			}
 			$replace['WARNING'] = 'OTPが違います。';
 		}

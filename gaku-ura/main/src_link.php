@@ -1,8 +1,9 @@
 <?php
-#gaku-ura9.6.8
+#gaku-ura9.8.20
 require __DIR__ .'/../conf/conf.php';
 function main(string $f):int{
 	$conf = new GakuUra();
+	if(EXITED()) return 0;
 	$conf->content_type('text/'.($f==='js'?'javascript':$f));
 	$q = $_GET[strtoupper($f)]??explode('&',$conf->url_param)[0];
 	$t = (!isset($_GET['STANDALONE'])&&$f==='css')?css_out($conf->data_dir.'/default/default.css'):'';

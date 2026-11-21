@@ -4,6 +4,7 @@ require __DIR__ .'/../conf/conf.php';
 #実際にURLでアクセスする方のファイル(/index.php)は、この関数を呼び出すだけ
 function main():int{
 	$conf = new GakuUra();
+	if(EXITED()) return 0;
 	$conf->content_type('text/html');
 	$robots = true;
 	$page = h($_GET['Page']??'index');
