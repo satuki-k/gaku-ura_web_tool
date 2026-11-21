@@ -49,7 +49,7 @@ button:hover{
 	text-align:center;
 }
 .tab{
-	min-height:calc(100vh - 8em);
+	min-height:calc(100vh - 8em - 32px);
 	padding:1em;
 }
 .logout{
@@ -69,7 +69,7 @@ button:hover{
 }
 #message .tabs{
 	flex-direction:column;
-	height:calc(100vh - 8em);
+	height:calc(100vh - 8em - 32px);
 }
 #message .tab{
 	overflow-y:scroll;
