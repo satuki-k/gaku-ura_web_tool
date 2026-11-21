@@ -100,7 +100,8 @@ class GakuUraUser{
 		foreach (get_rows($this->user_list_file,2) as $l){
 			$d = $this->user_data_convert(explode("\t", $l));
 			if ((int)$d['enable']===1&&($d['mail']===$name||$d['name']===$name)&&password_verify($passwd,$d['passwd'])){
-				if ((int)subrpos('$2y$','$',$d['passwd']) < 14){
+				$p = (int)subrpos('$2y$','$',$d['passwd']);
+				if ($p > 0 && $p < 14){
 					$d['passwd'] = password_hash($passwd,PASSWORD_BCRYPT,['cost'=>14]);
 					$this->change_user_data($d);
 				}
