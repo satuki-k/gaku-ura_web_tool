@@ -205,6 +205,7 @@ allow_url_include = Off
 file_uploads = On
 post_max_size = 1G
 upload_max_filesize = 1G
+max_file_uploads = 500
 short_open_tag = Off
 expose_php = Off
 log_errors = On
@@ -220,6 +221,7 @@ session.cookie_path = /
 session.serialize_handler = php
 session.use_trans_sid = 1
 session.trans_sid_tags = "form="
+session.gc_maxlifetime = 86400
 ;以下3つは特に重要
 session.use_strict_mode = 1
 session.cookie_httponly = 1

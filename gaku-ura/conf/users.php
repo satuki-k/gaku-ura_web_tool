@@ -20,7 +20,7 @@ class GakuUraUser{
 	public const MESSAGE_LABEL = 'gaku-ura_message_';
 	#GakuUraオブジェクトが引数
 	function __construct(object &$conf){
-		if((int)($conf->config['login.enable']??0)===0) $conf->not_found(false,'disabled');
+		if((int)($conf->config['login.enable']??0)===0) return $conf->not_found(false,'disabled');
 		$d = explode(' ', $conf->config['login.dir']??'');
 		$this->own_dir = [];
 		for ($i = 0;$i < 5;++$i){
@@ -41,7 +41,7 @@ class GakuUraUser{
 		$rows = get_rows($this->user_list_file, 1);
 		if ($rows && count($rows)>1){
 			$f = explode("\t", $rows[0]);
-			foreach($this->user_list_keys as $k) if(!in_array($k,$f,true))$conf->not_found(false,'Col "'.$k.'" is not in "user_list.tsv".');
+			foreach($this->user_list_keys as $k) if(!in_array($k,$f,true))return $conf->not_found(false,'Col "'.$k.'" is not in "user_list.tsv".');
 			$this->user_list_keys = $f;
 		} else {
 			file_put_contents($this->user_list_file, implode("\t",$this->user_list_keys)."\n", LOCK_EX);
@@ -55,6 +55,11 @@ class GakuUraUser{
 		$d = [];
 		$l = count($this->user_list_keys);
 		for($i=0;$i<$l;++$i) $d[$this->user_list_keys[$i]]=$row[$i]??'';
+		foreach(['id','enable']as$i) $d[$i]=(int)$d[$i];
+		$a = explode(' ', $d['admin']);
+		$a[0] = (int)$a[0];
+		$d['admin'] = $a[0];
+		$d['group'] = $a;
 		return $d;
 	}
 	public function login_check():array{
@@ -70,11 +75,7 @@ class GakuUraUser{
 				foreach(['id','enable']as$i) $u[$i]=(int)$u[$i];
 				if ($u['enable'] && $u['id']===$s[0] && $u['name']===$s[1] && $u['passwd']===$s[2]){
 					$r['result'] = true;
-					$a = explode(' ', $u['admin']);
-					$a[0] = (int)$a[0];
-					$u['admin'] = $a[0];
-					$u['group'] = $a;
-					foreach ($a as $g){
+					foreach ($u['group'] as $g){
 						$j = $this->c->config['login.dir.'.$g]??'';
 						if ($j !== ''){
 							if(!str_ends_with($j,'/')) $j.='/';
@@ -82,8 +83,8 @@ class GakuUraUser{
 							$this->own_dir[$g] = $j;
 						}
 					}
-					$u['own_dir'] = $this->own_dir[$a[0]];
-					if(isset($a[1])) $u['own_dir']=$this->own_dir[$a[1]]??$u['own_dir'];
+					$u['own_dir'] = $this->own_dir[$u['group'][0]];
+					if(isset($u['group'][1])) $u['own_dir']=$this->own_dir[$u['group'][1]]??$u['own_dir'];
 					$u['own_path'] = realpath($this->c->d_root.$u['own_dir']);
 					$r['user_data'] = $u;
 				}
@@ -99,8 +100,8 @@ class GakuUraUser{
 		foreach (get_rows($this->user_list_file,2) as $l){
 			$d = $this->user_data_convert(explode("\t", $l));
 			if ((int)$d['enable']===1&&($d['mail']===$name||$d['name']===$name)&&password_verify($passwd,$d['passwd'])){
-				if ((int)subrpos('$2y$','$',$d['passwd']) < 13){
-					$d['passwd'] = password_hash($passwd,PASSWORD_BCRYPT,['cost'=>13]);
+				if ((int)subrpos('$2y$','$',$d['passwd']) < 14){
+					$d['passwd'] = password_hash($passwd,PASSWORD_BCRYPT,['cost'=>14]);
 					$this->change_user_data($d);
 				}
 				$_SESSION[self::SKEY_ID] = $d['id'];
@@ -133,6 +134,7 @@ class GakuUraUser{
 		if(!not_empty($user_data['name']??'')) return 1;
 		if(strlen($user_data['name'])>32) return 2;
 		if($id<1&&$this->user_exists($user_data['name'],$user_data['mail'])) return 3;
+		if(subrpos('$','$',$user_data['passwd'])==='') return 4;
 		$user_data['admin'] = max((int)($user_data['admin']??0), 0);
 		$user_data['enable'] = (int)($user_data['enable']??1);
 		$sm = $this->c->config['school.mail']??'';

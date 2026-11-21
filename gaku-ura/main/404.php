@@ -4,6 +4,7 @@ require __DIR__ .'/../conf/conf.php';
 const DYM = 'もしかして:';
 function main():int{
 	$conf = new GakuUra();
+	if(EXITED()) return 0;
 	$u = urldecode($_SERVER['REQUEST_URI']??'');
 	$d = $conf->d_root.$u;
 	$reason = '';
